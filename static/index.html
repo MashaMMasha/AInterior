@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AInterior - 3D Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #e0c3fc 0%, #d8b5ff 50%, #c9a9f5 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .upload-panel {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .viewer-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .upload-area {
+            border: 2px dashed #d8b5ff;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #faf8ff;
+        }
+
+        .upload-area:hover {
+            border-color: #c9a9f5;
+            background: #f5f0ff;
+        }
+
+        .upload-area.dragging {
+            border-color: #c9a9f5;
+            background: #ede5ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #9d7bdb;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 12px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #e0c3fc 0%, #d8b5ff 50%, #c9a9f5 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            display: block;
+        }
+
+        .model-info {
+            background: #faf8ff;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 13px;
+        }
+
+        .model-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .model-info-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        #viewer {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .controls-hint strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #d8b5ff;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #d8b5ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            font-size: 18px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .models-list {
+            background: #faf8ff;
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .models-list-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .model-item {
+            background: white;
+            border: 1px solid #e0c3fc;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .model-item:hover {
+            background: #f5f0ff;
+            border-color: #c9a9f5;
+            transform: translateX(4px);
+        }
+
+        .model-item-name {
+            font-size: 13px;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+
+        .model-item-meta {
+            font-size: 11px;
+            color: #999;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .models-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .models-list::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+
+        .models-list::-webkit-scrollbar-thumb {
+            background: #d8b5ff;
+            border-radius: 3px;
+        }
+
+        .models-list::-webkit-scrollbar-thumb:hover {
+            background: #c9a9f5;
+        }
+
+        .empty-list {
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AInterior</h1>
+    </div>
+
+    <div class="container">
+        <div class="upload-panel">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📦</div>
+                <div class="upload-text">Перетащите файл сюда</div>
+                <div class="upload-hint">или нажмите для выбора</div>
+                <div class="upload-hint" style="margin-top: 10px;">Поддерживаются: GLB, GLTF, OBJ</div>
+            </div>
+            <input type="file" id="fileInput" accept=".glb,.gltf,.obj,.fbx,.stl" />
+
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Загрузка...</p>
+            </div>
+
+            <div class="status" id="status"></div>
+
+            <div class="model-info" id="modelInfo" style="display: none;">
+                <div class="model-info-item">
+                    <span class="model-info-label">Файл:</span>
+                    <span id="fileName">-</span>
+                </div>
+                <div class="model-info-item">
+                    <span class="model-info-label">Размер:</span>
+                    <span id="fileSize">-</span>
+                </div>
+            </div>
+
+            <div class="models-list" id="modelsList">
+                <div class="models-list-title">Загруженные модели</div>
+                <div id="modelsListContent">
+                    <div class="empty-list">Нет загруженных моделей</div>
+                </div>
+            </div>
+
+            <button class="btn" id="clearBtn" style="display: none;">Очистить сцену</button>
+        </div>
+
+        <div class="viewer-panel">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">🎨</div>
+                <div>Загрузите 3D модель для просмотра</div>
+            </div>
+            <canvas id="viewer" style="display: none;"></canvas>
+            <div class="controls-hint" style="display: none;" id="controlsHint">
+                <strong>ТУТ:</strong>
+                 БУДЕТ<br>
+                КАКАЯ-НИБУДЬ<br>
+                ИНСТРУКЦИЯ
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+
+        function initViewer() {
+            const canvas = document.getElementById('viewer');
+            const viewerPanel = canvas.parentElement;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            scene.fog = new THREE.Fog(0xf0f0f0, 10, 50);
+
+            camera = new THREE.PerspectiveCamera(
+                50,
+                viewerPanel.clientWidth / viewerPanel.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(5, 5, 5);
+
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(viewerPanel.clientWidth, viewerPanel.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 1;
+            controls.maxDistance = 50;
+            controls.maxPolarAngle = Math.PI / 2;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+            scene.add(hemisphereLight);
+
+            const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0xcccccc);
+            scene.add(gridHelper);
+
+            window.addEventListener('resize', onWindowResize);
+
+            animate();
+        }
+
+        function onWindowResize() {
+            const canvas = document.getElementById('viewer');
+            const viewerPanel = canvas.parentElement;
+            camera.aspect = viewerPanel.clientWidth / viewerPanel.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(viewerPanel.clientWidth, viewerPanel.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function showViewer() {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('viewer').style.display = 'block';
+            document.getElementById('controlsHint').style.display = 'block';
+        }
+
+        function hideViewer() {
+            document.getElementById('emptyState').style.display = 'flex';
+            document.getElementById('viewer').style.display = 'none';
+            document.getElementById('controlsHint').style.display = 'none';
+        }
+
+        function clearScene() {
+            if (currentModel) {
+                scene.remove(currentModel);
+                currentModel = null;
+            }
+            hideViewer();
+            document.getElementById('modelInfo').style.display = 'none';
+            document.getElementById('clearBtn').style.display = 'none';
+            showStatus('Сцена очищена', 'info');
+        }
+
+        function loadModel(url, filename, fromList = false) {
+            showViewer();
+            
+            if (currentModel) {
+                scene.remove(currentModel);
+            }
+
+            const extension = filename.split('.').pop().toLowerCase();
+            
+            if (extension === 'glb' || extension === 'gltf') {
+                const loader = new GLTFLoader();
+                loader.load(
+                    url,
+                    (gltf) => {
+                        currentModel = gltf.scene;
+                        
+                        const box = new THREE.Box3().setFromObject(currentModel);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 4 / maxDim;
+                        currentModel.scale.multiplyScalar(scale);
+                        
+                        currentModel.position.x = -center.x * scale;
+                        currentModel.position.y = -box.min.y * scale;
+                        currentModel.position.z = -center.z * scale;
+                        
+                        scene.add(currentModel);
+                        
+                        camera.position.set(5, 5, 5);
+                        controls.target.set(0, size.y * scale / 2, 0);
+                        controls.update();
+                        
+                        if (!fromList) {
+                            showStatus('Модель успешно загружена!', 'success');
+                        }
+                        document.getElementById('clearBtn').style.display = 'block';
+                    },
+                    (progress) => {
+                        console.log('Loading progress:', progress);
+                    },
+                    (error) => {
+                        console.error('Error loading model:', error);
+                        showStatus('Ошибка загрузки модели', 'error');
+                        hideViewer();
+                    }
+                );
+            } else if (extension === 'obj') {
+                const loader = new OBJLoader();
+                loader.load(
+                    url,
+                    (obj) => {
+                        currentModel = obj;
+                        
+                        currentModel.traverse((child) => {
+                            if (child.isMesh) {
+                                child.material = new THREE.MeshPhongMaterial({ 
+                                    color: 0x888888,
+                                    side: THREE.DoubleSide
+                                });
+                            }
+                        });
+                        
+                        const box = new THREE.Box3().setFromObject(currentModel);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 4 / maxDim;
+                        currentModel.scale.multiplyScalar(scale);
+                        
+                        currentModel.position.x = -center.x * scale;
+                        currentModel.position.y = -box.min.y * scale;
+                        currentModel.position.z = -center.z * scale;
+                        
+                        scene.add(currentModel);
+                        
+                        camera.position.set(5, 5, 5);
+                        controls.target.set(0, size.y * scale / 2, 0);
+                        controls.update();
+                        
+                        if (!fromList) {
+                            showStatus('Модель успешно загружена!', 'success');
+                        }
+                        document.getElementById('clearBtn').style.display = 'block';
+                    },
+                    (progress) => {
+                        console.log('Loading progress:', progress);
+                    },
+                    (error) => {
+                        console.error('Error loading model:', error);
+                        showStatus('Ошибка загрузки OBJ модели', 'error');
+                        hideViewer();
+                    }
+                );
+            } else {
+                showStatus(`Формат ${extension.toUpperCase()} пока не поддерживается`, 'error');
+                hideViewer();
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    status.className = 'status';
+                }, 3000);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'только что';
+            if (diffMins < 60) return `${diffMins} мин. назад`;
+            
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours} ч. назад`;
+            
+            const diffDays = Math.floor(diffHours / 24);
+            if (diffDays < 7) return `${diffDays} дн. назад`;
+            
+            return date.toLocaleDateString('ru-RU');
+        }
+
+        async function loadModelsList() {
+            try {
+                const response = await fetch('/list_models');
+                const data = await response.json();
+                
+                const listContent = document.getElementById('modelsListContent');
+                
+                if (data.models && data.models.length > 0) {
+                    const sortedModels = data.models.sort((a, b) => {
+                        return new Date(b.modified) - new Date(a.modified);
+                    });
+                    
+                    listContent.innerHTML = sortedModels.map(model => `
+                        <div class="model-item" onclick="loadModelFromList('${model.url}', '${model.filename}')">
+                            <div class="model-item-name">${model.filename}</div>
+                            <div class="model-item-meta">
+                                <span>${formatFileSize(model.size)}</span>
+                                <span>${formatDate(model.modified)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    listContent.innerHTML = '<div class="empty-list">Нет загруженных моделей</div>';
+                }
+            } catch (error) {
+                console.error('Error loading models list:', error);
+            }
+        }
+
+        function loadModelFromList(url, filename) {
+            loadModel(url, filename, true);
+        }
+
+        window.loadModelFromList = loadModelFromList;
+
+        async function uploadFile(file) {
+            const loader = document.getElementById('loader');
+            const modelInfo = document.getElementById('modelInfo');
+            
+            loader.classList.add('active');
+            showStatus('Загрузка файла...', 'info');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload_model', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Ошибка загрузки');
+                }
+
+                const result = await response.json();
+                
+                document.getElementById('fileName').textContent = result.original_filename;
+                document.getElementById('fileSize').textContent = formatFileSize(result.size);
+                modelInfo.style.display = 'block';
+                
+                loadModel(result.download_url, result.filename);
+                
+                loadModelsList();
+                
+            } catch (error) {
+                showStatus(`Ошибка: ${error.message}`, 'error');
+                console.error('Upload error:', error);
+            } finally {
+                loader.classList.remove('active');
+            }
+        }
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const clearBtn = document.getElementById('clearBtn');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) uploadFile(file);
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragging');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragging');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragging');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) uploadFile(file);
+        });
+
+        clearBtn.addEventListener('click', clearScene);
+
+        initViewer();
+        loadModelsList();
+    </script>
+</body>
+</html>
+
