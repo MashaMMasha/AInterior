@@ -1,11 +1,13 @@
-from ml_api.db.furniture_db import FURNITURE_DB
-from ml_api.agents.chat_assistant import assistant
-
-from typing import List, Dict, Any
-import trimesh
-import numpy as np
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+import numpy as np
+import trimesh
+
+from obllomov.agents.llm import llm
+from obllomov.db.furniture_db import FURNITURE_DB
+
 
 class FurnitureGenerator:
     
@@ -61,7 +63,7 @@ class FurnitureGenerator:
 
     @staticmethod
     def generate_from_text(text: str, output_dir: Path) -> Dict[str, Any]:
-        parsed = assistant.parse_request(text)
+        parsed = llm.parse_request(text)
         furniture_type = parsed["furniture"][0]
         
         mesh = FurnitureGenerator.create_mesh(

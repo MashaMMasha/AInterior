@@ -1,34 +1,50 @@
-from datetime import datetime
 import hashlib
+from datetime import datetime
 from pathlib import Path
-import trimesh
-from ml_api.db.furniture_db import FURNITURE_DB
-from ml_api.schema.dto import FurnitureItem
+from typing import Dict, List
 
-from ml_api.agents.chat_assistant import AIAssistant, assistant
-from ml_api.agents.generator import FurnitureGenerator, furniture_generator
-from ml_api.agents.planner import LayoutPlanner, layout_planner
-
-from typing import List, Dict
 import numpy as np
+import trimesh
+
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.language_models import LLM, BaseChatModel
+from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
+                                     SystemMessage)
+from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.prompts import ChatPromptTemplate
+
+from obllomov.agents.generator import FurnitureGenerator, furniture_generator
+from obllomov.agents.llm import llm
+from obllomov.agents.planner import LayoutPlanner, layout_planner
+from obllomov.db.furniture_db import FURNITURE_DB
+from obllomov.schema.dto import FurnitureItem
+from obllomov.shared.log import logger
 
 
-
-class AgentsService:
+class ObLLoMov:
     def __init__(self):
-        self.assistant = AIAssistant()
+        self.llm: BaseChatModel = llm
         self.furniture_generator = FurnitureGenerator()
         self.layout_planner = LayoutPlanner()
 
-    def parse_request(self, query):
-        return self.assistant.parse_request(query)
-    
-    def generate_from_text(self, query: str):
-        request = self.parse_request(query)
+    def parse_request(self, request):
+        prompt = ChatPromptTemplate.from_messages([
+            # SystemMessage("Ты профессиональный дизайнер интерьеров. Отвечай на вопросы кратко и по делу"),
+            ("system", "Ты профессиональный дизайнер интерьеров. Отвечай на вопросы кратко и по делу"),
+            # HumanMessage("{question}")
+            ("user", "{question}")
+        ])
 
-        result = self.furniture_generator.generate_from_request(request)
+        chain = prompt | llm
 
-        return result
+        response = chain.invoke({
+            "question": request,
+        })
+
+        logger.debug(response)
+
+        return response
+
     
     def auto_arrange_furniture(self, query):
         request = self.parse_request(query)

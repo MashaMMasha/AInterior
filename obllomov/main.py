@@ -1,42 +1,42 @@
-from ml_api.schema.dto import *
-
-from ml_api.db.furniture_db import FURNITURE_DB
-
-from ml_api.services.agents_service import AgentsService
-
-from fastapi import FastAPI, HTTPException, File, UploadFile
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
-from pathlib import Path
 import hashlib
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+
+from obllomov.db.furniture_db import FURNITURE_DB
+from obllomov.schema.dto import *
+from obllomov.services.obllomov import ObLLoMov
 
 app = FastAPI(
     title="AInterior ML Agents API",
     version="0.1.0"
 )
 
-agents_service = AgentsService()
+obLLoMov = ObLLoMov()
 
-@app.post("/chat", response_model=Dict[str, Any])
-async def chat(request: TextRequest):
+@app.post("/chat", response_model=ChatMessage)
+async def chat(request: ChatMessage):
     try:
-        parsed = agents_service.parse_request(request.text)
+        response = obLLoMov.parse_request(request.content)
+    
         return {
-            "status": "success",
-            "request_id": hashlib.md5(request.text.encode()).hexdigest()[:8],
-            "parsed": parsed,
-            "message": f"Определено {len(parsed['furniture'])} предметов в стиле '{parsed['style']}'"
+            "content": response.content,
+            "session_id": request.session_id,
+            "role": "ai"
         }
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки: {str(e)}")
+
 
 @app.post("/generate_furniture", response_model=Dict[str, Any])
 async def generate_furniture(request: TextRequest):
     try:
-        result = agents_service.generate_from_text(request.text)
+        result = obLLoMov.generate_from_text(request.text)
 
         output_dir = Path("generated_models")
         output_dir.mkdir(exist_ok=True)
@@ -57,7 +57,7 @@ async def generate_furniture(request: TextRequest):
 async def auto_arrange_furniture(request: TextRequest):
     try:
 
-        scene = agents_service.auto_arrange_furniture(request.text)
+        scene = obLLoMov.auto_arrange_furniture(request.text)
         
         scenes_dir = Path("scenes")
         scenes_dir.mkdir(exist_ok=True)
@@ -81,7 +81,7 @@ async def auto_arrange_furniture(request: TextRequest):
 @app.post("/edit_furniture")
 async def edit_furniture(item: FurnitureItem, modifications: Dict[str, Any]):
     try:
-        mesh = agents_service.edit_furniture(item, modifications)
+        mesh = obLLoMov.edit_furniture(item, modifications)
 
         edit_dir = Path("edited_models")
         edit_dir.mkdir(exist_ok=True)

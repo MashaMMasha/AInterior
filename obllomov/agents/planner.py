@@ -1,9 +1,9 @@
-from ml_api.db.furniture_db import FURNITURE_DB
-from ml_api.schema.dto import FurnitureItem
+from typing import Dict, List
 
-from typing import List, Dict
 import numpy as np
 
+from obllomov.db.furniture_db import FURNITURE_DB
+from obllomov.schema.dto import FurnitureItem
 
 
 class LayoutPlanner:
