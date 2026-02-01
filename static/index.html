@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #e0c3fc 0%, #d8b5ff 50%, #c9a9f5 100%);
+            background: #6D6943;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -21,15 +21,21 @@
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
+            background: #F4F3EE;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(72, 55, 47, 0.1);
+            border-bottom: 4px solid #C8A1B1;
         }
 
         .header h1 {
-            color: #333;
+            color: #48372F;
             font-size: 28px;
             margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #6D6943;
+            font-size: 14px;
         }
 
         .header p {
@@ -47,53 +53,68 @@
 
         .upload-panel {
             width: 320px;
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 12px;
             padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(72, 55, 47, 0.1);
             display: flex;
             flex-direction: column;
             gap: 15px;
             overflow: hidden;
+            border: 2px solid #C8A1B1;
         }
 
         .viewer-panel {
             flex: 1;
-            background: rgba(255, 255, 255, 0.95);
+            background: #F4F3EE;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(72, 55, 47, 0.1);
             position: relative;
+            border: 2px solid #C8A1B1;
         }
 
         .upload-area {
-            border: 2px dashed #d8b5ff;
+            border: 2px dashed #C8A1B1;
             border-radius: 8px;
             padding: 40px 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: #faf8ff;
+            background: #F4F3EE;
         }
 
         .upload-area:hover {
-            border-color: #c9a9f5;
-            background: #f5f0ff;
+            border-color: #6D6943;
+            background: #F4F3EE;
+            border-width: 2px;
+            border-style: solid;
         }
 
         .upload-area.dragging {
-            border-color: #c9a9f5;
-            background: #ede5ff;
+            border-color: #6D6943;
+            background: #F4F3EE;
             transform: scale(1.02);
+            border-width: 2px;
+            border-style: solid;
         }
 
         .upload-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-icon svg {
+            width: 100%;
+            height: 100%;
         }
 
         .upload-text {
-            color: #9d7bdb;
+            color: #48372F;
             font-weight: 600;
             margin-bottom: 5px;
         }
@@ -108,7 +129,7 @@
         }
 
         .btn {
-            background: linear-gradient(135deg, #e0c3fc 0%, #d8b5ff 50%, #c9a9f5 100%);
+            background: #C8A1B1;
             color: white;
             border: none;
             padding: 12px 24px;
@@ -116,10 +137,11 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-            transition: transform 0.2s ease;
+            transition: all 0.2s ease;
         }
 
         .btn:hover {
+            background: #6D6943;
             transform: translateY(-2px);
         }
 
@@ -140,40 +162,41 @@
         }
 
         .status.success {
-            background: #d4edda;
-            color: #155724;
+            background: #C8A1B1;
+            color: white;
             display: block;
         }
 
         .status.error {
-            background: #f8d7da;
-            color: #721c24;
+            background: #48372F;
+            color: white;
             display: block;
         }
 
         .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
+            background: #6D6943;
+            color: white;
             display: block;
         }
 
         .model-info {
-            background: #faf8ff;
+            background: #F4F3EE;
             border-radius: 8px;
             padding: 15px;
             font-size: 13px;
+            border: 1px solid #C8A1B1;
         }
 
         .model-info-item {
             display: flex;
             justify-content: space-between;
             margin-bottom: 8px;
-            color: #555;
+            color: #6D6943;
         }
 
         .model-info-label {
             font-weight: 600;
-            color: #333;
+            color: #48372F;
         }
 
         #viewer {
@@ -197,7 +220,7 @@
         .controls-hint strong {
             display: block;
             margin-bottom: 5px;
-            color: #d8b5ff;
+            color: #C8A1B1;
         }
 
         .loader {
@@ -212,7 +235,7 @@
 
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #d8b5ff;
+            border-top: 3px solid #C8A1B1;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -242,24 +265,25 @@
         }
 
         .models-list {
-            background: #faf8ff;
+            background: #F4F3EE;
             border-radius: 8px;
             padding: 15px;
             flex: 1;
             overflow-y: auto;
             min-height: 0;
+            border: 1px solid #C8A1B1;
         }
 
         .models-list-title {
             font-weight: 600;
-            color: #333;
+            color: #48372F;
             margin-bottom: 10px;
             font-size: 14px;
         }
 
         .model-item {
             background: white;
-            border: 1px solid #e0c3fc;
+            border: 1px solid #C8A1B1;
             border-radius: 6px;
             padding: 10px;
             margin-bottom: 8px;
@@ -268,14 +292,15 @@
         }
 
         .model-item:hover {
-            background: #f5f0ff;
-            border-color: #c9a9f5;
+            background: #F4F3EE;
+            border-color: #6D6943;
             transform: translateX(4px);
+            box-shadow: 0 2px 4px rgba(72, 55, 47, 0.1);
         }
 
         .model-item-name {
             font-size: 13px;
-            color: #333;
+            color: #48372F;
             font-weight: 500;
             margin-bottom: 4px;
             word-break: break-all;
@@ -298,12 +323,12 @@
         }
 
         .models-list::-webkit-scrollbar-thumb {
-            background: #d8b5ff;
+            background: #C8A1B1;
             border-radius: 3px;
         }
 
         .models-list::-webkit-scrollbar-thumb:hover {
-            background: #c9a9f5;
+            background: #6D6943;
         }
 
         .empty-list {
@@ -322,7 +347,11 @@
     <div class="container">
         <div class="upload-panel">
             <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📦</div>
+                <div class="upload-icon">
+                    <svg width="110" height="113" viewBox="0 0 110 113" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M106 52.5659L58.3748 101.591C41.5005 113.988 20.6152 108.251 13.6083 101.591C-1.60828 87.1274 3.09787 71.339 14.9102 57.2672L65.771 7.87136C73.9458 0.0358686 91.5592 5.53774 95.8412 11.5909C100.123 17.6441 102.752 24.3259 99.3827 31.8018C96.0132 39.2777 49.1054 85.0383 48.777 84.6915C42.3921 88.5 36.9647 91.6791 29.3133 87.0099C22.9509 80.7094 24.8972 73.6896 29.3133 67.8451L51.5019 46.6893" stroke="#6D6943" stroke-width="8" stroke-linecap="round"/>
+                    </svg>
+                </div>
                 <div class="upload-text">Перетащите файл сюда</div>
                 <div class="upload-hint">или нажмите для выбора</div>
                 <div class="upload-hint" style="margin-top: 10px;">Поддерживаются: GLB, GLTF, OBJ</div>
@@ -395,8 +424,8 @@
             const viewerPanel = canvas.parentElement;
 
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0);
-            scene.fog = new THREE.Fog(0xf0f0f0, 10, 50);
+            scene.background = new THREE.Color(0xF4F3EE);
+            scene.fog = new THREE.Fog(0xF4F3EE, 10, 50);
 
             camera = new THREE.PerspectiveCamera(
                 50,
