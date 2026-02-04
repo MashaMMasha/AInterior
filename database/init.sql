@@ -1,12 +1,6 @@
--- Создание схем для организации БД
 CREATE SCHEMA IF NOT EXISTS users;
 CREATE SCHEMA IF NOT EXISTS furniture;
 CREATE SCHEMA IF NOT EXISTS interior;
-
--- ============================================
--- СХЕМА: users
--- Управление пользователями и аутентификацией
--- ============================================
 
 CREATE TABLE IF NOT EXISTS users.users (
     id SERIAL PRIMARY KEY,
@@ -28,11 +22,6 @@ CREATE TABLE IF NOT EXISTS users.sessions (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- ============================================
--- СХЕМА: furniture
--- Каталог мебели и характеристик
--- ============================================
 
 CREATE TABLE IF NOT EXISTS furniture.catalog (
     id SERIAL PRIMARY KEY,
