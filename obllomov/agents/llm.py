@@ -1,21 +1,24 @@
 # from obllomov.db.furniture_db import FURNITURE_DB
-from typing import *
-
 import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import LLM, BaseChatModel
-from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
-                                     SystemMessage)
+from langchain_core.messages import (
+    AIMessage, BaseMessage, HumanMessage,SystemMessage
+    )
 from langchain_core.outputs import ChatGeneration, ChatResult
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+
 from pydantic import Field, model_validator
-from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from typing import *
 
 from obllomov.shared.log import logger
 
-# ObLLoMov
-MODEL_PATH="obllomov/models/qwen-7b-instruct"
-MAX_NEW_TOKENS=128
+# MODEL_PATH="obllomov/models/qwen-7b-instruct"
+
+MAX_NEW_TOKENS=2048
 
 
 class ChatQwen(BaseChatModel):
@@ -96,58 +99,14 @@ class ChatQwen(BaseChatModel):
 
         return ChatResult(generations=[generation])
     
+    # def parse_request()
+    
     @property
     def _llm_type(self) -> str:
         return "qwen"
 
-# class Qwen(LLM, ABC):
-#     tokenizer=AutoTokenizer.from_pretrained(MODEL_PATH)
-#     model=AutoModelForCausalLM.from_pretrained(
-#             MODEL_PATH,
-#             dtype=torch.float16,
-#             device_map="auto",
-#             attn_implementation="sdpa"
-#         )
-#     def __init__(self):
-#         super().__init__()
-         
-#         # self.tokenizer = AutoTokenizer.from_pretrained(
-#         #     model_path
-#         # )
 
-#         # self.model = AutoModelForCausalLM.from_pretrained(
-#         #     model_path,
-#         #     dtype=torch.float16,
-#         #     device_map="auto",
-#         #     attn_implementation="sdpa"
-#         # )
-
-#     @property
-#     def _llm_type(self) -> str:
-#         return "Qwen"
-
-#     @property
-#     def _history_len(self) -> int:
-#         return self.history_len
-
-#     def set_history_len(self, history_len: int = 10) -> None:
-#         self.history_len = history_len
-
-#     def _call(self, prompt, stop: Optional[List[str]] = None):
-#         input_tokens = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
-
-#         with torch.no_grad():
-#             output = self.model.generate(**input_tokens,
-#                                         cache_implementation="static",
-#                                         max_new_tokens=MAX_NEW_TOKENS,
-#                                         )
-
-#         logger.debug(output)
-
-#         return self.tokenizer.decode(output[0], skip_special_tokens=True)
-
-
-llm = ChatQwen(model_path=MODEL_PATH)
+# llm = ChatQwen(model_path=MODEL_PATH)
 
 # messages = [
 #     SystemMessage(content="Ты полезный ассистент."),

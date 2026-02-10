@@ -1,11 +1,14 @@
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import *
 
 import numpy as np
 import trimesh
 
+import os
+
+import compress_json
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import LLM, BaseChatModel
 from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
@@ -13,19 +16,60 @@ from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
 
-from obllomov.agents.generator import FurnitureGenerator, furniture_generator
-from obllomov.agents.llm import llm
-from obllomov.agents.planner import LayoutPlanner, layout_planner
+from sentence_transformers import SentenceTransformer
+import open_clip
+
+from obllomov.agents.llm import ChatQwen
 from obllomov.db.furniture_db import FURNITURE_DB
 from obllomov.schema.dto import FurnitureItem
 from obllomov.shared.log import logger
+from obllomov.shared.constants import LLM_MODEL_PATH, ABS_PATH_OF_HOLODECK
+from obllomov.agents.rooms import FloorPlanGenerator
 
 
 class ObLLoMov:
     def __init__(self):
-        self.llm: BaseChatModel = llm
-        self.furniture_generator = FurnitureGenerator()
-        self.layout_planner = LayoutPlanner()
+        self.llm: BaseChatModel = ChatQwen(model_path=LLM_MODEL_PATH)
+
+        self.sbert_model = SentenceTransformer("all-mpnet-base-v2", device="cpu")
+
+        (
+            self.clip_model,
+            _,
+            self.clip_preprocess,
+        ) = open_clip.create_model_and_transforms(
+            "ViT-L-14", pretrained="laion2b_s32b_b82k"
+        )
+        self.clip_tokenizer = open_clip.get_tokenizer("ViT-L-14")
+        
+
+        self.floor_generator = FloorPlanGenerator(
+            self.clip_model, self.clip_preprocess, self.clip_tokenizer, self.llm
+        )
+
+        self.additional_requirements_room = "N/A"
+
+    def get_empty_scene(self):
+        return compress_json.load(
+            os.path.join(ABS_PATH_OF_HOLODECK, "agents/empty_house.json")
+        )
+
+    def empty_house(self, scene):
+        scene["rooms"] = []
+        scene["walls"] = []
+        scene["doors"] = []
+        scene["windows"] = []
+        scene["objects"] = []
+        scene["proceduralParameters"]["lights"] = []
+        return scene
+    
+    def generate_rooms(self, scene, additional_requirements_room, used_assets=[]):
+        self.floor_generator.used_assets = used_assets
+        rooms = self.floor_generator.generate_rooms(scene, additional_requirements_room, visualize=True)
+        scene["rooms"] = rooms
+        return scene
+    
+
 
     def parse_request(self, request):
         prompt = ChatPromptTemplate.from_messages([
@@ -35,82 +79,49 @@ class ObLLoMov:
             ("user", "{question}")
         ])
 
-        chain = prompt | llm
+        chain = prompt | self.llm
 
         response = chain.invoke({
             "question": request,
         })
 
-        logger.debug(response)
-
         return response
-
     
-    def auto_arrange_furniture(self, query):
-        request = self.parse_request(query)
+    def generate_scene(
+        self,
+        scene,
+        query: str,
+        save_dir: str,
+        used_assets=[],
+        add_ceiling=False,
+        generate_image=True,
+        generate_video=False,
+        add_time=True,
+        use_constraint=True,
+        random_selection=False,
+        use_milp=False,
+    ) -> Tuple[Dict[str, Any], str]:
+        # initialize scene
+        query = query.replace("_", " ")
+        scene["query"] = query
 
-        placements =self.planner.calculate_optimal_placement(
-            room_dims=request.dimensions,
-            furniture_types=request["furniture"],
-            style=request["style"],
-            constraints=request.get("constraints", {})
+        # empty house
+        scene = self.empty_house(scene)
+
+        # generate rooms
+        scene = self.generate_rooms(
+            scene,
+            additional_requirements_room=self.additional_requirements_room,
+            used_assets=used_assets,
         )
-        
-        scene = self._create_complete_scene(request.dimensions, placements)
 
-        return scene
-    
-    def edit_furniture(item, modifications):
-        mesh = furniture_generator.create_mesh(item.type, item.scale, item.color)
-        
-        if "new_color" in modifications:
-            mesh.visual.vertex_colors = np.tile(modifications["new_color"], (len(mesh.vertices), 1))
-        
-        if "resize" in modifications:
-            scale = np.array(modifications["resize"])
-            mesh.apply_scale(scale)
 
-        return mesh
-        
+# if __name__ == "__main__":
+#     logger.debug("Init model")
+#     model = ObLLoMov()
 
-    def _create_complete_scene(self, room_dims, placements):
-        scene = trimesh.Scene()
-    
-        floor = trimesh.creation.box(extents=[room_dims[0], room_dims[1], 0.05])
-        floor.apply_translation([room_dims[0]/2, room_dims[1]/2, -0.025])
-        floor.visual.vertex_colors = [0.9, 0.9, 0.9, 1.0]
-        scene.add_geometry(floor, node_name="floor")
-        
-        wall_thickness = 0.1
-        wall_height = room_dims[2]
-        
-        walls = [
-            {"name": "wall_front", "pos": [room_dims[0]/2, 0, wall_height/2], "size": [room_dims[0], wall_thickness, wall_height]},
-            {"name": "wall_back", "pos": [room_dims[0]/2, room_dims[1], wall_height/2], "size": [room_dims[0], wall_thickness, wall_height]},
-            {"name": "wall_left", "pos": [0, room_dims[1]/2, wall_height/2], "size": [wall_thickness, room_dims[1], wall_height]},
-            {"name": "wall_right", "pos": [room_dims[0], room_dims[1]/2, wall_height/2], "size": [wall_thickness, room_dims[1], wall_height]},
-        ]
-        
-        for wall in walls:
-            wall_mesh = trimesh.creation.box(extents=wall["size"])
-            wall_mesh.apply_translation(wall["pos"])
-            wall_mesh.visual.vertex_colors = [0.95, 0.95, 0.9, 1.0]
-            scene.add_geometry(wall_mesh, node_name=wall["name"])
-        
-        for i, item in enumerate(placements):
-            mesh = furniture_generator.create_mesh(
-                item.type,
-                item.scale,
-                item.color
-            )
-            
-            transform = trimesh.transformations.compose_matrix(
-                translate=item.position,
-                angles=item.rotation
-            )
-            mesh.apply_transform(transform)
-            
-            scene.add_geometry(mesh, node_name=f"{item.type}_{i:02d}")
-        
-        return scene
+#     scene = model.get_empty_scene()
 
+
+#     logger.debug("Start generating")
+#     model.generate_scene(scene, "A lightful living room, small bedroom and tiny kitchen")
