@@ -19,17 +19,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from sentence_transformers import SentenceTransformer
 import open_clip
 
-from obllomov.agents.llm import ChatQwen
-from obllomov.db.furniture_db import FURNITURE_DB
-from obllomov.schema.dto import FurnitureItem
+
 from obllomov.shared.log import logger
-from obllomov.shared.constants import LLM_MODEL_PATH, ABS_PATH_OF_HOLODECK
-from obllomov.agents.rooms import FloorPlanGenerator
+from obllomov.shared.constants import ABS_PATH_OF_HOLODECK
+from obllomov.agents.planners.rooms import FloorPlanGenerator
 
 
 class ObLLoMov:
-    def __init__(self):
-        self.llm: BaseChatModel = ChatQwen(model_path=LLM_MODEL_PATH)
+    def __init__(self, llm: BaseChatModel):
+        self.llm: BaseChatModel = llm
 
         self.sbert_model = SentenceTransformer("all-mpnet-base-v2", device="cpu")
 
@@ -40,6 +38,7 @@ class ObLLoMov:
         ) = open_clip.create_model_and_transforms(
             "ViT-L-14", pretrained="laion2b_s32b_b82k"
         )
+
         self.clip_tokenizer = open_clip.get_tokenizer("ViT-L-14")
         
 

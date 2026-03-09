@@ -3,3 +3,4 @@ obllomov/models
 __pycache__/
 *.log
 *.db
+*.env
