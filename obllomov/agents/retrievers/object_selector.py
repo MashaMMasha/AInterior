@@ -12,19 +12,15 @@ from concurrent.futures import ThreadPoolExecutor
 import torch
 import torch.nn.functional as F
 from colorama import Fore
-# from langchain import PromptTemplate, OpenAI
-
-# from langchain_openai import ChatOpenAI
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import PromptTemplate
 from shapely import Polygon
 
 import obllomov.agents.prompts as prompts
-from generation.floor_objects import DFS_Solver_Floor
-from generation.objaverse_retriever import ObjathorRetriever
-from generation.utils import get_bbox_dims, get_annotations
-from generation.wall_objects import DFS_Solver_Wall
+from .dfs import DFS_Solver_Floor, DFS_Solver_Wall
+from .objaverse_retriever import ObjathorRetriever
+from obllomov.shared.utils import get_bbox_dims, get_annotations
 
 EXPECTED_OBJECT_ATTRIBUTES = [
     "description",
@@ -233,7 +229,7 @@ class ObjectSelector:
 
         result["floor"] = floor_objects
         result["wall"] = wall_objects
-        result["plan"] = new_plan
+        result["plan"] = plan_1
 
         return room_type, result
 

@@ -13,6 +13,7 @@ from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import LLM, BaseChatModel
 from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
                                      SystemMessage)
+
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -21,8 +22,12 @@ import open_clip
 
 
 from obllomov.shared.log import logger
+from obllomov.shared.time import NOW
 from obllomov.shared.constants import ABS_PATH_OF_HOLODECK
-from obllomov.agents.planners.rooms import FloorPlanGenerator
+
+from obllomov.agents.planners import (
+    FloorPlanGenerator, WallGenerator
+)
 
 
 class ObLLoMov:
@@ -46,6 +51,8 @@ class ObLLoMov:
             self.clip_model, self.clip_preprocess, self.clip_tokenizer, self.llm
         )
 
+        self.wall_generator = WallGenerator(self.llm)
+
         self.additional_requirements_room = "N/A"
 
     def get_empty_scene(self):
@@ -68,23 +75,51 @@ class ObLLoMov:
         scene["rooms"] = rooms
         return scene
     
+    def generate_walls(self, scene):
+        wall_height, walls = self.wall_generator.generate_walls(scene)
+        scene["wall_height"] = wall_height
+        scene["walls"] = walls
+        return scene
+    
 
+    # def parse_request(self, request):
+    #     prompt = ChatPromptTemplate.from_messages([
+    #         # SystemMessage("Ты профессиональный дизайнер интерьеров. Отвечай на вопросы кратко и по делу"),
+    #         ("system", "Ты профессиональный дизайнер интерьеров. Отвечай на вопросы кратко и по делу"),
+    #         # HumanMessage("{question}")
+    #         ("user", "{question}")
+    #     ])
 
-    def parse_request(self, request):
-        prompt = ChatPromptTemplate.from_messages([
-            # SystemMessage("Ты профессиональный дизайнер интерьеров. Отвечай на вопросы кратко и по делу"),
-            ("system", "Ты профессиональный дизайнер интерьеров. Отвечай на вопросы кратко и по делу"),
-            # HumanMessage("{question}")
-            ("user", "{question}")
-        ])
+    #     chain = prompt | self.llm
 
-        chain = prompt | self.llm
+    #     response = chain.invoke({
+    #         "question": request,
+    #     })
 
-        response = chain.invoke({
-            "question": request,
-        })
+    #     return response
+    
 
-        return response
+    def save_scene(self, scene, query, save_dir, add_time=True):
+        query_name = query.replace(" ", "_").replace("'", "")[:30]
+        create_time = (
+            str(NOW())
+            .replace(" ", "-")
+            .replace(":", "-")
+            .replace(".", "-")
+        )
+
+        if add_time:
+            folder_name = f"{query_name}-{create_time}"  # query name + time
+        else:
+            folder_name = query_name  # query name only
+
+        save_dir = os.path.abspath(os.path.join(save_dir, folder_name))
+        os.makedirs(save_dir, exist_ok=True)
+        compress_json.dump(
+            scene,
+            os.path.join(save_dir, f"{query_name}.json"),
+            json_kwargs=dict(indent=4),
+        )
     
     def generate_scene(
         self,
@@ -114,13 +149,7 @@ class ObLLoMov:
             used_assets=used_assets,
         )
 
+        # scene = self.generate_walls(scene)
 
-# if __name__ == "__main__":
-#     logger.debug("Init model")
-#     model = ObLLoMov()
-
-#     scene = model.get_empty_scene()
-
-
-#     logger.debug("Start generating")
-#     model.generate_scene(scene, "A lightful living room, small bedroom and tiny kitchen")
+        
+        self.save_scene(scene, query, save_dir, add_time)

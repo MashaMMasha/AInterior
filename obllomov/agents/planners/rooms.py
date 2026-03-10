@@ -19,9 +19,9 @@ from shapely.geometry import LineString, Point, Polygon
 from tqdm import tqdm
 
 import obllomov.agents.prompts as prompts
-from obllomov.shared.constants import HOLODECK_BASE_DATA_DIR, DEBUGGING
-
-DEBUGGING=True
+from obllomov.shared.constants import HOLODECK_BASE_DATA_DIR
+from obllomov.shared.env import env
+from obllomov.shared.log import logger
 
 
 class FloorPlanGenerator:
@@ -46,19 +46,15 @@ class FloorPlanGenerator:
         self.used_assets = []
 
     def generate_rooms(self, scene, additional_requirements="N/A", visualize=False):
-        # get floor plan if not provided
-        floor_plan_prompt = self.floor_plan_template.format(
-            input=scene["query"], additional_requirements=additional_requirements
-        )
-        if "raw_floor_plan" not in scene:
-            raw_floor_plan = self.llm.invoke(floor_plan_prompt).content
-            
-            scene["raw_floor_plan"] = raw_floor_plan
-        else:
-            raw_floor_plan = scene["raw_floor_plan"]
+        chain = self.floor_plan_template | self.llm
 
-        print(f"User: {floor_plan_prompt}\n")
-        print(f"{Fore.GREEN}AI: Here is the floor plan:\n{raw_floor_plan}{Fore.RESET}")
+        if "raw_floor_plan" not in scene:
+            scene["raw_floor_plan"] = chain.invoke({
+                "input":scene["query"],
+                "additional_requirements":additional_requirements
+            }).content
+
+        logger.info(f"{Fore.GREEN}AI: Here is the floor plan:\n{scene["raw_floor_plan"]}{Fore.RESET}")
 
         rooms = self.get_plan(scene["query"], scene["raw_floor_plan"], visualize)
         return rooms
@@ -130,12 +126,10 @@ class FloorPlanGenerator:
 
         valid, msg = self.check_validity(parsed_plan)
 
-
-
         if not valid:
-            print(f"{Fore.RED}AI: {msg}{Fore.RESET}")
+            logger.error(f"{Fore.RED}AI: {msg}{Fore.RESET}")
 
-            if DEBUGGING:
+            if env.LOG_LEVEL == "DEBUG":
                 import matplotlib.pyplot as plt
                 import numpy as np
 
@@ -149,7 +143,7 @@ class FloorPlanGenerator:
 
             raise ValueError(msg)
         else:
-            print(f"{Fore.GREEN}AI: {msg}{Fore.RESET}")
+            logger.info(f"{Fore.GREEN}AI: {msg}{Fore.RESET}")
             return parsed_plan
 
     def vertices2xyz(self, vertices):
@@ -379,7 +373,7 @@ class MaterialSelector:
                 )
             )
         except:
-            print("Precompute image features for materials...")
+            logger.debug("Precompute image features for materials...")
             self.material_feature_clip = []
             for material in tqdm(self.selected_materials):
                 image = self.preprocess(
@@ -406,7 +400,7 @@ class MaterialSelector:
                 os.path.join(HOLODECK_BASE_DATA_DIR, "materials/color_feature_clip.pkl")
             )
         except:
-            print("Precompute text features for colors...")
+            logger.debug("Precompute text features for colors...")
             with torch.no_grad():
                 self.color_feature_clip = self.clip_model.encode_text(
                     self.clip_tokenizer(self.colors)

@@ -11,12 +11,7 @@ from obllomov.db.furniture_db import FURNITURE_DB
 from obllomov.schema.dto import *
 from obllomov.services.obllomov import ObLLoMov
 from obllomov.agents.llms import ChatYandexQwen
-
-
-from os import getenv
-from dotenv import load_dotenv
-
-load_dotenv()
+from obllomov.shared.env import env
 
 
 app = FastAPI(
@@ -25,10 +20,10 @@ app = FastAPI(
 )
 
 llm = ChatYandexQwen(
-    api_key=getenv("YANDEX_CLOUD_API_KEY"),
+    api_key=env.YANDEX_CLOUD_API_KEY,
     base_url="https://ai.api.cloud.yandex.net/v1",
-    project=getenv("YANDEX_CLOUD_FOLDER"),
-    model_name=getenv("YANDEX_CLOUD_MODEL")
+    project=env.YANDEX_CLOUD_FOLDER,
+    model_name=env.YANDEX_CLOUD_MODEL
 )
 
 obLLoMov = ObLLoMov(llm)
