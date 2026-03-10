@@ -16,8 +16,12 @@ from moviepy import (
 )
 from tqdm import tqdm
 
-from constants import HOLODECK_BASE_DATA_DIR, THOR_COMMIT_ID
+from obllomov.shared.path import HOLODECK_BASE_DATA_DIR, ASSETS_VERSION
 
+if ASSETS_VERSION > "2023_09_23":
+    THOR_COMMIT_ID = "8524eadda94df0ab2dbb2ef5a577e4d37c712897"
+else:
+    THOR_COMMIT_ID = "3213d486cd09bcbafce33561997355983bdf8d1a"
 
 def all_edges_white(img):
     # Define a white pixel

@@ -1,7 +1,8 @@
 from obllomov.services.obllomov import ObLLoMov
 from obllomov.shared.log import logger
 from obllomov.shared.env import env
-from obllomov.agents.llms import ChatYandexQwen
+from obllomov.agents.llms import ChatYandexQwen, MockChat
+from obllomov.storage.assets import LocalAssets
 import argparse
 
 logger.info("Parsing args")
@@ -14,14 +15,18 @@ args = parser.parse_args()
 
 logger.info("Init model")
 
-llm = ChatYandexQwen(
-    api_key=env.YANDEX_CLOUD_API_KEY,
-    base_url="https://ai.api.cloud.yandex.net/v1",
-    project=env.YANDEX_CLOUD_FOLDER,
-    model_name=env.YANDEX_CLOUD_MODEL
-)
+# llm = ChatYandexQwen(
+#     api_key=env.YANDEX_CLOUD_API_KEY,
+#     base_url="https://ai.api.cloud.yandex.net/v1",
+#     project=env.YANDEX_CLOUD_FOLDER,
+#     model_name=env.YANDEX_CLOUD_MODEL
+# )
 
-model = ObLLoMov(llm)
+llm = MockChat()
+
+assets = LocalAssets()
+
+model = ObLLoMov(llm, assets)
 
 scene = model.get_empty_scene()
 

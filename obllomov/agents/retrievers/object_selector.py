@@ -36,7 +36,7 @@ class ObjectSelector:
     def __init__(self, object_retriever: ObjathorRetriever, llm: BaseChatModel):
         # object retriever
         self.object_retriever = object_retriever
-        self.database = object_retriever.database
+        self.annotations = object_retriever.annotations
 
         # language model and prompt templates
         self.llm = llm
@@ -432,7 +432,7 @@ class ObjectSelector:
                 for candidate, annotation in zip(
                     candidates,
                     [
-                        get_annotations(self.database[candidate[0]])
+                        get_annotations(self.annotations[candidate[0]])
                         for candidate in candidates
                     ],
                 )
@@ -511,7 +511,7 @@ class ObjectSelector:
             for object_name, selected_asset_id in selected_floor_objects_all:
                 if selected_asset_id not in current_selected_asset_ids:
                     selected_asset_size = get_bbox_dims(
-                        self.database[selected_asset_id]
+                        self.annotations[selected_asset_id]
                     )
                     selected_asset_capacity = (
                         selected_asset_size["x"] * selected_asset_size["z"]
@@ -571,7 +571,7 @@ class ObjectSelector:
             candidates = [
                 candidate
                 for candidate in candidates
-                if get_annotations(self.database[candidate[0]])["onWall"] == True
+                if get_annotations(self.annotations[candidate[0]])["onWall"] == True
             ]  # only select objects on the wall
 
             # ignore doors and windows
@@ -579,13 +579,13 @@ class ObjectSelector:
                 candidate
                 for candidate in candidates
                 if "door"
-                not in get_annotations(self.database[candidate[0]])["category"].lower()
+                not in get_annotations(self.annotations[candidate[0]])["category"].lower()
             ]
             candidates = [
                 candidate
                 for candidate in candidates
                 if "window"
-                not in get_annotations(self.database[candidate[0]])["category"].lower()
+                not in get_annotations(self.annotations[candidate[0]])["category"].lower()
             ]
 
             # check if the object is too big
@@ -655,7 +655,7 @@ class ObjectSelector:
             for object_name, selected_asset_id in selected_wall_objects_all:
                 if selected_asset_id not in current_selected_asset_ids:
                     selected_asset_size = get_bbox_dims(
-                        self.database[selected_asset_id]
+                        self.annotations[selected_asset_id]
                     )
                     selected_asset_capacity = selected_asset_size["x"]
                     if (
@@ -696,7 +696,7 @@ class ObjectSelector:
     def check_object_size(self, candidates, room_size):
         valid_candidates = []
         for candidate in candidates:
-            dimension = get_bbox_dims(self.database[candidate[0]])
+            dimension = get_bbox_dims(self.annotations[candidate[0]])
             size = [dimension["x"], dimension["y"], dimension["z"]]
             if size[2] > size[0]:
                 size = [size[2], size[1], size[0]]  # make sure that x > z
@@ -717,7 +717,7 @@ class ObjectSelector:
     def check_thin_object(self, candidates):
         valid_candidates = []
         for candidate in candidates:
-            dimension = get_bbox_dims(self.database[candidate[0]])
+            dimension = get_bbox_dims(self.annotations[candidate[0]])
             size = [dimension["x"], dimension["y"], dimension["z"]]
             if size[2] > min(size[0], size[1]) * self.thin_threshold:
                 continue
@@ -805,7 +805,7 @@ class ObjectSelector:
 
         valid_candidates = []
         for candidate in candidates:
-            object_size = get_bbox_dims(self.database[candidate[0]])
+            object_size = get_bbox_dims(self.annotations[candidate[0]])
             object_dim = (
                 object_size["x"] * 100 + self.size_buffer,
                 object_size["z"] * 100 + self.size_buffer,
@@ -842,7 +842,7 @@ class ObjectSelector:
 
         valid_candidates = []
         for candidate in candidates:
-            object_size = get_bbox_dims(self.database[candidate[0]])
+            object_size = get_bbox_dims(self.annotations[candidate[0]])
             object_dim = (
                 object_size["x"] * 100,
                 object_size["y"] * 100,

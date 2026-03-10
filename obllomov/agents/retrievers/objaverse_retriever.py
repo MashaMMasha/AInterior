@@ -6,13 +6,14 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from obllomov.shared.constants import (
+from obllomov.shared.path import (
     OBJATHOR_ANNOTATIONS_PATH,
     HOLODECK_THOR_ANNOTATIONS_PATH,
     OBJATHOR_FEATURES_DIR,
     HOLODECK_THOR_FEATURES_DIR,
 )
 from obllomov.shared.utils import get_bbox_dims
+from obllomov.storage.assets import BaseAssets
 
 
 class ObjathorRetriever:
@@ -23,16 +24,18 @@ class ObjathorRetriever:
         clip_tokenizer,
         sbert_model,
         retrieval_threshold,
+        assets: BaseAssets,
     ):
-        objathor_annotations = compress_json.load(OBJATHOR_ANNOTATIONS_PATH)
-        thor_annotations = compress_json.load(HOLODECK_THOR_ANNOTATIONS_PATH)
-        self.database = {**objathor_annotations, **thor_annotations}
+        self.assets = assets
+        objathor_annotations = self.assets.read_json(OBJATHOR_ANNOTATIONS_PATH)
+        thor_annotations = self.assets.read_json(HOLODECK_THOR_ANNOTATIONS_PATH)
+        self.annotations = {**objathor_annotations, **thor_annotations}
 
-        objathor_clip_features_dict = compress_pickle.load(
-            os.path.join(OBJATHOR_FEATURES_DIR, f"clip_features.pkl")
+        objathor_clip_features_dict = self.assets.read_pickle(
+            OBJATHOR_FEATURES_DIR / "clip_features.pkl"
         )  # clip features
-        objathor_sbert_features_dict = compress_pickle.load(
-            os.path.join(OBJATHOR_FEATURES_DIR, f"sbert_features.pkl")
+        objathor_sbert_features_dict = self.assets.read_pickle(
+            OBJATHOR_FEATURES_DIR / "sbert_features.pkl"
         )  # sbert features
         assert (
             objathor_clip_features_dict["uids"] == objathor_sbert_features_dict["uids"]
@@ -46,11 +49,11 @@ class ObjathorRetriever:
             np.float32
         )
 
-        thor_clip_features_dict = compress_pickle.load(
-            os.path.join(HOLODECK_THOR_FEATURES_DIR, "clip_features.pkl")
+        thor_clip_features_dict = self.assets.read_pickle(
+            HOLODECK_THOR_FEATURES_DIR / "clip_features.pkl"
         )  # clip features
-        thor_sbert_features_dict = compress_pickle.load(
-            os.path.join(HOLODECK_THOR_FEATURES_DIR, "sbert_features.pkl")
+        thor_sbert_features_dict = self.assets.read_pickle(
+            HOLODECK_THOR_FEATURES_DIR / "sbert_features.pkl"
         )  # clip features
         assert thor_clip_features_dict["uids"] == thor_sbert_features_dict["uids"]
 
@@ -118,7 +121,7 @@ class ObjathorRetriever:
     def compute_size_difference(self, target_size, candidates):
         candidate_sizes = []
         for uid, _ in candidates:
-            size = get_bbox_dims(self.database[uid])
+            size = get_bbox_dims(self.annotations[uid])
             size_list = [size["x"] * 100, size["y"] * 100, size["z"] * 100]
             size_list.sort()
             candidate_sizes.append(size_list)

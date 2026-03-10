@@ -23,16 +23,19 @@ import open_clip
 
 from obllomov.shared.log import logger
 from obllomov.shared.time import NOW
-from obllomov.shared.constants import ABS_PATH_OF_HOLODECK
+from obllomov.shared.path import ABS_ROOT_PATH
 
 from obllomov.agents.planners import (
-    FloorPlanGenerator, WallGenerator
+    FloorPlanGenerator, WallGenerator, FloorPlanner
 )
+
+from obllomov.storage.assets import BaseAssets
 
 
 class ObLLoMov:
-    def __init__(self, llm: BaseChatModel):
-        self.llm: BaseChatModel = llm
+    def __init__(self, llm: BaseChatModel, assets: BaseAssets):
+        self.llm = llm
+        self.assets = assets
 
         self.sbert_model = SentenceTransformer("all-mpnet-base-v2", device="cpu")
 
@@ -48,16 +51,23 @@ class ObLLoMov:
         
 
         self.floor_generator = FloorPlanGenerator(
-            self.clip_model, self.clip_preprocess, self.clip_tokenizer, self.llm
+            self.clip_model, self.clip_preprocess, self.clip_tokenizer, 
+            self.llm, self.assets
         )
 
-        self.wall_generator = WallGenerator(self.llm)
+        self.floor_planner = FloorPlanner(
+            self.clip_model, self.clip_preprocess, self.clip_tokenizer, 
+            self.llm, self.assets
+        )
+
+        # self.wall_generator = WallGenerator(self.llm, )
 
         self.additional_requirements_room = "N/A"
 
     def get_empty_scene(self):
+        # return self.assets.read_json("agents/empty_house.json")
         return compress_json.load(
-            os.path.join(ABS_PATH_OF_HOLODECK, "agents/empty_house.json")
+            os.path.join(ABS_ROOT_PATH, "agents/empty_house.json")
         )
 
     def empty_house(self, scene):
@@ -72,6 +82,12 @@ class ObLLoMov:
     def generate_rooms(self, scene, additional_requirements_room, used_assets=[]):
         self.floor_generator.used_assets = used_assets
         rooms = self.floor_generator.generate_rooms(scene, additional_requirements_room, visualize=True)
+        scene["rooms"] = rooms
+        return scene
+    
+    def plan_rooms(self, scene, additional_requirements_room, used_assets=[]):
+        self.floor_planner.used_assets = used_assets
+        rooms = self.floor_planner.plan(scene, additional_requirements_room)
         scene["rooms"] = rooms
         return scene
     
@@ -143,11 +159,15 @@ class ObLLoMov:
         scene = self.empty_house(scene)
 
         # generate rooms
-        scene = self.generate_rooms(
-            scene,
+        # scene = self.generate_rooms(
+        #     scene,
+        #     additional_requirements_room=self.additional_requirements_room,
+        #     used_assets=used_assets,
+        # )
+
+        scene = self.plan_rooms(scene,
             additional_requirements_room=self.additional_requirements_room,
-            used_assets=used_assets,
-        )
+            used_assets=used_assets)
 
         # scene = self.generate_walls(scene)
 

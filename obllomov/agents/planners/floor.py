@@ -23,8 +23,10 @@ from obllomov.storage.assets.base import BaseAssets
 
 from obllomov.shared.path import HOLODECK_MATERIALS_DIR
 
+from .base import BasePlanner
 
-class FloorPlanGenerator:
+
+class FloorPlanner(BasePlanner):
     def __init__(self, clip_model, clip_process, clip_tokenizer, llm: BaseChatModel, assets: BaseAssets):
         self.json_template = {
             "ceilings": [],
@@ -46,14 +48,19 @@ class FloorPlanGenerator:
         self.assets = assets
         self.used_assets = []
 
-    def generate_rooms(self, scene, additional_requirements="N/A", visualize=False):
-        chain = self.floor_plan_template | self.llm
+    def plan(self, scene, additional_requirements="N/A", visualize=False):
+        # chain = self.floor_plan_template | self.llm
 
         if "raw_floor_plan" not in scene:
-            scene["raw_floor_plan"] = chain.invoke({
+            scene["raw_floor_plan"] = self._raw_plan(self.floor_plan_template, {
                 "input": scene["query"],
                 "additional_requirements": additional_requirements
-            }).content
+            })
+            
+            # chain.invoke({
+            #     "input": scene["query"],
+            #     "additional_requirements": additional_requirements
+            # }).content
 
         logger.info(f"{Fore.GREEN}AI: Here is the floor plan:\n{scene['raw_floor_plan']}{Fore.RESET}")
 
