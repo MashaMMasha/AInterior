@@ -1,17 +1,11 @@
-import os
-
-import compress_json
-import compress_pickle
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-from obllomov.shared.path import (
-    OBJATHOR_ANNOTATIONS_PATH,
-    HOLODECK_THOR_ANNOTATIONS_PATH,
-    OBJATHOR_FEATURES_DIR,
-    HOLODECK_THOR_FEATURES_DIR,
-)
+from obllomov.shared.path import (HOLODECK_THOR_ANNOTATIONS_PATH,
+                                  HOLODECK_THOR_FEATURES_DIR,
+                                  OBJATHOR_ANNOTATIONS_PATH,
+                                  OBJATHOR_FEATURES_DIR)
 from obllomov.shared.utils import get_bbox_dims
 from obllomov.storage.assets import BaseAssets
 

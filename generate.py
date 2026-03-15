@@ -1,9 +1,10 @@
-from obllomov.services.obllomov import ObLLoMov
-from obllomov.shared.log import logger
-from obllomov.shared.env import env
-from obllomov.agents.llms import ChatYandexQwen, MockChat
-from obllomov.storage.assets import LocalAssets
 import argparse
+
+from obllomov.agents.llms import ChatMock, ChatYandexQwen
+from obllomov.services.obllomov import ObLLoMov
+from obllomov.shared.env import env
+from obllomov.shared.log import logger
+from obllomov.storage.assets import LocalAssets, S3Assets
 
 logger.info("Parsing args")
 
@@ -22,9 +23,9 @@ logger.info("Init model")
 #     model_name=env.YANDEX_CLOUD_MODEL
 # )
 
-llm = MockChat()
+llm = ChatMock()
 
-assets = LocalAssets()
+assets = S3Assets()
 
 model = ObLLoMov(llm, assets)
 

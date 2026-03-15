@@ -7,24 +7,26 @@ from typing import Iterator, Optional
 import boto3
 from botocore.exceptions import ClientError
 
-from .base import BaseAssets
 from obllomov.shared.env import env
+from obllomov.shared.log import logger
+
+from .base import BaseAssets
 
 
 class S3Assets(BaseAssets):
     def __init__(
         self,
-        bucket_name: Optional[str] = env.S3_BUCKET_NAME,
-        key_prefix: str = env.S3_KEY_PREFIX,
-        aws_access_key_id: Optional[str] = env.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key: Optional[str] = env.AWS_SECRET_ACCESS_KEY,
-        endpoint_url: Optional[str] = env.S3_ENDPOINT_URL,
-        region_name: Optional[str] = env.AWS_DEFAULT_REGION,
+        bucket_name: Optional[str] = None,       
+        key_prefix: Optional[str] = None,         
+        aws_access_key_id: Optional[str] = None,  
+        aws_secret_access_key: Optional[str] = None,
+        endpoint_url: Optional[str] = None,
+        region_name: Optional[str] = None,
         local_cache_dir: Optional[str] = None,
     ) -> None:
-        self.bucket_name: str = bucket_name
-
-        self.key_prefix: str = key_prefix.rstrip("/")
+        self.bucket_name = bucket_name or env.S3_BUCKET_NAME
+        key_prefix = key_prefix if key_prefix is not None else env.S3_KEY_PREFIX
+        self.key_prefix = key_prefix.rstrip("/")
 
         if local_cache_dir is None:
             local_cache_dir = os.path.join(tempfile.gettempdir(), "s3_assets_cache")
@@ -37,10 +39,10 @@ class S3Assets(BaseAssets):
         session = boto3.session.Session()
         self._s3 = session.client(
             service_name="s3",
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            endpoint_url=endpoint_url,
-            region_name=region_name,
+            aws_access_key_id=aws_access_key_id or env.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=aws_secret_access_key or env.AWS_SECRET_ACCESS_KEY,
+            endpoint_url=endpoint_url or env.S3_ENDPOINT_URL,
+            region_name=region_name or env.AWS_DEFAULT_REGION,
         )
 
 
@@ -98,6 +100,7 @@ class S3Assets(BaseAssets):
             Bucket=self.bucket_name,
             Key=self._s3_key(relative_path),
         )
+        logger.debug("read bytes")
         return response["Body"].read()
 
     def write_bytes(self, relative_path: Path | str, data: bytes) -> None:

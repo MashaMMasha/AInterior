@@ -6,32 +6,34 @@ from colorama import Fore
 # from langchain_openai import ChatOpenAI
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import PromptTemplate
-from shapely.geometry import LineString, Polygon, Point
+from shapely.geometry import LineString, Point, Polygon
 
 import obllomov.agents.prompts as prompts
+from obllomov.storage.assets import BaseAssets
+
+from .base import BasePlanner
 
 
-
-class WallGenerator:
+class WallPlanner(BasePlanner):
     def __init__(self, llm: BaseChatModel):
+        super().__init__(llm)
+
         self.json_template = {
             "id": None,
             "roomId": None,
             "material": {"name": None, "color": None},
             "polygon": [],
         }
-        self.llm = llm
-        self.wall_height_template = PromptTemplate(
-            input_variables=["input"], template=prompts.wall_height_prompt
-        )
-        self.used_assets = []
 
-    def generate_walls(self, scene):
-        # get wall height
-        if "wall_height" not in scene:
-            wall_height = self.get_wall_height(scene)
-        else:
-            wall_height = scene["wall_height"]
+
+    def plan(self, scene):
+        self._raw_plan(scene, prompts.wall_height_prompt, 
+                       cache_key="raw_wall_height",
+                       input_variables={
+                           "input": scene["query"],
+                       })
+        
+        wall_height = self.get_wall_height(scene)
 
         walls = []
         rooms = scene["rooms"]
@@ -101,29 +103,25 @@ class WallGenerator:
         return wall_height, walls
 
     def get_wall_height(self, scene):
-        # get wall height
-        # wall_height_prompt = self.wall_height_template.format(input=scene["query"])
+        if "wall_height" in scene:
+            return  scene["wall_height"]
+        
+        raw_wall_height = scene["raw_wall_height"].split("\n")[0].strip()
 
-        if "wall_height" not in scene:
-            chain = self.wall_height_template | self.llm
+        try:
+            wall_height = float(raw_wall_height)
+        except:
+            wall_height = round(
+                random.uniform(2.5, 4.5), 1
+            )  # if failed, random height between 2.5 and 4.5
 
-            wall_height = chain.invoke({"input": scene["query"]}).content.split("\n")[0].strip()
-            # wall_height = self.llm.invoke(wall_height_prompt).content.split("\n")[0].strip()
-
-            try:
-                wall_height = float(wall_height)
-            except:
-                wall_height = round(
-                    random.uniform(2.5, 4.5), 1
-                )  # if failed, random height between 2.5 and 4.5
-
-            scene["wall_height"] = min(
-                max(wall_height, 2.0), 4.5
-            )  # limit the wall height between 2.0 and 4.5
+        scene["wall_height"] = min(
+            max(wall_height, 2.0), 4.5
+        )  # limit the wall height between 2.0 and 4.5
 
         wall_height = scene["wall_height"]
-        # print(f"\nUser: {wall_height_prompt}\n")
-        print(f"{Fore.GREEN}AI: The wall height is {wall_height}{Fore.RESET}")
+
+        self._log(wall_height, "AI: The wall height is")
 
         return wall_height
 
@@ -311,3 +309,4 @@ class WallGenerator:
         ]
 
         return top_rectangle, bottom_rectangle
+

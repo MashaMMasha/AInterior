@@ -6,10 +6,9 @@ from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatResult
 
 import obllomov.agents.prompts as prompts
+
 from .base import format_chat_result
 
-
-# Уникальные подстроки из каждого промпта в prompts.py
 PROMPT_SIGNATURES: dict[str, str] = {
     "floor_plan":              "crafting a floor plan",
     "wall_height":             "decide the wall height in meters",
@@ -189,7 +188,7 @@ Here is my high-level design strategy: place large anchor pieces first, then acc
 }
 
 
-class MockChat(BaseChatModel):
+class ChatMock(BaseChatModel):
     def _detect_prompt_type(self, content: str) -> str:
         content_lower = content.lower()
         for prompt_type, signature in PROMPT_SIGNATURES.items():
@@ -204,9 +203,7 @@ class MockChat(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> ChatResult:
-        full_content = " ".join(
-            msg.content for msg in messages if hasattr(msg, "content")
-        )
+        full_content = " ".join(msg.content for msg in messages)
         prompt_type = self._detect_prompt_type(full_content)
         return format_chat_result(MOCK_RESPONSES[prompt_type])
 

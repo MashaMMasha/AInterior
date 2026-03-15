@@ -1,9 +1,7 @@
 from typing import *
 
-from langchain_core.messages import (
-    AIMessage, BaseMessage, HumanMessage,SystemMessage
-    )
-
+from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
+                                     SystemMessage)
 from langchain_core.outputs import ChatGeneration, ChatResult
 
 from obllomov.shared.log import logger

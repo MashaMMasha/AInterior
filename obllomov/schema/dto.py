@@ -1,11 +1,8 @@
 from typing import *
-
-from pydantic import BaseModel, Field
-
-from langchain_core.messages import BaseMessage
-
 from uuid import UUID
 
+from langchain_core.messages import BaseMessage
+from pydantic import BaseModel, Field
 
 
 class TextRequest(BaseModel):

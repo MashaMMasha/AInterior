@@ -5,22 +5,21 @@ import multiprocessing
 import random
 import re
 import traceback
-from typing import Dict, List
-
 from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
 from colorama import Fore
-
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import PromptTemplate
 from shapely import Polygon
 
 import obllomov.agents.prompts as prompts
+from obllomov.shared.utils import get_annotations, get_bbox_dims
+
 from .dfs import DFS_Solver_Floor, DFS_Solver_Wall
 from .objaverse_retriever import ObjathorRetriever
-from obllomov.shared.utils import get_bbox_dims, get_annotations
 
 EXPECTED_OBJECT_ATTRIBUTES = [
     "description",

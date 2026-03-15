@@ -1,22 +1,18 @@
 import copy
 import os
 from argparse import ArgumentParser
-from typing import Dict, Any
+from typing import Any, Dict
 
 import compress_json
 import numpy as np
-from PIL import Image
 from ai2thor.controller import Controller
 from ai2thor.hooks.procedural_asset_hook import ProceduralAssetHookRunner
-from moviepy import (
-    TextClip,
-    CompositeVideoClip,
-    concatenate_videoclips,
-    ImageSequenceClip,
-)
+from moviepy import (CompositeVideoClip, ImageSequenceClip, TextClip,
+                     concatenate_videoclips)
+from PIL import Image
 from tqdm import tqdm
 
-from obllomov.shared.path import HOLODECK_BASE_DATA_DIR, ASSETS_VERSION
+from obllomov.shared.path import ASSETS_VERSION, HOLODECK_BASE_DATA_DIR
 
 if ASSETS_VERSION > "2023_09_23":
     THOR_COMMIT_ID = "8524eadda94df0ab2dbb2ef5a577e4d37c712897"

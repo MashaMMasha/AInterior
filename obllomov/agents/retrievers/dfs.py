@@ -4,14 +4,13 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from rtree import index
-
 from scipy.interpolate import interp1d
-from shapely.geometry import Polygon, Point, box, LineString
+from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import substring
 
 from obllomov.shared.time import NOW
+
 
 class SolutionFound(Exception):
     def __init__(self, solution):

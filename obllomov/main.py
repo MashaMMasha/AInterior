@@ -7,12 +7,10 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from obllomov.db.furniture_db import FURNITURE_DB
+from obllomov.agents.llms import ChatYandexQwen
 from obllomov.schema.dto import *
 from obllomov.services.obllomov import ObLLoMov
-from obllomov.agents.llms import ChatYandexQwen
 from obllomov.shared.env import env
-
 
 app = FastAPI(
     title="AInterior ML Agents API",

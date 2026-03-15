@@ -1,14 +1,11 @@
-from obllomov.shared.time import NOW
-
-from typing import List, Optional
-
-
 import enum
+from typing import List, Optional
+from uuid import UUID
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, Enum
+from sqlalchemy import Column, DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from uuid import UUID
+from obllomov.shared.time import NOW
 
 
 class Base(DeclarativeBase):

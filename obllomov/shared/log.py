@@ -1,18 +1,19 @@
 import logging
-# import os
-# from .env import env
+from typing import *
 
 
-logging.basicConfig(
-    # level=env.LOG_LEVEL,
-    
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('obllmov.log', mode='w'),
-        logging.StreamHandler() 
-    ]
-)
+def configure_logging(level: str | Any = "DEBUG") -> None:
+    handlers = [
+        logging.StreamHandler(),
+        logging.FileHandler("obllmov.log", mode='w')
+        ]
 
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+
+configure_logging()
 
 logger = logging.getLogger(__name__)

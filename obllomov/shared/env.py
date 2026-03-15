@@ -1,20 +1,21 @@
 from pathlib import Path
 from typing import Optional
+from warnings import warn
 
 from dotenv import load_dotenv
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from warnings import warn
-
-from .log import logger
+from .log import configure_logging, logger
 
 env_path = Path(__file__).resolve().parents[1] / ".env"
 load_dotenv(env_path)
 
 
 class EnvConfig(BaseSettings):
+    LOG_LEVEL: str = "DEBUG"
     HF_TOKEN: Optional[str] = None
+    
     YANDEX_CLOUD_FOLDER: Optional[str] = None
     YANDEX_CLOUD_API_KEY: Optional[str] = None
     YANDEX_CLOUD_MODEL: Optional[str] = None
@@ -32,6 +33,8 @@ class EnvConfig(BaseSettings):
 
     @model_validator(mode="after")
     def validate_database_config(self):
+        configure_logging(level=self.LOG_LEVEL)
+        
         for env_var, env_value in vars(self).items():
             if env_value is None:
                 logger.warning(f"{env_var} is not set")

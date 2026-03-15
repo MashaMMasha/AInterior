@@ -1,3 +1,3 @@
 from .hf_qwen import ChatHFQwen
-from .yandex_qwen import ChatYandexQwen
-from .mock import MockChat
+from .mock import ChatMock
+from .ya_qwen import ChatYandexQwen

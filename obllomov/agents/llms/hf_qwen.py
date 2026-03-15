@@ -1,26 +1,26 @@
 # from obllomov.db.furniture_db import FURNITURE_DB
+import os
 from typing import *
 
 import torch
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import (
-    AIMessage, BaseMessage, HumanMessage,SystemMessage
-    )
+from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
+                                     SystemMessage)
 from langchain_core.outputs import ChatGeneration, ChatResult
-
 from openai import OpenAI
-
-# from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-
 # from langchain_core.prompts import ChatPromptTemplate
 from pydantic import Field, model_validator
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import os
 
 from obllomov.shared.log import logger
 
 from .base import *
+
+# from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+
+
+
 
 
 

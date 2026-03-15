@@ -3,16 +3,15 @@ from typing import *
 
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import (
-    AIMessage, BaseMessage, HumanMessage,SystemMessage
-    )
+from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
+                                     SystemMessage)
 from langchain_core.outputs import ChatGeneration, ChatResult
-
 from openai import OpenAI
-
+from openai.types import Completion
 from pydantic import Field, model_validator
 
 from .base import *
+
 
 class ChatYandexQwen(BaseChatModel):
     api_key: str
@@ -49,13 +48,14 @@ class ChatYandexQwen(BaseChatModel):
 
         formatted_messages = format_messages(messages)
 
-        response = self.client.chat.completions.create(
+        response: Completion = self.client.chat.completions.create(
             model=f"gpt://{self.project}/{self.model_name}",
             messages=formatted_messages,
             max_tokens=self.max_new_tokens,
             temperature=self.temperature,
             stream=False,
         )
+
 
         return format_chat_result(response.choices[0].message.content)
     

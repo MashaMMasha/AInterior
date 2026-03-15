@@ -257,8 +257,1211 @@
             }
         }
     ],
-    "walls": [],
+    "walls": [
+        {
+            "id": "wall|living room|west|0|exterior",
+            "roomId": "living room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 8.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 8.0,
+            "height": 3.0,
+            "direction": "west",
+            "segment": [
+                [
+                    0.0,
+                    8.0
+                ],
+                [
+                    0.0,
+                    0.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|living room|west|0",
+            "roomId": "living room",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 8.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 8.0,
+            "height": 3.0,
+            "direction": "west",
+            "segment": [
+                [
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    8.0
+                ]
+            ],
+            "connect_exterior": "wall|living room|west|0|exterior"
+        },
+        {
+            "id": "wall|living room|north|1|exterior",
+            "roomId": "living room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 8.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 8.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 6.0,
+            "height": 3.0,
+            "direction": "north",
+            "segment": [
+                [
+                    6.0,
+                    8.0
+                ],
+                [
+                    0.0,
+                    8.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|living room|north|1",
+            "roomId": "living room",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 8.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 8.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 6.0,
+            "height": 3.0,
+            "direction": "north",
+            "segment": [
+                [
+                    0.0,
+                    8.0
+                ],
+                [
+                    6.0,
+                    8.0
+                ]
+            ],
+            "connect_exterior": "wall|living room|north|1|exterior"
+        },
+        {
+            "id": "wall|living room|east|2|exterior",
+            "roomId": "living room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 8.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    6.0,
+                    6.0
+                ],
+                [
+                    6.0,
+                    8.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|living room|east|2",
+            "roomId": "living room",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 8.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 8.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 6.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    6.0,
+                    8.0
+                ],
+                [
+                    6.0,
+                    6.0
+                ]
+            ],
+            "connect_exterior": "wall|living room|east|2|exterior"
+        },
+        {
+            "id": "wall|living room|east|3",
+            "roomId": "living room",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 2.0
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 6.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 6.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 6.0
+                        }
+                    ],
+                    "roomId": "bedroom",
+                    "wallId": "wall|bedroom|west|0"
+                }
+            ],
+            "width": 4.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    6.0,
+                    6.0
+                ],
+                [
+                    6.0,
+                    2.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|living room|east|4",
+            "roomId": "living room",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 0.0
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 0.0
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 0.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "roomId": "kitchen",
+                    "wallId": "wall|kitchen|west|0"
+                }
+            ],
+            "width": 2.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    6.0,
+                    2.0
+                ],
+                [
+                    6.0,
+                    0.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|living room|south|5|exterior",
+            "roomId": "living room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 6.0,
+            "height": 3.0,
+            "direction": "south",
+            "segment": [
+                [
+                    0.0,
+                    0.0
+                ],
+                [
+                    6.0,
+                    0.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|living room|south|5",
+            "roomId": "living room",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 6.0,
+            "height": 3.0,
+            "direction": "south",
+            "segment": [
+                [
+                    6.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0
+                ]
+            ],
+            "connect_exterior": "wall|living room|south|5|exterior"
+        },
+        {
+            "id": "wall|bedroom|west|0",
+            "roomId": "bedroom",
+            "material": {
+                "name": "Porcelain_White_Mat"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 6.0
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 6.0
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 6.0
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 6.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "roomId": "living room",
+                    "wallId": "wall|living room|east|3"
+                }
+            ],
+            "width": 4.0,
+            "height": 3.0,
+            "direction": "west",
+            "segment": [
+                [
+                    6.0,
+                    2.0
+                ],
+                [
+                    6.0,
+                    6.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|bedroom|north|1|exterior",
+            "roomId": "bedroom",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 6.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 6.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 3.0,
+            "direction": "north",
+            "segment": [
+                [
+                    9.0,
+                    6.0
+                ],
+                [
+                    6.0,
+                    6.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|bedroom|north|1",
+            "roomId": "bedroom",
+            "material": {
+                "name": "Porcelain_White_Mat"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 6.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 6.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 3.0,
+            "direction": "north",
+            "segment": [
+                [
+                    6.0,
+                    6.0
+                ],
+                [
+                    9.0,
+                    6.0
+                ]
+            ],
+            "connect_exterior": "wall|bedroom|north|1|exterior"
+        },
+        {
+            "id": "wall|bedroom|east|2|exterior",
+            "roomId": "bedroom",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 6.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 4.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    9.0,
+                    2.0
+                ],
+                [
+                    9.0,
+                    6.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|bedroom|east|2",
+            "roomId": "bedroom",
+            "material": {
+                "name": "Porcelain_White_Mat"
+            },
+            "polygon": [
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 6.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 6.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 2.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 4.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    9.0,
+                    6.0
+                ],
+                [
+                    9.0,
+                    2.0
+                ]
+            ],
+            "connect_exterior": "wall|bedroom|east|2|exterior"
+        },
+        {
+            "id": "wall|bedroom|south|3",
+            "roomId": "bedroom",
+            "material": {
+                "name": "Porcelain_White_Mat"
+            },
+            "polygon": [
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 2.0
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "intersection": [
+                        {
+                            "x": 9.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 9.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 9.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "roomId": "kitchen",
+                    "wallId": "wall|kitchen|north|1"
+                }
+            ],
+            "width": 3.0,
+            "height": 3.0,
+            "direction": "south",
+            "segment": [
+                [
+                    9.0,
+                    2.0
+                ],
+                [
+                    6.0,
+                    2.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|kitchen|west|0",
+            "roomId": "kitchen",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 2.0
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 0.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 0.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 0.0
+                        }
+                    ],
+                    "roomId": "living room",
+                    "wallId": "wall|living room|east|4"
+                }
+            ],
+            "width": 2.0,
+            "height": 3.0,
+            "direction": "west",
+            "segment": [
+                [
+                    6.0,
+                    0.0
+                ],
+                [
+                    6.0,
+                    2.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|kitchen|north|1",
+            "roomId": "kitchen",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 2.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 2.0
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 9.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 9.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 9.0,
+                            "y": 0,
+                            "z": 2.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0,
+                            "z": 2.0
+                        }
+                    ],
+                    "roomId": "bedroom",
+                    "wallId": "wall|bedroom|south|3"
+                }
+            ],
+            "width": 3.0,
+            "height": 3.0,
+            "direction": "north",
+            "segment": [
+                [
+                    6.0,
+                    2.0
+                ],
+                [
+                    9.0,
+                    2.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|kitchen|east|2|exterior",
+            "roomId": "kitchen",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 0.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 2.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    9.0,
+                    0.0
+                ],
+                [
+                    9.0,
+                    2.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|kitchen|east|2",
+            "roomId": "kitchen",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 2.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 3.0,
+            "direction": "east",
+            "segment": [
+                [
+                    9.0,
+                    2.0
+                ],
+                [
+                    9.0,
+                    0.0
+                ]
+            ],
+            "connect_exterior": "wall|kitchen|east|2|exterior"
+        },
+        {
+            "id": "wall|kitchen|south|3|exterior",
+            "roomId": "kitchen",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 3.0,
+            "direction": "south",
+            "segment": [
+                [
+                    6.0,
+                    0.0
+                ],
+                [
+                    9.0,
+                    0.0
+                ]
+            ]
+        },
+        {
+            "id": "wall|kitchen|south|3",
+            "roomId": "kitchen",
+            "material": {
+                "name": "OrangeDrywall 1"
+            },
+            "polygon": [
+                {
+                    "x": 9.0,
+                    "y": 0,
+                    "z": 0.0
+                },
+                {
+                    "x": 9.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 3.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 3.0,
+            "direction": "south",
+            "segment": [
+                [
+                    9.0,
+                    0.0
+                ],
+                [
+                    6.0,
+                    0.0
+                ]
+            ],
+            "connect_exterior": "wall|kitchen|south|3|exterior"
+        }
+    ],
     "windows": [],
     "query": "A lightful living room, small bedroom and tiny kitchen",
-    "raw_floor_plan": "living room | oak hardwood, matte | light grey drywall, smooth | [(0, 0), (0, 8), (6, 8), (6, 0)]\nbedroom | walnut laminate, warm | pale blue paint, smooth | [(6, 2), (6, 6), (9, 6), (9, 2)]\nkitchen | white hex tile, glossy | light grey drywall, smooth | [(6, 0), (6, 2), (9, 2), (9, 0)]"
+    "raw_floor_plan": "living room | oak hardwood, matte | light grey drywall, smooth | [(0, 0), (0, 8), (6, 8), (6, 0)]\nbedroom | walnut laminate, warm | pale blue paint, smooth | [(6, 2), (6, 6), (9, 6), (9, 2)]\nkitchen | white hex tile, glossy | light grey drywall, smooth | [(6, 0), (6, 2), (9, 2), (9, 0)]",
+    "raw_wall_height": "3.0",
+    "wall_height": 3.0
 }

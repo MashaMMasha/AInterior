@@ -8,26 +8,26 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import torch
-from PIL import Image
 from colorama import Fore
-
-from langchain_core.prompts import PromptTemplate
 from langchain_core.language_models import BaseChatModel
+from langchain_core.prompts import PromptTemplate
+from PIL import Image
 from shapely.geometry import LineString, Point, Polygon
 from tqdm import tqdm
 
 import obllomov.agents.prompts as prompts
 from obllomov.shared.env import env
 from obllomov.shared.log import logger
-from obllomov.storage.assets.base import BaseAssets
-
 from obllomov.shared.path import HOLODECK_MATERIALS_DIR
+from obllomov.storage.assets.base import BaseAssets
 
 from .base import BasePlanner
 
 
 class FloorPlanner(BasePlanner):
     def __init__(self, clip_model, clip_process, clip_tokenizer, llm: BaseChatModel, assets: BaseAssets):
+        super().__init__(llm, assets)
+
         self.json_template = {
             "ceilings": [],
             "children": [],
@@ -40,29 +40,15 @@ class FloorPlanner(BasePlanner):
         self.material_selector = MaterialSelector(
             clip_model, clip_process, clip_tokenizer, assets
         )
-        self.floor_plan_template = PromptTemplate(
-            input_variables=["input", "additional_requirements"],
-            template=prompts.floor_plan_prompt,
-        )
-        self.llm = llm
-        self.assets = assets
-        self.used_assets = []
 
-    def plan(self, scene, additional_requirements="N/A", visualize=False):
-        # chain = self.floor_plan_template | self.llm
 
-        if "raw_floor_plan" not in scene:
-            scene["raw_floor_plan"] = self._raw_plan(self.floor_plan_template, {
-                "input": scene["query"],
-                "additional_requirements": additional_requirements
-            })
-            
-            # chain.invoke({
-            #     "input": scene["query"],
-            #     "additional_requirements": additional_requirements
-            # }).content
-
-        logger.info(f"{Fore.GREEN}AI: Here is the floor plan:\n{scene['raw_floor_plan']}{Fore.RESET}")
+    def plan(self, scene: dict, additional_requirements="N/A", visualize=False):
+        self._raw_plan(scene, prompts.floor_plan_prompt,
+                       cache_key="raw_floor_plan",
+                       input_variables={
+                           "input": scene["query"],
+                           "additional_requirements": additional_requirements,
+                       })
 
         rooms = self.get_plan(scene["query"], scene["raw_floor_plan"], visualize)
         return rooms
