@@ -1,17 +1,16 @@
 from datetime import datetime
 import hashlib
-from pathlib import Path
 import trimesh
-from ml_api.db.furniture_db import FURNITURE_DB
 from ml_api.schema.dto import FurnitureItem
+from ml_api.services.s3_service import get_s3_service
 
 from ml_api.agents.chat_assistant import AIAssistant, assistant
 from ml_api.agents.generator import FurnitureGenerator, furniture_generator
 from ml_api.agents.planner import LayoutPlanner, layout_planner
 
-from typing import List, Dict
 import numpy as np
-
+import tempfile
+import os
 
 
 class AgentsService:
@@ -19,30 +18,86 @@ class AgentsService:
         self.assistant = AIAssistant()
         self.furniture_generator = FurnitureGenerator()
         self.layout_planner = LayoutPlanner()
+        self.s3 = get_s3_service()
 
     def parse_request(self, query):
         return self.assistant.parse_request(query)
-    
+
     def generate_from_text(self, query: str):
         request = self.parse_request(query)
-
         result = self.furniture_generator.generate_from_request(request)
 
-        return result
-    
+        with tempfile.NamedTemporaryFile(suffix='.glb', delete=False) as tmp:
+            tmp_path = tmp.name
+            result["mesh"].export(tmp_path)
+
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            furniture_type = result.get('furniture_type', 'unknown')
+            s3_key = f"models/{furniture_type}_{timestamp}.glb"
+
+            metadata = {
+                "furniture_type": furniture_type,
+                "generated_at": datetime.now().isoformat(),
+                "query": query[:100]
+            }
+
+            self.s3.upload_file(tmp_path, s3_key, metadata=metadata, content_type='model/gltf-binary')
+            download_url = self.s3.get_presigned_url(s3_key, expiration=3600)
+
+            result["s3_key"] = s3_key
+            result["download_url"] = download_url
+            result["storage"] = "s3"
+
+            return result
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
     def auto_arrange_furniture(self, query):
         request = self.parse_request(query)
 
-        placements =self.planner.calculate_optimal_placement(
-            room_dims=request.dimensions,
+        placements = self.layout_planner.calculate_optimal_placement(
+            room_dims=request.get("dimensions", [5.0, 4.0, 2.7]),
             furniture_types=request["furniture"],
             style=request["style"],
             constraints=request.get("constraints", {})
         )
-        
-        scene = self._create_complete_scene(request.dimensions, placements)
 
-        return scene
+        scene = self._create_complete_scene(
+            request.get("dimensions", [5.0, 4.0, 2.7]),
+            placements
+        )
+
+        with tempfile.NamedTemporaryFile(suffix='.glb', delete=False) as tmp:
+            tmp_path = tmp.name
+            scene.export(tmp_path)
+
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            scene_hash = hashlib.md5(query.encode()).hexdigest()[:8]
+            s3_key = f"scenes/scene_{scene_hash}_{timestamp}.glb"
+
+            metadata = {
+                "scene_type": "auto_arranged",
+                "style": request["style"],
+                "furniture_count": str(len(placements)),
+                "generated_at": datetime.now().isoformat()
+            }
+
+            self.s3.upload_file(tmp_path, s3_key, metadata=metadata, content_type='model/gltf-binary')
+            download_url = self.s3.get_presigned_url(s3_key, expiration=3600)
+
+            return {
+                "scene": scene,
+                "s3_key": s3_key,
+                "download_url": download_url,
+                "placements": placements,
+                "storage": "s3"
+            }
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
     
     def edit_furniture(item, modifications):
         mesh = furniture_generator.create_mesh(item.type, item.scale, item.color)

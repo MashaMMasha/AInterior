@@ -21,7 +21,6 @@ class AIAssistant:
         }
     
     def parse_request(self, text: str, room_type: str = "living_room") -> Dict[str, Any]:
-        """Парсит текстовый запрос на параметры расстановки"""
         text_lower = text.lower()
         result = {
             "furniture": [],
@@ -29,28 +28,24 @@ class AIAssistant:
             "action": "add",
             "constraints": {}
         }
-        
-        # Определение стиля
+
         for style, keywords in self.style_keywords.items():
             if any(kw in text_lower for kw in keywords):
                 result["style"] = style
                 break
-        
-        # Поиск конкретной мебели
+
         for furniture_type in FURNITURE_DB.keys():
             if furniture_type.replace("_", " ") in text_lower:
                 result["furniture"].append(furniture_type)
-        
-        # Если мебель не указана, используем стандартный набор
+
         if not result["furniture"]:
             result["furniture"] = self.room_furniture_map.get(room_type, ["sofa", "coffee_table"])
-        
-        # Парсинг ограничений
+
         if "у окна" in text_lower:
             result["constraints"]["near_window"] = True
         if "у стены" in text_lower:
             result["constraints"]["near_wall"] = True
-        
+
         return result
 
 assistant = AIAssistant()

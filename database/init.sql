@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users.users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
+    role VARCHAR(50) DEFAULT 'user',
     is_active BOOLEAN DEFAULT TRUE,
     is_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -15,13 +16,16 @@ CREATE TABLE IF NOT EXISTS users.users (
     last_login TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS users.sessions (
+CREATE TABLE IF NOT EXISTS users.verification_codes (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users.users(id) ON DELETE CASCADE,
-    token VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    code VARCHAR(6) NOT NULL,
     expires_at TIMESTAMP NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_verification_codes_email ON users.verification_codes(email);
 
 CREATE TABLE IF NOT EXISTS furniture.catalog (
     id SERIAL PRIMARY KEY,
