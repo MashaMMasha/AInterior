@@ -7,12 +7,16 @@ import open_clip
 import trimesh
 from langchain_core.language_models import LLM, BaseChatModel
 from sentence_transformers import SentenceTransformer
+import matplotlib.colors as mcolors
+
 
 from obllomov.agents.planners import FloorPlanner, WallPlanner
 from obllomov.shared.log import logger
-from obllomov.shared.path import ABS_ROOT_PATH
+from obllomov.shared.path import ABS_ROOT_PATH, HOLODECK_MATERIALS_DIR
 from obllomov.shared.time import NOW
 from obllomov.storage.assets import BaseAssets
+from obllomov.agents.retrievers import CLIPRetriever, SBERTRetriever, ObjathorRetriever
+from obllomov.agents.selectors import MaterialSelector, ObjectSelector
 
 
 class ObLLoMov:
@@ -31,8 +35,15 @@ class ObLLoMov:
         )
 
         self.clip_tokenizer = open_clip.get_tokenizer("ViT-L-14")
-    
 
+        self._init_retrievers()
+
+        self._init_planners()
+
+        self.additional_requirements_room = "N/A"
+
+    def _init_planners(self):
+        logger.debug("Initing planners...")
         self.floor_planner = FloorPlanner(
             self.clip_model, self.clip_preprocess, self.clip_tokenizer, 
             self.llm, self.assets
@@ -40,7 +51,47 @@ class ObLLoMov:
 
         self.wall_planner = WallPlanner(self.llm)
 
-        self.additional_requirements_room = "N/A"
+    def _init_retrievers(self):
+        logger.debug("Initing retrievers...")
+
+        materials_data = self.assets.read_json(HOLODECK_MATERIALS_DIR / "material-database.json")
+        self.selected_materials = materials_data["Wall"] + materials_data["Wood"] + materials_data["Fabric"]
+        colors = list(mcolors.CSS4_COLORS.keys())
+
+        self.material_retriever = CLIPRetriever.from_images(
+            clip_model=self.clip_model,
+            clip_tokenizer=self.clip_tokenizer,
+            clip_preprocess=self.clip_preprocess,
+            asset_ids=self.selected_materials,
+            image_dir=HOLODECK_MATERIALS_DIR / "images",
+            assets=self.assets,
+            cache_path=HOLODECK_MATERIALS_DIR / "material_feature_clip.pkl",
+            )
+        
+
+        self.color_retriever = CLIPRetriever.from_texts(
+            clip_model=self.clip_model,
+            clip_tokenizer=self.clip_tokenizer,
+            clip_preprocess=self.clip_preprocess,
+            labels=colors,
+            assets=self.assets,
+            cache_path=HOLODECK_MATERIALS_DIR / "color_feature_clip.pkl",
+            )
+        
+        object_img_retriever = CLIPRetriever()
+
+        object_txt_retriever = SBERTRetriever()
+
+        self.objathor_retriever = ObjathorRetriever(object_img_retriever, object_txt_retriever)
+
+    def _init_selectors(self):
+        self.material_selector = MaterialSelector(self.material_retriever, self.color_retriever)
+
+        self.object_selector = ObjectSelector(self.objathor_retriever, self.llm)
+        
+
+
+
 
     def get_empty_scene(self):
         # return self.assets.read_json("agents/empty_house.json")

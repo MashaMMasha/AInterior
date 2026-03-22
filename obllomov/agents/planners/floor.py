@@ -16,6 +16,8 @@ from shapely.geometry import LineString, Point, Polygon
 from tqdm import tqdm
 
 import obllomov.agents.prompts as prompts
+from obllomov.agents.selectors import MaterialSelector
+from obllomov.agents.retrievers import BaseRetriever
 from obllomov.shared.env import env
 from obllomov.shared.log import logger
 from obllomov.shared.path import HOLODECK_MATERIALS_DIR
@@ -25,6 +27,9 @@ from .base import BasePlanner
 
 
 class FloorPlanner(BasePlanner):
+    def __init__(self, material_retriever: BaseRetriever, color_retriever: BaseRetriever, llm: BaseChatModel, assets: BaseAssets):
+        ...
+
     def __init__(self, clip_model, clip_process, clip_tokenizer, llm: BaseChatModel, assets: BaseAssets):
         super().__init__(llm, assets)
 
@@ -37,6 +42,8 @@ class FloorPlanner(BasePlanner):
             "id": None,
             "roomType": None,
         }
+
+        self.material_selector = MaterialSelector()
         self.material_selector = MaterialSelector(
             clip_model, clip_process, clip_tokenizer, assets
         )
@@ -279,89 +286,89 @@ class FloorPlanner(BasePlanner):
         plt.show()
 
 
-class MaterialSelector:
-    def __init__(self, clip_model, clip_preprocess, clip_tokenizer, assets: BaseAssets):
-        self.assets = assets
+# class MaterialSelector:
+#     def __init__(self, clip_model, clip_preprocess, clip_tokenizer, assets: BaseAssets):
+#         self.assets = assets
 
-        materials = self.assets.read_json(HOLODECK_MATERIALS_DIR / "material-database.json")
-        self.selected_materials = materials["Wall"] + materials["Wood"] + materials["Fabric"]
-        self.colors = list(mcolors.CSS4_COLORS.keys())
+#         materials = self.assets.read_json(HOLODECK_MATERIALS_DIR / "material-database.json")
+#         self.selected_materials = materials["Wall"] + materials["Wood"] + materials["Fabric"]
+#         self.colors = list(mcolors.CSS4_COLORS.keys())
 
-        self.clip_model      = clip_model
-        self.clip_preprocess = clip_preprocess
-        self.clip_tokenizer  = clip_tokenizer
+#         self.clip_model      = clip_model
+#         self.clip_preprocess = clip_preprocess
+#         self.clip_tokenizer  = clip_tokenizer
 
-        self.load_features()
+#         self.load_features()
 
-    def load_features(self):
-        clip_pkl_path  = HOLODECK_MATERIALS_DIR / "material_feature_clip.pkl"
-        color_pkl_path = HOLODECK_MATERIALS_DIR / "color_feature_clip.pkl"
+#     def load_features(self):
+#         clip_pkl_path  = HOLODECK_MATERIALS_DIR / "material_feature_clip.pkl"
+#         color_pkl_path = HOLODECK_MATERIALS_DIR / "color_feature_clip.pkl"
 
-        # ── CLIP-признаки материалов ──────────────────────────────────────
-        if self.assets.exists(clip_pkl_path):
-            self.material_feature_clip = self.assets.read_pickle(clip_pkl_path)
-        else:
-            logger.debug("Precompute image features for materials...")
-            self.material_feature_clip = []
-            for material in tqdm(self.selected_materials):
-                img_bytes = self.assets.read_bytes(
-                    HOLODECK_MATERIALS_DIR / f"images/{material}.png"
-                )
-                image = self.clip_preprocess(
-                    Image.open(io.BytesIO(img_bytes))
-                ).unsqueeze(0)
-                with torch.no_grad():
-                    image_features = self.clip_model.encode_image(image)
-                    image_features /= image_features.norm(dim=-1, keepdim=True)
-                self.material_feature_clip.append(image_features)
-            self.material_feature_clip = torch.vstack(self.material_feature_clip)
-            self.assets.write_pickle(clip_pkl_path, self.material_feature_clip)
+#         # ── CLIP-признаки материалов ──────────────────────────────────────
+#         if self.assets.exists(clip_pkl_path):
+#             self.material_feature_clip = self.assets.read_pickle(clip_pkl_path)
+#         else:
+#             logger.debug("Precompute image features for materials...")
+#             self.material_feature_clip = []
+#             for material in tqdm(self.selected_materials):
+#                 img_bytes = self.assets.read_bytes(
+#                     HOLODECK_MATERIALS_DIR / f"images/{material}.png"
+#                 )
+#                 image = self.clip_preprocess(
+#                     Image.open(io.BytesIO(img_bytes))
+#                 ).unsqueeze(0)
+#                 with torch.no_grad():
+#                     image_features = self.clip_model.encode_image(image)
+#                     image_features /= image_features.norm(dim=-1, keepdim=True)
+#                 self.material_feature_clip.append(image_features)
+#             self.material_feature_clip = torch.vstack(self.material_feature_clip)
+#             self.assets.write_pickle(clip_pkl_path, self.material_feature_clip)
 
-        # ── CLIP-признаки цветов ──────────────────────────────────────────
-        if self.assets.exists(color_pkl_path):
-            self.color_feature_clip = self.assets.read_pickle(color_pkl_path)
-        else:
-            logger.debug("Precompute text features for colors...")
-            with torch.no_grad():
-                self.color_feature_clip = self.clip_model.encode_text(
-                    self.clip_tokenizer(self.colors)
-                )
-                self.color_feature_clip /= self.color_feature_clip.norm(dim=-1, keepdim=True)
-            self.assets.write_pickle(color_pkl_path, self.color_feature_clip)
+#         # ── CLIP-признаки цветов ──────────────────────────────────────────
+#         if self.assets.exists(color_pkl_path):
+#             self.color_feature_clip = self.assets.read_pickle(color_pkl_path)
+#         else:
+#             logger.debug("Precompute text features for colors...")
+#             with torch.no_grad():
+#                 self.color_feature_clip = self.clip_model.encode_text(
+#                     self.clip_tokenizer(self.colors)
+#                 )
+#                 self.color_feature_clip /= self.color_feature_clip.norm(dim=-1, keepdim=True)
+#             self.assets.write_pickle(color_pkl_path, self.color_feature_clip)
 
-    def match_material(self, queries, topk=5):
-        with torch.no_grad():
-            query_feature_clip  = self.clip_model.encode_text(self.clip_tokenizer(queries))
-            query_feature_clip /= query_feature_clip.norm(dim=-1, keepdim=True)
+#     def match_material(self, queries, topk=5):
+#         with torch.no_grad():
+#             query_feature_clip  = self.clip_model.encode_text(self.clip_tokenizer(queries))
+#             query_feature_clip /= query_feature_clip.norm(dim=-1, keepdim=True)
 
-        clip_similarity = query_feature_clip @ self.material_feature_clip.T
-        string_similarity = torch.tensor([
-            [self.string_match(query, material) for material in self.selected_materials]
-            for query in queries
-        ])
+#         clip_similarity = query_feature_clip @ self.material_feature_clip.T
+#         string_similarity = torch.tensor([
+#             [self.string_match(query, material) for material in self.selected_materials]
+#             for query in queries
+#         ])
 
-        joint_similarity = string_similarity + clip_similarity
+#         joint_similarity = string_similarity + clip_similarity
 
-        results, scores = [], []
-        for sim in joint_similarity:
-            indices = torch.argsort(sim, descending=True)[:topk]
-            results.append([self.selected_materials[ind] for ind in indices])
-            scores.append([sim[ind] for ind in indices])
-        return results, scores
+#         results, scores = [], []
+#         for sim in joint_similarity:
+#             indices = torch.argsort(sim, descending=True)[:topk]
+#             results.append([self.selected_materials[ind] for ind in indices])
+#             scores.append([sim[ind] for ind in indices])
+#         return results, scores
 
-    def select_color(self, queries, topk=5):
-        with torch.no_grad():
-            query_feature_clip  = self.clip_model.encode_text(self.clip_tokenizer(queries))
-            query_feature_clip /= query_feature_clip.norm(dim=-1, keepdim=True)
+#     def select_color(self, queries, topk=5):
+#         with torch.no_grad():
+#             query_feature_clip  = self.clip_model.encode_text(self.clip_tokenizer(queries))
+#             query_feature_clip /= query_feature_clip.norm(dim=-1, keepdim=True)
 
-        clip_similarity = query_feature_clip @ self.color_feature_clip.T
+#         clip_similarity = query_feature_clip @ self.color_feature_clip.T
 
-        results, scores = [], []
-        for sim in clip_similarity:
-            indices = torch.argsort(sim, descending=True)[:topk]
-            results.append([self.colors[ind] for ind in indices])
-            scores.append([sim[ind] for ind in indices])
-        return results, scores
+#         results, scores = [], []
+#         for sim in clip_similarity:
+#             indices = torch.argsort(sim, descending=True)[:topk]
+#             results.append([self.colors[ind] for ind in indices])
+#             scores.append([sim[ind] for ind in indices])
+#         return results, scores
 
-    def string_match(self, a, b):
-        return SequenceMatcher(None, a, b).ratio()
+#     def string_match(self, a, b):
+#         return SequenceMatcher(None, a, b).ratio()

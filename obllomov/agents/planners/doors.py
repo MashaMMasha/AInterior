@@ -6,10 +6,10 @@ import compress_json
 import compress_pickle
 import numpy as np
 import torch
-from PIL import Image
 from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import PromptTemplate
+from PIL import Image
 from tqdm import tqdm
 
 import obllomov.agents.prompts as prompts

@@ -1,13 +1,10 @@
-# obllomov/agents/planners/base.py
-
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import *
 
 from colorama import Fore
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import BasePromptTemplate, PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from obllomov.shared.log import logger
 from obllomov.storage.assets.base import BaseAssets
