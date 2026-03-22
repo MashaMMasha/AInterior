@@ -1,9 +1,11 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import './Header.css';
 
 const Header = ({ onToggleLeftPanel, onToggleRightPanel, isLeftCollapsed, isRightCollapsed }) => {
   const { projects, currentProject, createProject, deleteProject, switchProject } = useApp();
+  const { user, logout } = useAuth();
 
   const handleCreateProject = () => {
     const projectName = prompt('Название нового проекта:', `Проект ${projects.length + 1}`);
@@ -43,6 +45,16 @@ const Header = ({ onToggleLeftPanel, onToggleRightPanel, isLeftCollapsed, isRigh
         </div>
       </div>
       <div className="header-right">
+        {user && (
+          <div className="header-user">
+            <span className="header-user-name">{user.full_name || user.username}</span>
+            <button className="header-logout-btn" onClick={logout} title="Выйти">
+              <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
+                <path d="M7 3H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h3M13 14l4-4-4-4M17 10H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        )}
         <button 
           className={`panel-toggle-btn ${isLeftCollapsed ? 'collapsed' : ''}`}
           onClick={onToggleLeftPanel}

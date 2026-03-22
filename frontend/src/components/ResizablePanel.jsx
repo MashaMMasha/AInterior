@@ -13,7 +13,6 @@ const ResizablePanel = ({
   const [width, setWidth] = useState(defaultWidth);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Горячие клавиши
   useEffect(() => {
     const handler = (event) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;

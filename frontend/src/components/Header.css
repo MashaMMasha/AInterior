@@ -6,7 +6,7 @@
   justify-content: space-between;
   padding: 0 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  border-bottom: 3px solid var(--color-secondary);
+  border-bottom: 3px solid var(--color-border);
 }
 
 .header-left {
@@ -70,12 +70,10 @@
   transition: opacity 0.2s ease;
 }
 
-/* Кнопка закрытия всегда видна на активной вкладке */
 .project-tab.active .project-tab-close {
   opacity: 1;
 }
 
-/* На неактивных вкладках - только при наведении */
 .project-tab:hover .project-tab-close {
   opacity: 1;
 }
@@ -101,7 +99,39 @@
   opacity: 1;
 }
 
-/* Кнопки управления панелями */
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 8px;
+  padding-right: 8px;
+  border-right: 1px solid rgba(200, 161, 177, 0.3);
+}
+
+.header-user-name {
+  color: var(--color-text-light);
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.header-logout-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-light);
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.header-logout-btn:hover {
+  opacity: 1;
+  background: rgba(200, 161, 177, 0.2);
+}
+
 .panel-toggle-btn {
   background: transparent;
   border: 1px solid rgba(200, 161, 177, 0.3);

@@ -67,10 +67,6 @@ const ScenePanel = ({ onModelLoad }) => {
 
   return (
     <div className="scene-panel">
-      {/* <div className="scene-header">
-        <div className="scene-title">Элементы сцены</div>
-      </div> */}
-      
       <div className="scene-objects">
         {sceneObjects.length === 0 ? (
           <div className="scene-empty">Пока нет объектов на сцене</div>

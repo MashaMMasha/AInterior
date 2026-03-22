@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authFetch } from '../services/api';
 
 const AppContext = createContext();
 
@@ -22,22 +23,20 @@ export const AppProvider = ({ children }) => {
     }
   ]);
 
-  // Загрузка проектов при старте
   useEffect(() => {
     loadProjects();
   }, []);
 
   const loadProjects = async () => {
     try {
-      const response = await fetch('/projects');
+      const response = await authFetch('/projects');
       const data = await response.json();
       
       if (data.status === 'success' && data.projects.length > 0) {
         setProjects(data.projects);
         setCurrentProject(data.projects[0]);
       } else {
-        // Создать дефолтный проект
-        const defaultProject = {
+      const defaultProject = {
           id: 'default',
           name: 'Мой проект',
           objects: []
@@ -47,7 +46,6 @@ export const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading projects:', error);
-      // Fallback к дефолтному проекту
       const defaultProject = {
         id: 'default',
         name: 'Мой проект',
@@ -60,7 +58,7 @@ export const AppProvider = ({ children }) => {
 
   const createProject = async (name) => {
     try {
-      const response = await fetch(`/projects?name=${encodeURIComponent(name)}`, {
+      const response = await authFetch(`/projects?name=${encodeURIComponent(name)}`, {
         method: 'POST'
       });
       const data = await response.json();
@@ -82,7 +80,7 @@ export const AppProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`/projects/${projectId}`, {
+      const response = await authFetch(`/projects/${projectId}`, {
         method: 'DELETE'
       });
       
@@ -117,7 +115,7 @@ export const AppProvider = ({ children }) => {
     };
 
     try {
-      const response = await fetch(`/projects/${currentProject.id}`, {
+      const response = await authFetch(`/projects/${currentProject.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -138,7 +136,6 @@ export const AppProvider = ({ children }) => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
 
-    // Сохранить текущий проект перед переключением
     if (currentProject) {
       saveCurrentProject();
     }
@@ -177,7 +174,6 @@ export const AppProvider = ({ children }) => {
     );
   };
 
-  // Автосохранение каждые 30 секунд
   useEffect(() => {
     const interval = setInterval(() => {
       saveCurrentProject();

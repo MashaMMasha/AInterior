@@ -57,10 +57,6 @@ const ChatPanel = ({ onModelLoad }) => {
 
   return (
     <div className="chat-panel">
-      {/* <div className="chat-header">
-        <div className="chat-title">AI Interior асистент</div>
-      </div> */}
-      
       <div className="chat-messages">
         {chatMessages.map((msg, index) => (
           <div key={index} className={`chat-message ${msg.type}`}>
