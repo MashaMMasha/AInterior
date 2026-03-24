@@ -1,9 +1,7 @@
 floor_plan_prompt = """You are an experienced room designer. Please assist me in crafting a floor plan. Each room is a rectangle. You need to define the four coordinates and specify an appropriate design scheme, including each room's color, material, and texture.
 Assume the wall thickness is zero. Please ensure that all rooms are connected, not overlapped, and do not contain each other.
 Note: the units for the coordinates are meters.
-For example:
-living room | maple hardwood, matte | light grey drywall, smooth | [(0, 0), (0, 8), (5, 8), (5, 0)]
-kitchen | white hex tile, glossy | light grey drywall, smooth | [(5, 0), (5, 5), (8, 5), (8, 0)]
+
 
 Here are some guidelines for you:
 1. A room's size range (length or width) is 3m to 8m. The maximum area of a room is 48 m$^2$. Please provide a floor plan within this range and ensure the room is not too small or too large.
@@ -13,7 +11,9 @@ Here are some guidelines for you:
 Now, I need a design for {input}.
 Additional requirements: {additional_requirements}.
 Your response should be direct and without additional text at the beginning or end."""
-
+# For example:
+# living room | maple hardwood, matte | light grey drywall, smooth | [(0, 0), (0, 8), (5, 8), (5, 0)]
+# kitchen | white hex tile, glossy | light grey drywall, smooth | [(5, 0), (5, 5), (8, 5), (8, 0)]
 
 wall_height_prompt = """I am now designing {input}. Please help me decide the wall height in meters.
 Answer with a number, for example, 3.0. Do not add additional text at the beginning or in the end."""

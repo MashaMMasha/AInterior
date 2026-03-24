@@ -1,3 +1,3 @@
 from .base import BaseSelector
 from .materials import MaterialSelector
-from .objects import ObjectSelector
+from .objects_old import ObjectSelector

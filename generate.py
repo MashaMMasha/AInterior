@@ -1,11 +1,20 @@
 import argparse
+import os
+
+import compress_json
+import open_clip
 
 from obllomov.agents.llms import ChatMock, ChatYandexQwen
+
+from langchain_openai import ChatOpenAI
 from obllomov.services.obllomov import ObLLoMov
 from obllomov.shared.env import env
 from obllomov.shared.log import logger
+from obllomov.shared.path import ABS_ROOT_PATH
 from obllomov.storage.assets import LocalAssets, S3Assets
 
+
+from obllomov.agents.llms import get_chat_yandex_model
 logger.info("Parsing args")
 
 parser = argparse.ArgumentParser()
@@ -16,16 +25,13 @@ args = parser.parse_args()
 
 logger.info("Init model")
 
-# llm = ChatYandexQwen(
-#     api_key=env.YANDEX_CLOUD_API_KEY,
-#     base_url="https://ai.api.cloud.yandex.net/v1",
-#     project=env.YANDEX_CLOUD_FOLDER,
-#     model_name=env.YANDEX_CLOUD_MODEL
-# )
+llm = get_chat_yandex_model(
+    temperature=0.3,
+    max_completion_tokens=2048
+    )
 
-llm = ChatMock()
 
-assets = S3Assets()
+assets = LocalAssets()
 
 model = ObLLoMov(llm, assets)
 

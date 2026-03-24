@@ -4,11 +4,15 @@ from typing import *
 from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 
 from obllomov.shared.log import logger
 from obllomov.storage.assets.base import BaseAssets
 
+
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
 
 class BasePlanner(ABC):
     def __init__(self, llm: BaseChatModel, assets: BaseAssets = None):
@@ -48,6 +52,28 @@ class BasePlanner(ABC):
         # logger.info(f"{Fore.GREEN}{self.__class__.__name__} response:\n{response}{Fore.RESET}")
 
 
+        return response
+    
+    def _structured_plan(
+        self,
+        scene: dict,
+        schema: type[T],
+        prompt_template: str,
+        cache_key: str | None = None,
+        input_variables: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ) -> T:
+        if cache_key and cache_key in scene:
+            response = schema.model_validate(scene[cache_key])
+        else:
+            prompt = PromptTemplate.from_template(prompt_template)
+            chain = prompt | self.llm.with_structured_output(schema)
+            response = chain.invoke(input_variables)
+
+            if cache_key:
+                scene[cache_key] = response.model_dump()
+
+        self._log(response.model_dump_json(indent=2))
         return response
     
 

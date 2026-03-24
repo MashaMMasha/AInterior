@@ -3,8 +3,10 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 from PIL import Image
 from tqdm import tqdm
+from typing import Dict, Any
 
 from obllomov.storage.assets.base import BaseAssets
 
@@ -81,13 +83,18 @@ class CLIPRetriever(BaseRetriever):
             labels, features, assets, similarity_scale,
         )
 
-    def load_features(self, assets: BaseAssets, features_path: Path | str, features_key = None, append=True):
+    def load_features(self, assets: BaseAssets, features_path: Path | str, features_key=None, append=True):
         raw = assets.read_pickle(features_path)
 
-        if features_key is not None:
-            features =  torch.from_numpy(raw[features_key].astype("float32"))
-        else:
-            features = raw
+        match raw:
+            case torch.Tensor():
+                features = raw
+            case np.array():
+                features =  torch.from_numpy(raw.astype("float32"))
+            case dict() if features_key is not None:
+                features =  torch.from_numpy(raw[features_key].astype("float32"))
+            case _:
+                raise TypeError()
         
         if self.features is None or not append:
             self.features = features
@@ -96,6 +103,8 @@ class CLIPRetriever(BaseRetriever):
                 [self.features, features],
                 axis=0
             )
+
+    
 
 
     @classmethod

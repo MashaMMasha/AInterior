@@ -43,7 +43,7 @@ class MaterialSelector(BaseSelector):
     ) -> list[list[str]]:
         material_results = self.material_retriever.score(queries)
 
-        string_bonus = self._string_similarity_matrix(queries, self.selected_materials)
+        string_bonus = self._string_similarity(queries, self.selected_materials)
 
         material_results = []
         for q_idx, row in enumerate(material_results):
@@ -61,13 +61,14 @@ class MaterialSelector(BaseSelector):
         queries: list[str],
         topk: int = 5,
     ) -> list[list[str]]:
-        color_results = self.color_retriever.retrieve(queries, k=topk)
+        asset_ids, _ = self.color_retriever.retrieve(queries, k=topk)
+        return asset_ids
         return [
             [asset_id for asset_id, _ in row]
             for row in color_results
         ]
 
-    def _string_similarity_matrix(
+    def _string_similarity(
         self,
         queries: list[str],
         materials: list[str],

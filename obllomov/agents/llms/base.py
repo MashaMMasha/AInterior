@@ -6,7 +6,7 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 
 from obllomov.shared.log import logger
 
-MAX_NEW_TOKENS=4096
+MAX_NEW_TOKENS=1024
 
 FROM_LANGCHAIN_MSG_TYPE = {
     "ai": "assistant",

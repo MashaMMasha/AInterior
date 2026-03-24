@@ -13,6 +13,28 @@ from obllomov.storage.assets import BaseAssets
 
 from .base import BasePlanner
 
+from typing import List, Optional, Tuple
+import random
+import copy
+import numpy as np
+from colorama import Fore
+from pydantic import BaseModel, Field
+from shapely.geometry import LineString, Polygon, Point
+from langchain_core.language_models import BaseChatModel
+
+import obllomov.agents.prompts as prompts
+from obllomov.shared.log import logger
+from .base import BasePlanner
+
+
+class RawWallPlan(BaseModel):
+    wall_height: float = Field(description="Height of the walls in meters, between 2.0 and 4.5", ge=2.0, le=4.5)
+
+
+class WallPlan(BaseModel):
+    wall_height: float
+    walls: List[dict]
+
 
 class WallPlanner(BasePlanner):
     def __init__(self, llm: BaseChatModel):
@@ -27,13 +49,16 @@ class WallPlanner(BasePlanner):
 
 
     def plan(self, scene):
-        self._raw_plan(scene, prompts.wall_height_prompt, 
-                       cache_key="raw_wall_height",
-                       input_variables={
-                           "input": scene["query"],
-                       })
+        raw = self._structured_plan(
+            scene=scene,
+            schema=RawWallPlan,
+            prompt_template=prompts.wall_height_prompt,
+            cache_key="raw_wall_plan",
+            input_variables={"input": scene["query"]},
+        )
         
-        wall_height = self.get_wall_height(scene)
+        # wall_height = self.get_wall_height(scene)
+        wall_height = raw.wall_height
 
         walls = []
         rooms = scene["rooms"]
