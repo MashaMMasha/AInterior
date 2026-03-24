@@ -5,12 +5,10 @@ from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from pydantic import BaseModel
 
 from obllomov.shared.log import logger
 from obllomov.storage.assets.base import BaseAssets
-
-
-from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 

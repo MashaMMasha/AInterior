@@ -1,8 +1,7 @@
 
 from langchain_openai import ChatOpenAI
+
 from obllomov.shared.env import env
-
-
 
 
 def get_chat_yandex_model(**kwargs):

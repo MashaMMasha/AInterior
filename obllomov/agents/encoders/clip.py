@@ -2,7 +2,8 @@
 import torch
 from PIL import Image
 
-from .base import BaseEncoder, TextEncoder, ImageEncoder
+from .base import BaseEncoder, ImageEncoder, TextEncoder
+
 
 class CLIPTextEncoder(TextEncoder):
     def __init__(self, clip_model, clip_tokenizer):

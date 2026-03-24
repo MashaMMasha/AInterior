@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import *
 
 import torch
 import torch.nn.functional as F
 from PIL import Image
 
-from typing import *
 
 class BaseEncoder(ABC):
     @abstractmethod

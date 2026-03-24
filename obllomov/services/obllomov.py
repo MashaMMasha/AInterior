@@ -2,21 +2,21 @@ import os
 from typing import *
 
 import compress_json
+import matplotlib.colors as mcolors
 import numpy as np
 import open_clip
 import trimesh
 from langchain_core.language_models import LLM, BaseChatModel
 from sentence_transformers import SentenceTransformer
-import matplotlib.colors as mcolors
-
 
 from obllomov.agents.planners import FloorPlanner, WallPlanner
+from obllomov.agents.retrievers import (CLIPRetriever, ObjathorRetriever,
+                                        SBERTRetriever)
+from obllomov.agents.selectors import MaterialSelector, ObjectSelector
 from obllomov.shared.log import logger
 from obllomov.shared.path import ABS_ROOT_PATH, HOLODECK_MATERIALS_DIR
 from obllomov.shared.time import NOW
 from obllomov.storage.assets import BaseAssets
-from obllomov.agents.retrievers import CLIPRetriever, SBERTRetriever, ObjathorRetriever
-from obllomov.agents.selectors import MaterialSelector, ObjectSelector
 
 
 class ObLLoMov:

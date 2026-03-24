@@ -3,6 +3,7 @@ import torch
 
 from .base import BaseEncoder, TextEncoder
 
+
 class SBERTEncoder(TextEncoder):
     def __init__(self, sbert_model):
         self.sbert_model = sbert_model

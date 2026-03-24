@@ -1,12 +1,12 @@
 import io
 from pathlib import Path
+from typing import Any, Dict
 
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
 from PIL import Image
 from tqdm import tqdm
-from typing import Dict, Any
 
 from obllomov.storage.assets.base import BaseAssets
 
