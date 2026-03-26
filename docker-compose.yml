@@ -92,6 +92,35 @@ services:
     networks:
       - ainterior-network
 
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.auth
+    container_name: ainterior-auth-service
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=ainterior
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./auth-service:/app/auth-service
+    command: uvicorn auth_service.main:app --host 0.0.0.0 --port 8001 --reload
+    networks:
+      - ainterior-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   ml-service:
     build:
       context: .
@@ -107,24 +136,52 @@ services:
       - S3_SECRET_KEY=minioadmin
       - S3_BUCKET=ainterior-models
       - S3_REGION=us-east-1
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     depends_on:
       minio:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
-      - ./ml_api:/app/ml_api
-      - ./static:/app/static
-    command: uvicorn ml_api.main:app --host 0.0.0.0 --port 8002 --reload
+      - ./ml-service:/app/ml-service
+    command: uvicorn ml_service.main:app --host 0.0.0.0 --port 8002 --reload
     networks:
       - ainterior-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ainterior-backend-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - ML_SERVICE_URL=http://ml-service:8002
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_BUCKET=ainterior-models
+      - S3_REGION=us-east-1
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./backend-service:/app/backend-service
+      - ./static:/app/static
+    command: uvicorn backend_service.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - ainterior-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

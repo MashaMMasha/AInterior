@@ -11,7 +11,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ml_api/ ./ml_api/
+COPY ml-service/ ./ml-service/
 COPY static/ ./static/
 
 RUN mkdir -p /tmp /app/logs
@@ -21,4 +21,4 @@ ENV LOG_LEVEL=INFO
 
 EXPOSE 8002
 
-CMD ["uvicorn", "ml_api.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uvicorn", "ml_service.main:app", "--host", "0.0.0.0", "--port", "8002"]
