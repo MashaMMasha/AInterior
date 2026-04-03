@@ -1,86 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import *
 
-from colorama import Fore
 from langchain_core.language_models import BaseChatModel
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
-from pydantic import BaseModel
 
-from obllomov.shared.log import logger
+from obllomov.agents.base import BaseAgent
 from obllomov.storage.assets.base import BaseAssets
 
-T = TypeVar("T", bound=BaseModel)
 
-class BasePlanner(ABC):
-    def __init__(self, llm: BaseChatModel, assets: BaseAssets = None):
-        self.llm = llm
+class BasePlanner(BaseAgent, ABC):
+    def __init__(self, llm: BaseChatModel, assets: BaseAssets | None = None):
+        super().__init__(llm)
 
-        if assets:
-            self.assets = assets
-
+        self.assets = assets
         self.used_assets: list[str] = []
 
-    @abstractmethod
-    def plan(self, scene: Dict[str, Any], **kwargs) -> Any:
-        pass
-
-    def _raw_plan(
-        self,
-        scene: dict,
-        prompt_template: str,
-        cache_key: str | None = None,
-        input_variables: Optional[Dict[str, Any]] = None,
-        # system: Optional[str] = None,
-        
-        **kwargs
-    ) -> str:
-        prompt = PromptTemplate.from_template(prompt_template)
-
-        if cache_key and cache_key in scene:
-            response = scene[cache_key]
-        else:
-            chain = prompt | self.llm | StrOutputParser()
-            response = chain.invoke(input_variables)
-            
-            if cache_key:
-                scene[cache_key] = response
-        
-        self._log(response)
-        # logger.info(f"{Fore.GREEN}{self.__class__.__name__} response:\n{response}{Fore.RESET}")
-
-
-        return response
-    
-    def _structured_plan(
-        self,
-        scene: dict,
-        schema: type[T],
-        prompt_template: str,
-        cache_key: str | None = None,
-        input_variables: Optional[Dict[str, Any]] = None,
-        **kwargs,
-    ) -> T:
-        if cache_key and cache_key in scene:
-            response = schema.model_validate(scene[cache_key])
-        else:
-            prompt = PromptTemplate.from_template(prompt_template)
-            chain = prompt | self.llm.with_structured_output(schema)
-            response = chain.invoke(input_variables)
-
-            if cache_key:
-                scene[cache_key] = response.model_dump()
-
-        self._log(response.model_dump_json(indent=2))
-        return response
-    
 
     def reset_used_assets(self) -> None:
         self.used_assets = []
-
-    def _log(self, response, prefix: str | None = None):
-        if prefix is None:
-            # prefix = f"{self.__class__.__name__} response:"
-            prefix = f"AI:"
-        
-        logger.info(f"{Fore.GREEN}{prefix}\n{response}{Fore.RESET}")

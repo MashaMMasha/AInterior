@@ -16,6 +16,8 @@ Your response should be direct and without additional text at the beginning or e
 # kitchen | white hex tile, glossy | light grey drywall, smooth | [(5, 0), (5, 5), (8, 5), (8, 0)]
 
 wall_height_prompt = """I am now designing {input}. Please help me decide the wall height in meters.
+
+Additional requirements: {additional_requirements}.
 Answer with a number, for example, 3.0. Do not add additional text at the beginning or in the end."""
 
 
@@ -205,75 +207,17 @@ Agent: """
 
 object_selection_prompt_new_1 = """You are an experienced room designer, please assist me in selecting large *floor*/*wall* objects and small objects on top of them to furnish the room. You need to select appropriate objects to satisfy the customer's requirements.
 You must provide a description and desired size for each object since I will use it to retrieve object. If multiple items are to be placed in the room with the same description, please indicate the quantity and variance_type ("same" if they should be identical, otherwise "varied").
-Present your recommendations in JSON format:
-{
-    object_name:{
-        "description": a short sentence describing the object,
-        "location": "floor" or "wall",
-        "size": the desired size of the object, in the format of a list of three numbers, [length, width, height] in centimeters,
-        "quantity": the number of objects (int),
-        "variance_type": "same" or "varied",
-        "objects_on_top": a list of small children objects (can be empty) which are placed *on top of* this object. For each child object, you only need to provide the object name, quantity and variance type. For example, {"object_name": "book", "quantity": 2, "variance_type": "varied"}
-    }
-}
 
-For example:
-{
-    "sofa": {
-        "description": "modern sectional, light grey sofa",
-        "location": "floor",
-        "size": [200, 100, 80],
-        "quantity": 1,
-        "variance_type": "same",
-        "objects_on_top": [
-            {"object_name": "news paper", "quantity": 2, "variance_type": "varied"},
-            {"object_name": "pillow", "quantity": 2, "variance_type": "varied"},
-            {"object_name": "mobile phone", "quantity": 1, "variance_type": "same"}
-        ]
-    },
-    "tv stand": {
-        "description": "a modern style TV stand",
-        "location": "floor",
-        "size": [200, 50, 50],
-        "quantity": 1,
-        "variance_type": "same",
-        "objects_on_top": [
-            {"object_name": "49 inch TV", "quantity": 1, "variance_type": "same"},
-            {"object_name": "speaker", "quantity": 2, "variance_type": "same"},
-            {"object_name": "remote control for TV", "quantity": 1, "variance_type": "same"}
-        ]
-    },
-    "painting": {
-        "description": "abstract painting",
-        "location": "wall",
-        "size": [100, 100, 5],
-        "quantity": 2,
-        "variance_type": "varied",
-        "objects_on_top": []
-    },
-    "wall shelf": {
-        "description": "a modern style wall shelf",
-        "location": "wall",
-        "size": [100, 30, 50],
-        "quantity": 1,
-        "variance_type": "same",
-        "objects_on_top": [
-            {"object_name": "small plant", "quantity": 2, "variance_type": "varied"},
-            {"object_name": "coffee mug", "quantity": 2, "variance_type": "varied"},
-            {"object_name": "book", "quantity": 5, "variance_type": "varied"}
-        ]
-    }
-}
-
-Currently, the design in progress is *INPUT*, and we are working on the *ROOM_TYPE* with the size of ROOM_SIZE.
-Please also consider the following additional requirements: REQUIREMENTS.
+Currently, the design in progress is *{input}*, and we are working on the *{room_type}* with the size of {room_size}.
+Please also consider the following additional requirements: {additional_requirements}.
 
 Here are some guidelines for you:
 1. Provide reasonable type/style/quantity of objects for each room based on the room size to make the room not too crowded or empty.
 2. Do not provide rug/mat, windows, doors, curtains, and ceiling objects which have been installed for each room.
 3. I want more types of large objects and more types of small objects on top of the large objects to make the room look more vivid.
 
-Please first use natural language to explain your high-level design strategy for *ROOM_TYPE*, and then follow the desired JSON format *strictly* (do not add any additional text at the beginning or end)."""
+"""
+# Please first use natural language to explain your high-level design strategy for *ROOM_TYPE*, and then follow the desired JSON format *strictly* (do not add any additional text at the beginning or end).
 
 
 object_selection_prompt_new_2 = """User: {object_selection_prompt_new_1}

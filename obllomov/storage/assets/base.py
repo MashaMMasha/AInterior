@@ -1,3 +1,4 @@
+import gzip
 import io
 import json
 import pickle
@@ -5,9 +6,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Iterator, Optional
 
-import compress_json
 import compress_pickle
 
+COMPRESSED_EXTS = {".gz", ".lz4", ".bz2", ".lzma"}
 
 class BaseAssets(ABC):
     @abstractmethod
@@ -34,6 +35,14 @@ class BaseAssets(ABC):
     def get_local_path(self, relative_path: Path | str) -> Path:
         pass
 
+    @abstractmethod
+    def get_local_dir(self, relative_prefix: Path | str) -> Path:
+        """
+        Возвращает локальный путь к директории (prefix) с ассетами.
+        Для удалённых бэкендов (например S3) должен скачать содержимое в кэш.
+        """
+        pass
+
 
     @staticmethod
     def _to_path(relative_path: Path | str) -> Path:
@@ -56,10 +65,11 @@ class BaseAssets(ABC):
         path = self._to_path(relative_path)
 
         if path.suffix == ".gz":
-            buf = io.BytesIO(self.read_bytes(path))
-            return compress_json.load(buf, **json_kwargs)
+            raw = self.read_bytes(path)
+            decompressed = gzip.decompress(raw)
+            return json.loads(decompressed.decode("utf-8"), **json_kwargs)
 
-        return json.loads(self.read_bytes(path), **json_kwargs)
+        return json.loads(self.read_text(path), **json_kwargs)
 
     def write_json(
         self,
@@ -71,9 +81,8 @@ class BaseAssets(ABC):
         path = self._to_path(relative_path)
 
         if path.suffix == ".gz":
-            buf = io.BytesIO()
-            compress_json.dump(data, buf, json_kwargs={"indent": indent, **json_kwargs})
-            self.write_bytes(path, buf.getvalue())
+            text = json.dumps(data, indent=indent, **json_kwargs).encode("utf-8")
+            self.write_bytes(path, gzip.compress(text))
             return
 
         raw = json.dumps(data, indent=indent, **json_kwargs).encode("utf-8")
@@ -82,9 +91,8 @@ class BaseAssets(ABC):
 
     def read_pickle(self, relative_path: Path | str, **pickle_kwargs) -> Any:
         path = self._to_path(relative_path)
-        compressed_exts = {".gz", ".lz4", ".bz2", ".lzma"}
 
-        if path.suffix in compressed_exts:
+        if path.suffix in COMPRESSED_EXTS:
             buf = io.BytesIO(self.read_bytes(path))
             return compress_pickle.load(buf, **pickle_kwargs)
 
@@ -97,9 +105,8 @@ class BaseAssets(ABC):
         **pickle_kwargs,
     ) -> None:
         path = self._to_path(relative_path)
-        compressed_exts = {".gz", ".lz4", ".bz2", ".lzma"}
 
-        if path.suffix in compressed_exts:
+        if path.suffix in COMPRESSED_EXTS:
             buf = io.BytesIO()
             compress_pickle.dump(data, buf, **pickle_kwargs)
             self.write_bytes(path, buf.getvalue())

@@ -2,82 +2,58 @@ import copy
 import random
 from typing import List, Optional, Tuple
 
-import compress_json
 import numpy as np
 from colorama import Fore
 from langchain_core.language_models import BaseChatModel
-from pydantic import BaseModel, Field
 
 import obllomov.agents.prompts as prompts
+from obllomov.schemas.domain.entries import ScenePlan, WindowEntry, WindowPlan
+from obllomov.schemas.domain.raw import RawWindowEntry, RawWindowPlan
+from obllomov.shared.geometry import (Segment2D, Vertex2D, Vertex3D,
+                                      create_offset_rectangles,
+                                      generate_wall_polygon)
 from obllomov.shared.log import logger
-from obllomov.shared.path import HOLODECK_BASE_DATA_DIR
+
 from .base import BasePlanner
-
-class RawWindowEntry(BaseModel):
-    room_id: str = Field(description="Room type id")
-    wall_direction: str = Field(description="One of: north, south, east, west")
-    window_type: str = Field(description="One of: fixed, hung, and slider")
-    window_size: List[float] = Field(description="[width, height] in meters")
-    quantity: int = Field(description="Number of windows on this wall")
-    window_height: float = Field(description="Height from floor to bottom of window in cm")
-
-
-class RawWindowPlan(BaseModel):
-    windows: List[RawWindowEntry] = Field(description="List of windows per room wall")
-
-
-class WindowEntry(BaseModel):
-    asset_id: str
-    id: str
-    room0: str
-    room1: str
-    wall0: str
-    wall1: str
-    room_id: str
-    hole_polygon: List[dict]
-    asset_position: dict
-    window_segment: list
-    window_boxes: list
-
-
-class WindowPlan(BaseModel):
-    windows: List[WindowEntry]
-    walls: list
 
 
 class WindowPlanner(BasePlanner):
-    def __init__(self, llm: BaseChatModel):
+    def __init__(self, window_data: dict, llm: BaseChatModel):
         super().__init__(llm)
 
-        self.window_data = compress_json.load(
-            f"{HOLODECK_BASE_DATA_DIR}/windows/window-database.json"
-        )
+        self.window_data = window_data
         self.window_ids = list(self.window_data.keys())
         self.hole_offset = 0.05
         self.used_assets = []
 
-    def plan(self, scene, additional_requirements="N/A") -> WindowPlan:
-        organized_walls, available_wall_str = self._get_wall_for_windows(scene)
+    def plan(
+        self,
+        scene_plan: ScenePlan,
+        raw: Optional[RawWindowPlan] = None,
+        additional_requirements: str = "N/A",
+    ) -> Tuple[WindowPlan, RawWindowPlan]:
+        organized_walls, available_wall_str = self._get_wall_for_windows(scene_plan)
 
-        raw = self._structured_plan(
-            scene=scene,
-            schema=RawWindowPlan,
-            prompt_template=prompts.window_prompt,
-            cache_key="raw_window_plan",
-            input_variables={
-                "input": scene["query"],
-                "walls": available_wall_str,
-                "wall_height": int(scene["wall_height"] * 100),
-                "additional_requirements": additional_requirements,
-            },
-        )
+        logger.debug(organized_walls)
+        logger.debug(available_wall_str)
 
-        return self._parse_raw(raw, scene, organized_walls)
+        if raw is None:
+            raw = self._structured_plan(
+                schema=RawWindowPlan,
+                prompt_template=prompts.window_prompt,
+                input_variables={
+                    "input": scene_plan.query,
+                    "walls": available_wall_str,
+                    "wall_height": int(scene_plan.wall_height * 100),
+                    "additional_requirements": additional_requirements,
+                },
+            )
 
+        walls_data = [w.model_dump() for w in scene_plan.walls]
+        window_plan = self._parse_raw(raw, walls_data, organized_walls)
+        return window_plan, raw
 
-
-    def _parse_raw(self, raw: RawWindowPlan, scene: dict, organized_walls: dict) -> WindowPlan:
-        walls = scene["walls"]
+    def _parse_raw(self, raw: RawWindowPlan, walls: list, organized_walls: dict) -> WindowPlan:
         windows = []
         window_ids_seen = []
         rooms_with_windows = []
@@ -160,7 +136,7 @@ class WindowPlanner(BasePlanner):
 
         wall_width = wall_info["width"]
         wall_height = wall_info["height"]
-        wall_segment = wall_info["segment"]
+        wall_segment_data = wall_info["segment"]
 
         window_height = min(window_height / 100.0, wall_height - window_y)
         quantity = min(quantity, int(wall_width / window_x))
@@ -168,33 +144,41 @@ class WindowPlanner(BasePlanner):
         if quantity == 0:
             return [], [], [], [], [], walls
 
-        wall_start = np.array(wall_segment[0])
-        wall_end = np.array(wall_segment[1])
-        original_vector = wall_end - wall_start
-        original_length = np.linalg.norm(original_vector)
-        normalized_vector = original_vector / original_length
+        if isinstance(wall_segment_data, dict) and "v1" in wall_segment_data:
+            wall_seg = Segment2D(
+                v1=Vertex2D(**wall_segment_data["v1"]),
+                v2=Vertex2D(**wall_segment_data["v2"]),
+            )
+        else:
+            wall_seg = Segment2D(
+                v1=Vertex2D(x=wall_segment_data[0][0], z=wall_segment_data[0][1]),
+                v2=Vertex2D(x=wall_segment_data[1][0], z=wall_segment_data[1][1]),
+            )
+
+        original_length = wall_seg.length
+        normalized_vector = wall_seg.direction_vector
 
         if quantity == 1:
             w_start = random.uniform(0, wall_width - window_x)
             w_end = w_start + window_x
             polygon = [
-                {"x": w_start, "y": window_height, "z": 0},
-                {"x": w_end, "y": window_height + window_y, "z": 0},
+                Vertex3D(x=w_start, y=window_height, z=0),
+                Vertex3D(x=w_end, y=window_height + window_y, z=0),
             ]
-            position = {
-                "x": (polygon[0]["x"] + polygon[1]["x"]) / 2,
-                "y": (polygon[0]["y"] + polygon[1]["y"]) / 2,
-                "z": 0,
-            }
-            window_segment = [
-                list(wall_start + normalized_vector * w_start),
-                list(wall_start + normalized_vector * w_end),
-            ]
-            window_boxes = self._create_rectangles(window_segment)
-            return [polygon], [position], [window_segment], [window_boxes], [wall_info["id"]], walls
+            position = Vertex3D(
+                x=(polygon[0].x + polygon[1].x) / 2,
+                y=(polygon[0].y + polygon[1].y) / 2,
+                z=0,
+            )
+            p1 = wall_seg.point_at(w_start)
+            p2 = wall_seg.point_at(w_end)
+            win_segment = Segment2D(v1=p1, v2=p2)
+            window_boxes = create_offset_rectangles(win_segment, 0.1)
+            return [polygon], [position], [win_segment], [window_boxes], [wall_info["id"]], walls
 
-        # multiple windows — split wall into subwalls
         subwall_length = original_length / quantity
+        wall_start = wall_seg.v1.to_np()
+
         segments = [
             (
                 wall_start + i * subwall_length * normalized_vector,
@@ -209,18 +193,21 @@ class WindowPlanner(BasePlanner):
         for i, (seg_start, seg_end) in enumerate(segments):
             current_wall = copy.deepcopy(wall_info)
             current_wall["id"] = f"{wall_info['id']}|{i}"
-            current_wall["segment"] = [seg_start.tolist(), seg_end.tolist()]
+            s1 = Vertex2D(x=float(seg_start[0]), z=float(seg_start[1]))
+            s2 = Vertex2D(x=float(seg_end[0]), z=float(seg_end[1]))
+            current_wall["segment"] = Segment2D(v1=s1, v2=s2).model_dump()
             current_wall["width"] = subwall_length
-            current_wall["polygon"] = self._generate_wall_polygon(
-                seg_start.tolist(), seg_end.tolist(), wall_height
-            )
+            current_wall["polygon"] = [
+                v.model_dump() for v in generate_wall_polygon(s1, s2, wall_height)
+            ]
             current_wall["connect_exterior"] = current_wall["id"] + "|exterior"
 
             exterior = copy.deepcopy(current_wall)
             exterior["id"] = current_wall["id"] + "|exterior"
             exterior["material"] = {"name": "Walldrywall4Tiled"}
             exterior["polygon"] = list(reversed(current_wall["polygon"]))
-            exterior["segment"] = list(reversed(current_wall["segment"]))
+            rev_seg = Segment2D(v1=s2, v2=s1)
+            exterior["segment"] = rev_seg.model_dump()
             exterior.pop("connect_exterior", None)
 
             updated_walls.extend([current_wall, exterior])
@@ -231,69 +218,56 @@ class WindowPlanner(BasePlanner):
             w_start = random.uniform(0, subwall_length - window_x)
             w_end = w_start + window_x
             polygon = [
-                {"x": w_start, "y": window_height, "z": 0},
-                {"x": w_end, "y": window_height + window_y, "z": 0},
+                Vertex3D(x=w_start, y=window_height, z=0),
+                Vertex3D(x=w_end, y=window_height + window_y, z=0),
             ]
-            position = {
-                "x": (polygon[0]["x"] + polygon[1]["x"]) / 2,
-                "y": (polygon[0]["y"] + polygon[1]["y"]) / 2,
-                "z": 0,
-            }
-            window_segment = [
-                list(seg_start + normalized_vector * w_start),
-                list(seg_start + normalized_vector * w_end),
-            ]
+            position = Vertex3D(
+                x=(polygon[0].x + polygon[1].x) / 2,
+                y=(polygon[0].y + polygon[1].y) / 2,
+                z=0,
+            )
+            p1_np = seg_start + normalized_vector * w_start
+            p2_np = seg_start + normalized_vector * w_end
+            win_segment = Segment2D(
+                v1=Vertex2D(x=float(p1_np[0]), z=float(p1_np[1])),
+                v2=Vertex2D(x=float(p2_np[0]), z=float(p2_np[1])),
+            )
             window_polygons.append(polygon)
             window_positions.append(position)
-            window_segments.append(window_segment)
-            window_boxes_list.append(self._create_rectangles(window_segment))
+            window_segments.append(win_segment)
+            window_boxes_list.append(create_offset_rectangles(win_segment, 0.1))
 
         return window_polygons, window_positions, window_segments, window_boxes_list, new_wall_ids, updated_walls
 
-    def _generate_wall_polygon(self, point, next_point, wall_height) -> List[dict]:
-        return [
-            {"x": point[0], "y": 0, "z": point[1]},
-            {"x": point[0], "y": wall_height, "z": point[1]},
-            {"x": next_point[0], "y": wall_height, "z": next_point[1]},
-            {"x": next_point[0], "y": 0, "z": next_point[1]},
-        ]
-
-    def _create_rectangles(self, segment) -> Tuple[list, list]:
-        pt1 = np.array(segment[0])
-        pt2 = np.array(segment[1])
-        vec = pt2 - pt1
-        perp_vec = np.array([-vec[1], vec[0]], dtype=np.float64)
-        perp_vec /= np.linalg.norm(perp_vec)
-        perp_vec *= 0.1
-
-        top = [list(pt1 + perp_vec), list(pt2 + perp_vec), list(pt2), list(pt1)]
-        bottom = [list(pt1), list(pt2), list(pt2 - perp_vec), list(pt1 - perp_vec)]
-        return top, bottom
-
-    def _get_wall_for_windows(self, scene: dict) -> Tuple[dict, str]:
+    def _get_wall_for_windows(self, scene_plan: ScenePlan) -> Tuple[dict, str]:
         walls_with_door = set()
-        for door in scene["doors"]:
-            walls_with_door.add(door["wall0"])
-            walls_with_door.add(door["wall1"])
+        for door in scene_plan.doors:
+            walls_with_door.add(door.wall0)
+            walls_with_door.add(door.wall1)
+
+        logger.debug(f"walls_with_door: {walls_with_door}")
+
+        available_wall = []
+        for wall in scene_plan.walls:
+            if wall.id not in walls_with_door and "exterior" in wall.id:
+                available_wall.append(wall)
 
         organized_walls = {}
-        for wall in scene["walls"]:
-            if "connect_exterior" not in wall or wall["id"] in walls_with_door:
-                continue
-            if wall["width"] < 2.0:
+        for wall in scene_plan.walls:
+            if wall.width < 2.0:
                 continue
 
-            room_id = wall["roomId"]
-            direction = wall["direction"]
+            room_id = wall.room_id
+            direction = wall.direction
 
             if room_id not in organized_walls:
                 organized_walls[room_id] = {}
 
             if direction not in organized_walls[room_id] or \
-                    wall["width"] > organized_walls[room_id][direction]["wall_width"]:
+                    wall.width > organized_walls[room_id][direction]["wall_width"]:
                 organized_walls[room_id][direction] = {
-                    "wall_id": wall["id"],
-                    "wall_width": wall["width"],
+                    "wall_id": wall.id,
+                    "wall_width": wall.width,
                 }
 
         available_wall_str = ""

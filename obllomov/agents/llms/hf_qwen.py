@@ -13,21 +13,13 @@ from openai import OpenAI
 from pydantic import Field, model_validator
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from obllomov.shared.log import logger
-
 from .base import *
-
-# from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-
-
-
-
 
 
 class ChatHFQwen(BaseChatModel):
     model_path: str
-    tokenizer: AutoModelForCausalLM = Field(default=None, exclude=True)
-    model: AutoTokenizer = Field(default=None, exclude=True)
+    tokenizer: AutoTokenizer = Field(default=None, exclude=True)
+    model: AutoModelForCausalLM = Field(default=None, exclude=True)
     max_new_tokens: int = MAX_NEW_TOKENS
 
     @model_validator(mode='after')

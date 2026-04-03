@@ -1,57 +1,47 @@
-import copy
-import random
 from typing import List, Optional, Tuple
 
-import numpy as np
 from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel, Field
-from shapely.geometry import LineString, Polygon, Point
 
 import obllomov.agents.prompts as prompts
+from obllomov.schemas.domain.entries import (ScenePlan, WallConnection,
+                                             WallEntry, WallPlan)
+from obllomov.schemas.domain.raw import RawWallPlan
+from obllomov.shared.geometry import (Polygon2D, Segment2D, Vertex2D, Vertex3D,
+                                      create_offset_rectangles,
+                                      generate_wall_polygon,
+                                      get_wall_direction)
 from obllomov.shared.log import logger
+
 from .base import BasePlanner
-
-
-
-class RawWallPlan(BaseModel):
-    wall_height: float = Field(description="Height of the walls in meters, between 2.0 and 4.5", ge=2.0, le=4.5)
-
-
-class WallEntry(BaseModel):
-    id: str
-    room_id: str
-    material: dict
-    polygon: List[dict]
-    connected_rooms: List[dict]
-    width: float
-    height: float
-    direction: Optional[str]
-    segment: List
-
-
-class WallPlan(BaseModel):
-    wall_height: float
-    walls: List[WallEntry]
+from .floor import RoomPlan
 
 
 class WallPlanner(BasePlanner):
     def __init__(self, llm: BaseChatModel):
         super().__init__(llm)
 
-    def plan(self, scene) -> WallPlan:
-        raw = self._structured_plan(
-            scene=scene,
-            schema=RawWallPlan,
-            prompt_template=prompts.wall_height_prompt,
-            cache_key="raw_wall_plan",
-            input_variables={"input": scene["query"]},
-        )
+    def plan(
+        self,
+        scene_plan: ScenePlan,
+        raw: Optional[RawWallPlan] = None,
+        additional_requirements: str = "N/A",
+    ) -> Tuple[WallPlan, RawWallPlan]:
+        if raw is None:
+            raw = self._structured_plan(
+                schema=RawWallPlan,
+                prompt_template=prompts.wall_height_prompt,
+                input_variables={
+                    "input": scene_plan.query,
+                    "additional_requirements": additional_requirements,
+                },
+            )
 
         wall_height = min(max(raw.wall_height, 2.0), 4.5)
-        walls = self._build_walls(scene["rooms"], wall_height)
+        walls = self._build_walls(scene_plan.rooms, wall_height)
 
-        return WallPlan(wall_height=wall_height, walls=walls)
+        return WallPlan(wall_height=wall_height, walls=walls), raw
 
     def update_walls(self, wall_plan: WallPlan, open_room_pairs: list) -> Tuple[WallPlan, dict]:
         updated_walls = []
@@ -62,7 +52,7 @@ class WallPlanner(BasePlanner):
                 updated_walls.append(wall)
                 continue
             room0_id = wall.room_id
-            room1_id = wall.connected_rooms[0]["roomId"]
+            room1_id = wall.connected_rooms[0].room_id
             if (room0_id, room1_id) in open_room_pairs or (room1_id, room0_id) in open_room_pairs:
                 deleted_wall_ids.append(wall.id)
             else:
@@ -72,35 +62,41 @@ class WallPlanner(BasePlanner):
         for wall_id in deleted_wall_ids:
             wall = next(w for w in wall_plan.walls if w.id == wall_id)
             seg = wall.segment
-            if seg not in open_wall_segments and list(reversed(seg)) not in open_wall_segments:
+            rev = seg.reversed()
+            already = any(
+                s == seg or s == rev for s in open_wall_segments
+            )
+            if not already:
                 open_wall_segments.append(seg)
 
         open_wall_rectangles = []
         for segment in open_wall_segments:
-            top, bottom = self._create_rectangles(segment)
+            top, bottom = create_offset_rectangles(segment, 0.5)
             open_wall_rectangles.append(top)
             open_wall_rectangles.append(bottom)
 
         open_walls = {
-            "segments": open_wall_segments,
+            "segments": [s.model_dump() for s in open_wall_segments],
             "openWallBoxes": open_wall_rectangles,
         }
 
         return WallPlan(wall_height=wall_plan.wall_height, walls=updated_walls), open_walls
 
-    def _build_walls(self, rooms: list, wall_height: float) -> List[WallEntry]:
+    def _build_walls(self, rooms: List[RoomPlan], wall_height: float) -> List[WallEntry]:
         walls: list[WallEntry] = []
         for room in rooms:
-            room_id = room["id"]
-            material = room["wallMaterial"]
-            full_vertices = room["full_vertices"]
+            room_id = room.id
+            material = room.wall_material
+            full_vertices = list(room.full_vertices)
+            room_polygon = Polygon2D(vertices=list(room.vertices))
 
             for j in range(len(full_vertices)):
                 p1 = full_vertices[j]
                 p2 = full_vertices[(j + 1) % len(full_vertices)]
-                polygon = self._generate_wall_polygon(p1, p2, wall_height)
+                segment = Segment2D(v1=p1, v2=p2)
+                polygon = generate_wall_polygon(p1, p2, wall_height)
                 connected_rooms = self._get_connected_rooms(polygon, rooms, room_id)
-                wall_width, wall_direction = self._get_wall_direction(p1, p2, full_vertices)
+                wall_width, wall_direction = get_wall_direction(p1, p2, room_polygon)
 
                 walls.append(WallEntry(
                     id=f"wall|{room_id}|{wall_direction}|{j}",
@@ -111,20 +107,20 @@ class WallPlanner(BasePlanner):
                     width=wall_width,
                     height=wall_height,
                     direction=wall_direction,
-                    segment=[p1, p2],
+                    segment=segment,
                 ))
 
-        # update wallId in connected_rooms
         for wall in walls:
             for connection in wall.connected_rooms:
-                connect_room_id = connection["roomId"]
-                line1 = connection["line1"]
+                connect_room_id = connection.room_id
+                line1 = connection.line1
                 for candidate in walls:
                     if candidate.room_id == connect_room_id:
-                        if line1[0] in candidate.polygon and line1[1] in candidate.polygon:
-                            connection["wallId"] = candidate.id
+                        line1_dicts = [v.model_dump() for v in line1]
+                        candidate_dicts = [v.model_dump() for v in candidate.polygon]
+                        if line1_dicts[0] in candidate_dicts and line1_dicts[1] in candidate_dicts:
+                            connection.wall_id = candidate.id
 
-        # add exterior walls
         updated_walls = []
         for wall in walls:
             if not wall.connected_rooms:
@@ -137,7 +133,7 @@ class WallPlanner(BasePlanner):
                     width=wall.width,
                     height=wall.height,
                     direction=wall.direction,
-                    segment=list(reversed(wall.segment)),
+                    segment=wall.segment.reversed(),
                 )
                 updated_walls.append(exterior)
             updated_walls.append(wall)
@@ -145,98 +141,37 @@ class WallPlanner(BasePlanner):
         return updated_walls
 
 
-    def _generate_wall_polygon(self, point, next_point, wall_height) -> List[dict]:
-        return [
-            {"x": point[0], "y": 0, "z": point[1]},
-            {"x": point[0], "y": wall_height, "z": point[1]},
-            {"x": next_point[0], "y": wall_height, "z": next_point[1]},
-            {"x": next_point[0], "y": 0, "z": next_point[1]},
-        ]
-
-    def _get_connected_rooms(self, wall_polygon, rooms, room_id) -> list:
+    def _get_connected_rooms(self, wall_polygon: list[Vertex3D], rooms: List[RoomPlan], room_id: str) -> list[WallConnection]:
         connected_rooms = []
-        vertices0 = [(v["x"], v["z"]) for v in wall_polygon if v["y"] == 0]
-        lines0 = [LineString([vertices0[0], vertices0[1]])]
+        floor_verts = [v.to_2d() for v in wall_polygon if v.y == 0]
+        seg0 = Segment2D(v1=floor_verts[0], v2=floor_verts[1])
 
         for room in rooms:
-            if room["id"] == room_id:
+            if room.id == room_id:
                 continue
-            vertices1 = [(v["x"], v["z"]) for v in room["floorPolygon"]]
-            lines1 = [
-                LineString([vertices1[i], vertices1[(i + 1) % len(vertices1)]])
-                for i in range(len(vertices1))
+            room_verts = list(room.floor_polygon)
+            room_segments = [
+                Segment2D(v1=room_verts[i].to_2d(), v2=room_verts[(i + 1) % len(room_verts)].to_2d())
+                for i in range(len(room_verts))
             ]
-            shared = self._check_connected(lines0, lines1)
+            shared = self._check_connected(seg0, room_segments)
             if shared:
                 connection = shared[0]
-                connection["roomId"] = room["id"]
+                connection.room_id = room.id
                 connected_rooms.append(connection)
 
         return connected_rooms
 
-    def _line_to_dict(line):
-        return [
-                {"x": line.xy[0][0], "y": 0, "z": line.xy[1][0]},
-                {"x": line.xy[0][1], "y": 0, "z": line.xy[1][1]},
-            ]
-    
-    def _check_connected(self, lines0, lines1) -> Optional[list]:
-        
-        shared_segments = []
-        for line0 in lines0:
-            for line1 in lines1:
-                if line0.intersects(line1):
-                    intersection = line0.intersection(line1)
-                    if intersection.geom_type == "LineString":
-                        # shared_segments.append({
-                        #     "intersection": [
-                        #         {"x": intersection.xy[0][0], "y": 0, "z": intersection.xy[1][0]},
-                        #         {"x": intersection.xy[0][1], "y": 0, "z": intersection.xy[1][1]},
-                        #     ],
-                        #     "line0": [
-                        #         {"x": line0.xy[0][0], "y": 0, "z": line0.xy[1][0]},
-                        #         {"x": line0.xy[0][1], "y": 0, "z": line0.xy[1][1]},
-                        #     ],
-                        #     "line1": [
-                        #         {"x": line1.xy[0][0], "y": 0, "z": line1.xy[1][0]},
-                        #         {"x": line1.xy[0][1], "y": 0, "z": line1.xy[1][1]},
-                        #     ],
-                        # })
-                        shared_segments.append({
-                            "intersection": self._line_to_dict(intersection),
-                            "line0": self._line_to_dict(line0),
-                            "line1": self._line_to_dict(line1),
-                        })
+    def _check_connected(self, seg0: Segment2D, segments: list[Segment2D]) -> Optional[list[WallConnection]]:
+        shared = []
+        for seg1 in segments:
+            if seg0.intersects(seg1):
+                intersection = seg0.intersection(seg1)
+                if intersection is not None:
+                    shared.append(WallConnection(
+                        intersection=seg0.intersection(seg1).to_vertex3d_list(),
+                        line0=seg0.to_vertex3d_list(),
+                        line1=seg1.to_vertex3d_list(),
+                    ))
 
-        return shared_segments if shared_segments else None
-
-    def _get_wall_direction(self, p1, p2, room_vertices) -> Tuple[float, Optional[str]]:
-        wall_width = float(np.linalg.norm(np.array(p1) - np.array(p2)))
-        room_polygon = Polygon(room_vertices)
-        wall_center = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2]
-        direction = None
-
-        if p1[1] == p2[1]:
-            if room_polygon.contains(Point([wall_center[0], wall_center[1] + 0.01])):
-                direction = "south"
-            elif room_polygon.contains(Point([wall_center[0], wall_center[1] - 0.01])):
-                direction = "north"
-        elif p1[0] == p2[0]:
-            if room_polygon.contains(Point([wall_center[0] + 0.01, wall_center[1]])):
-                direction = "west"
-            elif room_polygon.contains(Point([wall_center[0] - 0.01, wall_center[1]])):
-                direction = "east"
-
-        return wall_width, direction
-
-    def _create_rectangles(self, segment) -> Tuple[list, list]:
-        pt1 = np.array(segment[0])
-        pt2 = np.array(segment[1])
-        vec = pt2 - pt1
-        perp_vec = np.array([-vec[1], vec[0]], dtype=np.float32)
-        perp_vec /= np.linalg.norm(perp_vec)
-        perp_vec *= 0.5
-
-        top = [list(pt1 + perp_vec), list(pt2 + perp_vec), list(pt2), list(pt1)]
-        bottom = [list(pt1), list(pt2), list(pt2 - perp_vec), list(pt1 - perp_vec)]
-        return top, bottom
+        return shared if shared else None

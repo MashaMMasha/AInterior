@@ -46,3 +46,11 @@ class LocalAssets(BaseAssets):
                 f"Файл не найден в локальном хранилище: {abs_path}"
             )
         return abs_path
+
+    def get_local_dir(self, relative_prefix: Path | str) -> Path:
+        abs_path = self._abs(relative_prefix)
+        if not abs_path.is_dir():
+            raise FileNotFoundError(
+                f"Директория не найдена в локальном хранилище: {abs_path}"
+            )
+        return abs_path

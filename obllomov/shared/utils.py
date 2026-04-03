@@ -12,6 +12,7 @@ from moviepy import (CompositeVideoClip, ImageSequenceClip, TextClip,
 from PIL import Image
 from tqdm import tqdm
 
+from obllomov.shared.geometry import BBox3D
 from obllomov.shared.path import ASSETS_VERSION, HOLODECK_BASE_DATA_DIR
 
 if ASSETS_VERSION > "2023_09_23":
@@ -252,6 +253,7 @@ def ithor_video(scene, objaverse_asset_dir, width, height, scene_type):
         ),
     )
 
+
     event = controller.step(action="GetMapViewCameraProperties", raise_for_failure=True)
     pose = copy.deepcopy(event.metadata["actionReturn"])
 
@@ -445,21 +447,20 @@ def get_annotations(obj_data: Dict[str, Any]):
         return obj_data
 
 
-def get_bbox_dims(obj_data: Dict[str, Any]):
+def get_bbox_dims(obj_data: Dict[str, Any]) -> BBox3D:
     am = get_asset_metadata(obj_data)
-
     bbox_info = am["boundingBox"]
 
     if "x" in bbox_info:
-        return bbox_info
+        return BBox3D(x=bbox_info["x"], y=bbox_info["y"], z=bbox_info["z"])
 
     if "size" in bbox_info:
-        return bbox_info["size"]
+        s = bbox_info["size"]
+        return BBox3D(x=s["x"], y=s["y"], z=s["z"])
 
     mins = bbox_info["min"]
     maxs = bbox_info["max"]
-
-    return {k: maxs[k] - mins[k] for k in ["x", "y", "z"]}
+    return BBox3D(x=maxs["x"] - mins["x"], y=maxs["y"] - mins["y"], z=maxs["z"] - mins["z"])
 
 
 def get_secondary_properties(obj_data: Dict[str, Any]):

@@ -1,5 +1,6 @@
 query ?= "A lightful living room, small bedroom and tiny kitchen"
 save_dir ?= "./scenes"
+mock ?= 0
 
 run: 
 	uvicorn obllomov.main:app --reload
@@ -8,7 +9,8 @@ req:
 	pipreqs --mode gt --force . 
 
 generate:
-	python generate.py --query $(query) --save-dir $(save_dir)
+	export PYTHONPATH="." && python scripts/generate.py --query $(query) --save-dir $(save_dir) \
+	$(if $(filter 1,$(mock)),--mock)
 
 minio:
 	docker run -d \

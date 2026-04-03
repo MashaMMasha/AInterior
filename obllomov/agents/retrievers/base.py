@@ -1,112 +1,52 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any
 
+import numpy as np
 import torch
-from PIL import Image
 
-from obllomov.agents.encoders import BaseEncoder
-
-
-class BaseRetriever:
-    def __init__(self, encoder: BaseEncoder, features: torch.Tensor, items: list[str], scale: float = 100.0):
-        self.encoder = encoder
-        self.features = features
-        self.items = items
-        self.scale = scale
-
-    # encoder: BaseEncoder
-    # features: torch.Tensor
-    # items: list
-
-    # scale: float = 100.0
+from obllomov.agents.encoders import TextEncoder
+from obllomov.storage.assets import BaseAssets
 
 
-    def _get_top_k(self, features_score, topk=5):
-        results, scores = [], []
-        for score in features_score:
-            indices = torch.argsort(score, descending=True)[:topk]
+def load_features(assets: BaseAssets, feature_path: Path | str, feature_key: str | None = None) -> torch.Tensor:
+    raw = assets.read_pickle(feature_path)
 
-            results.append([self.items[ind] for ind in indices])
-            scores.append([score[ind].item() for ind in indices])
-
-        return results, scores
-
-
-    def retrieve(self, queries: list[str], topk: int = 5) -> tuple[list[list[str]], list[list[float]]]:
-        features = self.encoder.encode(queries)
-        scores = self.score(features)
-
-        return self._get_top_k(scores, self.items, topk)
-
-    def score(self, featrues: torch.Tensor) -> torch.Tensor:
-        return self.scale * (featrues @ self.features.T)
+    match raw:
+        case torch.Tensor():
+            return raw
+        case np.ndarray():
+            return torch.from_numpy(raw.astype(np.float32))
+        case dict() if feature_key is not None:
+            return torch.from_numpy(raw[feature_key].astype(np.float32))
+        case _:
+            raise TypeError(f"Unsupported feature format: {type(raw)}")
 
 
-# class DenseRetriever(BaseRetriever):
-#     def __init__(self, encoder: BaseEncoder, features: torch.Tensor, items: list[str], score_scale: float = 100.0):
-#         super().__init__(encoder, features, items, score_scale)
 
+class BaseRetriever(ABC):
+    @abstractmethod
+    def retrieve(self, queries: list[str], topk: int = 5) -> tuple[list[list[Any]], torch.Tensor]:
+        ...
 
-#     def score(self, featrues: torch.Tensor) -> torch.Tensor:
-#         return self.scale * (featrues @ self.features.T)
+    def retrieve_single(self, query: str, topk: int = 5) -> tuple[list[Any], torch.Tensor]:
+        items, scores = self.retrieve([query], topk)
+        return items[0], scores[0]
     
+    @staticmethod
+    def get_top_k(
+        scores: torch.Tensor,
+        items: list,
+        topk: int = 5,
+        mask: torch.Tensor | None = None,
+    ) -> tuple[list[list[Any]], torch.Tensor]:
+        if mask is not None:
+            top_scores, indices = scores[mask].topk(topk)
+        else:
+            top_scores, indices = scores.topk(topk)
 
-class ObjectRetriever(BaseRetriever):
-    def __init__(self, encoder: BaseEncoder, features: torch.Tensor, items: list[str], score_scale: float = 100.0):
-        super().__init__(encoder, features, items, score_scale)
-
-    def score(self, featrues: torch.Tensor) -> torch.Tensor:
-        scores = self.scale * torch.einsum("ij, lkj -> ilk", featrues, self.features)
-        return torch.max(scores, dim=-1).values  # Возвращает [N, M]
-    
+        top_items = [[items[i] for i in ind] for ind in indices]
+        return top_items, top_scores
 
 
-    
 
-    
-    
-
-
-    
-# class BaseRetriever(ABC):
-#     @abstractmethod
-#     def retrieve(
-#         self,
-#         queries: list[str],
-#         threshold: float | None = None,
-#         k: int | None = None,
-#     ) -> list[list[tuple[str, float]]]:
-#         ...
-
-#     def retrieve_single(
-#         self,
-#         query: str,
-#         threshold: float | None = None,
-#         k: int | None = None,
-#     ) -> list[tuple[str, float]]:
-#         return self.retrieve([query], threshold=threshold, k=k)[0]
-
-#     def retrieve_by_image(
-#         self,
-#         images: list[Image.Image],
-#         threshold: float | None = None,
-#         k: int | None = None,
-#     ) -> list[list[tuple[str, float]]]:
-#         raise NotImplementedError(
-#             f"{self.__class__.__name__} does not support image queries"
-#         )
-
-#     def retrieve_by_image_single(
-#         self,
-#         image: Image.Image,
-#         threshold: float | None = None,
-#         k: int | None = None,
-#     ) -> list[tuple[str, float]]:
-#         return self.retrieve_by_image([image], threshold=threshold, k=k)[0]
-    
-#     def score(
-#         self,
-#         queries: list[str],
-#     ) -> torch.Tensor:
-#         raise NotImplementedError(
-#             f"{self.__class__.__name__} does not implement score()"
-#         )

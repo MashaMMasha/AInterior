@@ -7,15 +7,11 @@ from PIL import Image
 
 
 class BaseEncoder(ABC):
-    @abstractmethod
-    @torch.no_grad()
-    def encode(self, items: list[Any], normalize=True) -> torch.Tensor:
-        ...
-
-    @abstractmethod
-    def precompute_features(self, items: list[Any], normalize=True) -> torch.Tensor:
-        ...
-
+    def _conditionally_normalize(self, raw_features: torch.Tensor, normalize: bool):
+        if normalize:
+            return self._normalize(raw_features)
+        return raw_features
+    
     def _normalize(self, features:  torch.Tensor) -> torch.Tensor:
         return F.normalize(features.float(), p=2, dim=-1)
     
@@ -24,20 +20,11 @@ class BaseEncoder(ABC):
 class TextEncoder(BaseEncoder):
     @abstractmethod
     @torch.no_grad()
-    def encode(self, texts: list[str], normalize=True) -> torch.Tensor:
+    def encode_text(self, texts: list[str], normalize=True) -> torch.Tensor:
         ...
-
-    @abstractmethod
-    def precompute_features(self, texts: list[str]) -> torch.Tensor:
-        ...
-
 
 class ImageEncoder(BaseEncoder):
     @abstractmethod
     @torch.no_grad()
-    def encode(self, images: list[Image.Image], normalize=True) -> torch.Tensor:
-        ...
-
-    @abstractmethod
-    def precompute_features(self, images: list[Image.Image]) -> torch.Tensor:
+    def encode_images(self, images: list[Image.Image], normalize=True) -> torch.Tensor:
         ...

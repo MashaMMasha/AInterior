@@ -136,6 +136,12 @@ class S3Assets(BaseAssets):
     def get_local_path(self, relative_path: Path | str) -> Path:
         return self._ensure_cached(relative_path)
 
+    def get_local_dir(self, relative_prefix: Path | str) -> Path:
+        rel = self._to_path(relative_prefix)
+        local_root = self.cache_dir
+        self.download_directory(rel, local_root, skip_existing=True)
+        return local_root / rel
+
     def upload_directory(
         self,
         local_dir: Path | str,

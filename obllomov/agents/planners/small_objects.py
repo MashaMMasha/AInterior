@@ -1,5 +1,6 @@
-import multiprocessing
 import random
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 import torch
@@ -7,54 +8,57 @@ import torch.nn.functional as F
 from ai2thor.controller import Controller
 from ai2thor.hooks.procedural_asset_hook import ProceduralAssetHookRunner
 from langchain_core.language_models import BaseChatModel
-from pydantic import BaseModel, Field
 from procthor.constants import FLOOR_Y
 from procthor.utils.types import Vector3
+from pydantic import BaseModel, Field
 
-from obllomov.shared.utils import THOR_COMMIT_ID
-from obllomov.shared.utils import get_bbox_dims, get_annotations, get_secondary_properties
+from obllomov.agents.retrievers import BaseRetriever
+from obllomov.agents.selectors import BaseSelector
+from obllomov.schemas.domain.entries import (ScenePlan, SmallObjectEntry,
+                                             SmallObjectPlan)
+from obllomov.shared.geometry import BBox3D, Box3D, Vertex3D
 from obllomov.shared.log import logger
+from obllomov.shared.path import OBJATHOR_ANNOTATIONS_PATH, OBJATHOR_ASSETS_DIR
+from obllomov.shared.utils import (THOR_COMMIT_ID, get_annotations,
+                                   get_bbox_dims, get_secondary_properties)
 from obllomov.storage.assets import BaseAssets
+
 from .base import BasePlanner
-
-class SmallObjectEntry(BaseModel):
-    asset_id: str
-    id: str
-    kinematic: bool
-    position: dict
-    rotation: dict
-    material: Optional[str] = None
-    room_id: str
-
-
-class SmallObjectPlan(BaseModel):
-    small_objects: List[SmallObjectEntry]
-    receptacle2small_objects: dict
 
 
 class SmallObjectPlanner(BasePlanner):
-    def __init__(self, llm: BaseChatModel, assets: BaseAssets):
+    def __init__(
+        self,
+        llm: BaseChatModel,
+        assets: BaseAssets,
+        objathor_retriever: BaseRetriever,
+    ):
         super().__init__(llm, assets)
+        self.objathor_retriever = objathor_retriever
+        self.annotations: dict = self.assets.read_json(OBJATHOR_ANNOTATIONS_PATH)
         self.clip_threshold = 30
         self.reuse_assets = True
 
-    def plan(self, scene, controller, receptacle_ids) -> SmallObjectPlan:
-        object_selection_plan = scene["object_selection_plan"]
-        receptacle2asset_id = {obj["id"]: obj["assetId"] for obj in scene["objects"]}
+    def plan(self, scene_plan: ScenePlan, controller, receptacle_ids) -> SmallObjectPlan:
+        object_selection_plan = scene_plan.object_selection_plan
+        receptacle2asset_id = {}
 
-        if "receptacle2small_objects" in scene and self.reuse_assets:
-            receptacle2small_objects = scene["receptacle2small_objects"]
+        if scene_plan.receptacle2small_objects and self.reuse_assets:
+            receptacle2small_objects = scene_plan.receptacle2small_objects
         else:
             receptacle2small_objects = self._select_small_objects(
                 object_selection_plan, receptacle_ids, receptacle2asset_id
             )
 
-        small_objects = self._place_objects(scene, controller, receptacle2small_objects)
+        small_objects = self._place_objects(
+            scene_plan.wall_height, controller, receptacle2small_objects,
+        )
 
         return SmallObjectPlan(
             small_objects=small_objects,
             receptacle2small_objects=receptacle2small_objects,
         )
+    
     def _select_small_objects(
         self, object_selection_plan: dict, receptacle_ids: list, receptacle2asset_id: dict
     ) -> dict:
@@ -76,22 +80,18 @@ class SmallObjectPlanner(BasePlanner):
             if plans:
                 receptacle2plans[receptacle_id] = plans
 
-        packed_args = [
-            (receptacle, plans, receptacle2asset_id)
-            for receptacle, plans in receptacle2plans.items()
-        ]
-        pool = multiprocessing.Pool(processes=4)
-        results = pool.map(self._select_per_receptacle, packed_args)
-        pool.close()
-        pool.join()
+        packed_args = [(receptacle, plans, receptacle2asset_id) for receptacle, plans in receptacle2plans.items()]
+
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            results = list(ex.map(self._select_per_receptacle, packed_args))
 
         return {receptacle: objects for receptacle, objects in results}
 
     def _select_per_receptacle(self, args) -> Tuple[str, list]:
         receptacle, small_objects, receptacle2asset_id = args
 
-        receptacle_dims = get_bbox_dims(self.assets.database[receptacle2asset_id[receptacle]])
-        receptacle_area = receptacle_dims["x"] * receptacle_dims["z"]
+        receptacle_dims = get_bbox_dims(self.annotations[receptacle2asset_id[receptacle]])
+        receptacle_area = receptacle_dims.x * receptacle_dims.z
         capacity = 0
         num_objects = 0
         results = []
@@ -101,14 +101,15 @@ class SmallObjectPlanner(BasePlanner):
             quantity = min(small_object["quantity"], 5)
             variance_type = small_object["variance_type"]
 
-            candidates = self.assets.retrieve(
-                [f"a 3D model of {object_name}"], self.clip_threshold
+            items, scores = self.objathor_retriever.retrieve(
+                [f"a 3D model of {object_name}"], topk=80
             )
+            candidates = list(zip(items[0], scores[0]))
             candidates = [
                 c for c in candidates
-                if get_annotations(self.assets.database[c[0]])["onObject"]
-                and get_bbox_dims(self.assets.database[c[0]])["x"] < receptacle_dims["x"] * 0.9
-                and get_bbox_dims(self.assets.database[c[0]])["z"] < receptacle_dims["z"] * 0.9
+                if get_annotations(self.annotations[c[0]])["onObject"]
+                and get_bbox_dims(self.annotations[c[0]]).x < receptacle_dims.x * 0.9
+                and get_bbox_dims(self.annotations[c[0]]).z < receptacle_dims.z * 0.9
             ]
 
             if not candidates:
@@ -120,17 +121,17 @@ class SmallObjectPlanner(BasePlanner):
 
             selected_ids = []
             if variance_type == "same":
-                selected_ids = [self._random_select(candidates)[0]] * quantity
+                selected_ids = [BaseSelector.random_select(candidates)[0]] * quantity
             else:
                 for _ in range(quantity):
-                    selected = self._random_select(candidates)
+                    selected = BaseSelector.random_select(candidates)
                     selected_ids.append(selected[0])
                     if len(candidates) > 1:
                         candidates.remove(selected)
 
             for i, asset_id in enumerate(selected_ids):
-                dims = get_bbox_dims(self.assets.database[asset_id])
-                sizes = sorted([dims["x"], dims["y"], dims["z"]])
+                dims = get_bbox_dims(self.annotations[asset_id])
+                sizes = sorted([dims.x, dims.y, dims.z])
                 obj_area = sizes[1] * sizes[2] * 0.8
                 capacity += obj_area
                 num_objects += 1
@@ -138,14 +139,14 @@ class SmallObjectPlanner(BasePlanner):
                 if (capacity > receptacle_area * 0.9 and num_objects > 1) or num_objects > 15:
                     break
 
-                results.append((f"{object_name}-{i}", asset_id, max(dims["x"], dims["z"])))
+                results.append((f"{object_name}-{i}", asset_id, max(dims.x, dims.z)))
 
         results.sort(key=lambda x: x[2], reverse=True)
         return receptacle, results
 
 
     def _place_objects(
-        self, scene: dict, controller: Controller, receptacle2small_objects: dict
+        self, wall_height: float, controller: Controller, receptacle2small_objects: dict,
     ) -> List[SmallObjectEntry]:
         results = []
 
@@ -160,30 +161,33 @@ class SmallObjectPlanner(BasePlanner):
                 if obj is None:
                     continue
 
-                asset_height = get_bbox_dims(self.assets.database[asset_id])["y"]
-                if obj["position"]["y"] + asset_height > scene["wall_height"]:
+                asset_height = get_bbox_dims(self.annotations[asset_id]).y
+                if obj["position"]["y"] + asset_height > wall_height:
                     continue
 
-                position = dict(obj["position"])
-                position["y"] = obj["position"]["y"] + asset_height / 2 + 0.001
+                position = Vertex3D(
+                    x=obj["position"]["x"],
+                    y=obj["position"]["y"] + asset_height / 2 + 0.001,
+                    z=obj["position"]["z"],
+                )
                 room_id = receptacle.split("(")[1].split(")")[0]
 
                 kinematic = not (small or thin)
-                if "CanBreak" in get_secondary_properties(self.assets.database[asset_id]):
+                if "CanBreak" in get_secondary_properties(self.annotations[asset_id]):
                     kinematic = True
 
-                rotation_dict = dict(obj["rotation"])
+                rotation_v = Vertex3D(**obj["rotation"])
                 if thin:
-                    position, rotation_dict = self._fix_thin_placement(asset_id, position, rotation_dict)
+                    position, rotation_v = self._fix_thin_placement(asset_id, position, rotation_v)
                 if small:
-                    rotation_dict["y"] = y_rotation
+                    rotation_v = Vertex3D(x=rotation_v.x, y=y_rotation, z=rotation_v.z)
 
                 placements.append(SmallObjectEntry(
                     asset_id=asset_id,
                     id=f"{object_name}|{receptacle}",
                     kinematic=kinematic,
                     position=position,
-                    rotation=rotation_dict,
+                    rotation=rotation_v,
                     room_id=room_id,
                 ))
 
@@ -220,32 +224,31 @@ class SmallObjectPlanner(BasePlanner):
 
 
     def _check_thin(self, asset_id: str) -> Tuple[bool, list]:
-        dims = get_bbox_dims(self.assets.database[asset_id])
-        threshold = 0.05
-        if dims["x"] * 100 < threshold * 100:
+        dims_cm = get_bbox_dims(self.annotations[asset_id]).convert_m_to_cm()
+        threshold = 5.0
+        if dims_cm.x < threshold:
             return True, [0, 90, 0]
-        if dims["z"] * 100 < threshold * 100:
+        if dims_cm.z < threshold:
             return True, [90, 0, 0]
         return False, [0, 0, 0]
 
     def _check_small(self, asset_id: str) -> Tuple[bool, int]:
-        dims = get_bbox_dims(self.assets.database[asset_id])
-        size = (dims["x"] * 100, dims["y"] * 100, dims["z"] * 100)
+        size = get_bbox_dims(self.annotations[asset_id]).convert_m_to_cm().size()
         if size[0] * size[2] <= 625 and all(s <= 25 for s in size):
             return True, random.randint(0, 360)
         return False, 0
 
-    def _fix_thin_placement(self, asset_id: str, position: dict, rotation: dict) -> Tuple[dict, dict]:
-        dims = get_bbox_dims(self.assets.database[asset_id])
+    def _fix_thin_placement(self, asset_id: str, position: Vertex3D, rotation: Vertex3D) -> Tuple[Vertex3D, Vertex3D]:
+        dims = get_bbox_dims(self.annotations[asset_id])
         threshold = 0.03
-        bottom_y = position["y"] - dims["y"] / 2
+        bottom_y = position.y - dims.y / 2
 
-        if dims["x"] <= threshold:
-            rotation = {**rotation, "z": rotation.get("z", 0) + 90}
-            position = {**position, "y": bottom_y + dims["x"] / 2}
-        elif dims["z"] <= threshold:
-            rotation = {**rotation, "x": rotation.get("x", 0) + 90}
-            position = {**position, "y": bottom_y + dims["z"] / 2}
+        if dims.x <= threshold:
+            rotation = Vertex3D(x=rotation.x, y=rotation.y, z=rotation.z + 90)
+            position = Vertex3D(x=position.x, y=bottom_y + dims.x / 2, z=position.z)
+        elif dims.z <= threshold:
+            rotation = Vertex3D(x=rotation.x + 90, y=rotation.y, z=rotation.z)
+            position = Vertex3D(x=position.x, y=bottom_y + dims.z / 2, z=position.z)
 
         return position, rotation
 
@@ -257,7 +260,7 @@ class SmallObjectPlanner(BasePlanner):
         colliding_pairs = []
         for i, p1 in enumerate(static[:-1]):
             for p2 in static[i + 1:]:
-                if self._intersect_3d(self._get_box(p1), self._get_box(p2)):
+                if self._get_box(p1).intersects(self._get_box(p2)):
                     colliding_pairs.append((p1.id, p2.id))
 
         if not colliding_pairs:
@@ -267,8 +270,8 @@ class SmallObjectPlanner(BasePlanner):
         all_ids = list(set(pid for pair in colliding_pairs for pid in pair))
         all_ids.sort(
             key=lambda x: get_bbox_dims(
-                self.assets.database[next(p.asset_id for p in placements if p.id == x)]
-            )["x"]
+                self.annotations[next(p.asset_id for p in placements if p.id == x)]
+            ).x
         )
         for obj_id in all_ids:
             remove_ids.add(obj_id)
@@ -278,28 +281,13 @@ class SmallObjectPlanner(BasePlanner):
 
         return [p for p in placements if p.id not in remove_ids]
 
-    def _get_box(self, placement: SmallObjectEntry) -> dict:
-        dims = get_bbox_dims(self.assets.database[placement.asset_id])
-        size = (dims["x"] * 100, dims["y"] * 100, dims["z"] * 100)
-        pos = placement.position
-        return {
-            "min": [pos["x"] * 100 - size[0] / 2, pos["y"] * 100 - size[1] / 2, pos["z"] * 100 - size[2] / 2],
-            "max": [pos["x"] * 100 + size[0] / 2, pos["y"] * 100 + size[1] / 2, pos["z"] * 100 + size[2] / 2],
-        }
+    def _get_box(self, placement: SmallObjectEntry) -> Box3D:
+        dims = get_bbox_dims(self.annotations[placement.asset_id]).convert_m_to_cm()
+        center = placement.position.convert_m_to_cm()
+        return Box3D.from_center_and_size(center, dims)
 
-    def _intersect_3d(self, box1: dict, box2: dict) -> bool:
-        return all(
-            box1["max"][i] >= box2["min"][i] and box1["min"][i] <= box2["max"][i]
-            for i in range(3)
-        )
-
-    def _random_select(self, candidates):
-        scores = torch.Tensor([c[1] for c in candidates])
-        probas = F.softmax(scores, dim=0)
-        idx = torch.multinomial(probas, 1).item()
-        return candidates[idx]
-
-    def start_controller(self, scene, objaverse_dir) -> Controller:
+    def start_controller(self, scene) -> Controller:
+        objathor_assets_dir = self.assets.get_local_dir(OBJATHOR_ASSETS_DIR)
         return Controller(
             commit_id=THOR_COMMIT_ID,
             agentMode="default",
@@ -310,7 +298,7 @@ class SmallObjectPlanner(BasePlanner):
             height=224,
             fieldOfView=40,
             action_hook_runner=ProceduralAssetHookRunner(
-                asset_directory=objaverse_dir,
+                asset_directory=str(objathor_assets_dir),
                 asset_symlink=True,
                 verbose=True,
             ),
