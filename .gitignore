@@ -1,6 +1,8 @@
 obllomov/models
 .DS_Store
-.vscode/settings.json
+.vscode/
+.claude/
+.python-version
 __pycache__/
 *.log
 *.db
