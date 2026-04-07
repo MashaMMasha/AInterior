@@ -7,7 +7,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${BLUE}=================================${NC}"
-echo -e "${BLUE}  AInterior - Backend${NC}"
+echo -e "${BLUE}  AInterior - Backend Services${NC}"
 echo -e "${BLUE}=================================${NC}\n"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -54,13 +54,40 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}Запуск FastAPI сервера...${NC}"
+echo -e "${BLUE}Запуск Auth Service (порт 8001)...${NC}"
+uvicorn auth_service.main:app --reload --host 0.0.0.0 --port 8001 &
+AUTH_PID=$!
+
+sleep 2
+echo -e "${BLUE}Запуск ML Service (порт 8002)...${NC}"
+uvicorn ml_service.main:app --reload --host 0.0.0.0 --port 8002 &
+ML_PID=$!
+
+sleep 2
+echo -e "${BLUE}Запуск Backend Service (порт 8000)...${NC}\n"
+uvicorn backend_service.main:app --reload --host 0.0.0.0 --port 8000 &
+BACKEND_PID=$!
+
+sleep 2
 echo ""
-echo -e "  ${GREEN}API:${NC}      http://localhost:8001"
-echo -e "  ${GREEN}Docs:${NC}     http://localhost:8001/docs"
-echo -e "  ${GREEN}Health:${NC}   http://localhost:8001/health"
+echo -e "${GREEN}=================================${NC}"
+echo -e "${GREEN}  Backend Services запущены${NC}"
+echo -e "${GREEN}=================================${NC}"
+echo ""
+echo -e "  ${GREEN}Backend Service:${NC}   http://localhost:8000/docs"
+echo -e "  ${GREEN}Auth Service:${NC}      http://localhost:8001/docs"
+echo -e "  ${GREEN}ML Service:${NC}        http://localhost:8002/docs"
 echo ""
 echo -e "${YELLOW}Ctrl+C для остановки${NC}"
 echo ""
 
-uvicorn ml_api.main:app --reload --host 0.0.0.0 --port 8001
+cleanup() {
+    echo -e "\n${YELLOW}Остановка сервисов...${NC}"
+    kill $AUTH_PID $ML_PID $BACKEND_PID 2>/dev/null
+    echo -e "${GREEN}Сервисы остановлены${NC}"
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+wait

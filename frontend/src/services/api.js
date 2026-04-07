@@ -1,3 +1,6 @@
+const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8001';
+const BACKEND_SERVICE_URL = import.meta.env.VITE_BACKEND_SERVICE_URL || 'http://localhost:8000';
+
 const getAccessToken = () => localStorage.getItem('access_token');
 const getRefreshToken = () => localStorage.getItem('refresh_token');
 
@@ -6,7 +9,7 @@ async function tryRefreshToken() {
   if (!refreshToken) return false;
 
   try {
-    const response = await fetch('/auth/refresh', {
+    const response = await fetch(`${AUTH_SERVICE_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -51,7 +54,7 @@ export async function authFetch(url, options = {}) {
 
 export const authApi = {
   register: async (email, username, fullName, password) => {
-    const response = await fetch('/auth/register', {
+    const response = await fetch(`${AUTH_SERVICE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, username, full_name: fullName, password }),
@@ -62,7 +65,7 @@ export const authApi = {
   },
 
   verifyEmail: async (email, code) => {
-    const response = await fetch('/auth/verify-email', {
+    const response = await fetch(`${AUTH_SERVICE_URL}/auth/verify-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, code }),
@@ -73,7 +76,7 @@ export const authApi = {
   },
 
   login: async (email, password) => {
-    const response = await fetch('/auth/login', {
+    const response = await fetch(`${AUTH_SERVICE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -84,13 +87,13 @@ export const authApi = {
   },
 
   getMe: async () => {
-    const response = await authFetch('/auth/me');
+    const response = await authFetch(`${AUTH_SERVICE_URL}/auth/me`);
     if (!response.ok) throw new Error('Unauthorized');
     return response.json();
   },
 
   resendCode: async (email) => {
-    const response = await fetch('/auth/resend-code', {
+    const response = await fetch(`${AUTH_SERVICE_URL}/auth/resend-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -104,7 +107,7 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await authFetch('/upload_model', {
+    const response = await authFetch(`${BACKEND_SERVICE_URL}/upload_model`, {
       method: 'POST',
       body: formData,
     });
@@ -118,7 +121,7 @@ export const api = {
   },
 
   generateModel: async (prompt) => {
-    const response = await authFetch('/generate', {
+    const response = await authFetch(`${BACKEND_SERVICE_URL}/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: prompt }),
@@ -132,19 +135,21 @@ export const api = {
   },
 
   getProjects: async () => {
-    const response = await authFetch('/projects');
+    const response = await authFetch(`${BACKEND_SERVICE_URL}/projects`);
     return response.json();
   },
 
   createProject: async (name) => {
-    const response = await authFetch(`/projects?name=${encodeURIComponent(name)}`, {
+    const response = await authFetch(`${BACKEND_SERVICE_URL}/projects`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
     });
     return response.json();
   },
 
   updateProject: async (projectId, project) => {
-    const response = await authFetch(`/projects/${projectId}`, {
+    const response = await authFetch(`${BACKEND_SERVICE_URL}/projects/${projectId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(project),
@@ -153,7 +158,7 @@ export const api = {
   },
 
   deleteProject: async (projectId) => {
-    const response = await authFetch(`/projects/${projectId}`, {
+    const response = await authFetch(`${BACKEND_SERVICE_URL}/projects/${projectId}`, {
       method: 'DELETE',
     });
     return response.json();
