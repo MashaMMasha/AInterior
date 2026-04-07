@@ -33,7 +33,7 @@ class ObjectRetriever(BaseRetriever):
         scores = self.scale * torch.einsum("ij, lkj -> ilk", features, self.features)
         return torch.max(scores, dim=-1).values
 
-    def retrieve(self, queries: list[str], topk: int = 5) -> tuple[list[list[str]], torch.Tensor]:
+    def retrieve(self, queries: list[str], topk: int = 5, threshold: float | None = None) -> tuple[list[list[str]], torch.Tensor]:
         features = self.encoder.encode_text(queries)
         scores = self.score(features)
         return self.get_top_k(scores, self.items, topk)

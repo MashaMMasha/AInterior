@@ -13,6 +13,20 @@ from obllomov.shared.log import logger
 from obllomov.shared.path import ABS_ROOT_PATH, OBJATHOR_ANNOTATIONS_PATH
 from obllomov.storage.assets import LocalAssets, S3Assets
 
+
+from pydantic import BaseModel
+
+# class ThorMetadata(BaseModel):
+
+# class Annotation(BaseModel):
+#     uid: str
+#     description: str
+#     description_auto: str
+#     scale: str
+#     category: str
+#     category_max_scale: float
+#     category_min_scale: float
+
 logger.info("Parsing args")
 
 parser = argparse.ArgumentParser()

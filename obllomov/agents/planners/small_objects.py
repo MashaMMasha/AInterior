@@ -1,7 +1,7 @@
 import random
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import torch
 import torch.nn.functional as F
@@ -14,13 +14,14 @@ from pydantic import BaseModel, Field
 
 from obllomov.agents.retrievers import BaseRetriever
 from obllomov.agents.selectors import BaseSelector
+from obllomov.agents.retrievers import ObjathorRetriever
 from obllomov.schemas.domain.entries import (ScenePlan, SmallObjectEntry,
                                              SmallObjectPlan)
+from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.shared.geometry import BBox3D, Box3D, Vertex3D
 from obllomov.shared.log import logger
-from obllomov.shared.path import OBJATHOR_ANNOTATIONS_PATH, OBJATHOR_ASSETS_DIR
-from obllomov.shared.utils import (THOR_COMMIT_ID, get_annotations,
-                                   get_bbox_dims, get_secondary_properties)
+from obllomov.shared.path import OBJATHOR_ASSETS_DIR
+from obllomov.shared.utils import THOR_COMMIT_ID
 from obllomov.storage.assets import BaseAssets
 
 from .base import BasePlanner
@@ -32,10 +33,11 @@ class SmallObjectPlanner(BasePlanner):
         llm: BaseChatModel,
         assets: BaseAssets,
         objathor_retriever: BaseRetriever,
+        annotations: AnnotationDict,
     ):
         super().__init__(llm, assets)
         self.objathor_retriever = objathor_retriever
-        self.annotations: dict = self.assets.read_json(OBJATHOR_ANNOTATIONS_PATH)
+        self.annotations = annotations
         self.clip_threshold = 30
         self.reuse_assets = True
 
@@ -58,7 +60,7 @@ class SmallObjectPlanner(BasePlanner):
             small_objects=small_objects,
             receptacle2small_objects=receptacle2small_objects,
         )
-    
+
     def _select_small_objects(
         self, object_selection_plan: dict, receptacle_ids: list, receptacle2asset_id: dict
     ) -> dict:
@@ -90,7 +92,7 @@ class SmallObjectPlanner(BasePlanner):
     def _select_per_receptacle(self, args) -> Tuple[str, list]:
         receptacle, small_objects, receptacle2asset_id = args
 
-        receptacle_dims = get_bbox_dims(self.annotations[receptacle2asset_id[receptacle]])
+        receptacle_dims = self.annotations[receptacle2asset_id[receptacle]].bbox
         receptacle_area = receptacle_dims.x * receptacle_dims.z
         capacity = 0
         num_objects = 0
@@ -107,9 +109,9 @@ class SmallObjectPlanner(BasePlanner):
             candidates = list(zip(items[0], scores[0]))
             candidates = [
                 c for c in candidates
-                if get_annotations(self.annotations[c[0]])["onObject"]
-                and get_bbox_dims(self.annotations[c[0]]).x < receptacle_dims.x * 0.9
-                and get_bbox_dims(self.annotations[c[0]]).z < receptacle_dims.z * 0.9
+                if self.annotations[c[0]].onObject
+                and self.annotations[c[0]].bbox.x < receptacle_dims.x * 0.9
+                and self.annotations[c[0]].bbox.z < receptacle_dims.z * 0.9
             ]
 
             if not candidates:
@@ -130,7 +132,7 @@ class SmallObjectPlanner(BasePlanner):
                         candidates.remove(selected)
 
             for i, asset_id in enumerate(selected_ids):
-                dims = get_bbox_dims(self.annotations[asset_id])
+                dims = self.annotations[asset_id].bbox
                 sizes = sorted([dims.x, dims.y, dims.z])
                 obj_area = sizes[1] * sizes[2] * 0.8
                 capacity += obj_area
@@ -161,7 +163,7 @@ class SmallObjectPlanner(BasePlanner):
                 if obj is None:
                     continue
 
-                asset_height = get_bbox_dims(self.annotations[asset_id]).y
+                asset_height = self.annotations[asset_id].bbox.y
                 if obj["position"]["y"] + asset_height > wall_height:
                     continue
 
@@ -173,7 +175,7 @@ class SmallObjectPlanner(BasePlanner):
                 room_id = receptacle.split("(")[1].split(")")[0]
 
                 kinematic = not (small or thin)
-                if "CanBreak" in get_secondary_properties(self.annotations[asset_id]):
+                if "CanBreak" in self.annotations[asset_id].secondary_properties:
                     kinematic = True
 
                 rotation_v = Vertex3D(**obj["rotation"])
@@ -224,7 +226,7 @@ class SmallObjectPlanner(BasePlanner):
 
 
     def _check_thin(self, asset_id: str) -> Tuple[bool, list]:
-        dims_cm = get_bbox_dims(self.annotations[asset_id]).convert_m_to_cm()
+        dims_cm = self.annotations[asset_id].bbox.convert_m_to_cm()
         threshold = 5.0
         if dims_cm.x < threshold:
             return True, [0, 90, 0]
@@ -233,13 +235,13 @@ class SmallObjectPlanner(BasePlanner):
         return False, [0, 0, 0]
 
     def _check_small(self, asset_id: str) -> Tuple[bool, int]:
-        size = get_bbox_dims(self.annotations[asset_id]).convert_m_to_cm().size()
+        size = self.annotations[asset_id].bbox.convert_m_to_cm().size()
         if size[0] * size[2] <= 625 and all(s <= 25 for s in size):
             return True, random.randint(0, 360)
         return False, 0
 
     def _fix_thin_placement(self, asset_id: str, position: Vertex3D, rotation: Vertex3D) -> Tuple[Vertex3D, Vertex3D]:
-        dims = get_bbox_dims(self.annotations[asset_id])
+        dims = self.annotations[asset_id].bbox
         threshold = 0.03
         bottom_y = position.y - dims.y / 2
 
@@ -269,9 +271,9 @@ class SmallObjectPlanner(BasePlanner):
         remove_ids = set()
         all_ids = list(set(pid for pair in colliding_pairs for pid in pair))
         all_ids.sort(
-            key=lambda x: get_bbox_dims(
-                self.annotations[next(p.asset_id for p in placements if p.id == x)]
-            ).x
+            key=lambda x: self.annotations[
+                next(p.asset_id for p in placements if p.id == x)
+            ].bbox.x
         )
         for obj_id in all_ids:
             remove_ids.add(obj_id)
@@ -282,7 +284,7 @@ class SmallObjectPlanner(BasePlanner):
         return [p for p in placements if p.id not in remove_ids]
 
     def _get_box(self, placement: SmallObjectEntry) -> Box3D:
-        dims = get_bbox_dims(self.annotations[placement.asset_id]).convert_m_to_cm()
+        dims = self.annotations[placement.asset_id].bbox.convert_m_to_cm()
         center = placement.position.convert_m_to_cm()
         return Box3D.from_center_and_size(center, dims)
 

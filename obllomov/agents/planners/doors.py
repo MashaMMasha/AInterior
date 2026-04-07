@@ -178,7 +178,9 @@ class DoorPlanner(BasePlanner):
 
 
     def _select_door(self, door_type: str, door_size: str, query: str) -> str:
-        candidates, _ = self.door_retriever.retrieve_single(query, )
+        candidates, _ = self.door_retriever.retrieve_single(query)
+
+        logger.debug(f"candidates: {candidates}")
 
         valid = [
             candidate
@@ -187,6 +189,10 @@ class DoorPlanner(BasePlanner):
             and self.door_data[candidate]["size"] == door_size
         ]
 
+        logger.debug(f"valid: {valid}")
+        if len(valid) == 0:
+            return candidates[0]
+        
         for door in valid:
             if door not in self.used_assets:
                 return door

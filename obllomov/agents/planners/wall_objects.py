@@ -6,6 +6,7 @@ from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel, Field
 
 import obllomov.agents.prompts as prompts
+from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.entries import (ScenePlan, WallObjectEntry,
                                              WallObjectPlan)
 from obllomov.schemas.domain.raw import (RawWallObjectConstraintEntry,
@@ -13,20 +14,19 @@ from obllomov.schemas.domain.raw import (RawWallObjectConstraintEntry,
 from obllomov.shared.dfs import DFS_Solver_Wall
 from obllomov.shared.geometry import Polygon2D, Vertex2D, Vertex3D
 from obllomov.shared.log import logger
-from obllomov.shared.path import OBJATHOR_ANNOTATIONS_PATH
-from obllomov.shared.utils import get_bbox_dims
+from obllomov.agents.retrievers import ObjathorRetriever
 from obllomov.storage.assets import BaseAssets
 
 from .base import BasePlanner
 
 
 class WallObjectPlanner(BasePlanner):
-    def __init__(self, llm: BaseChatModel, assets: BaseAssets):
+    def __init__(self, llm: BaseChatModel, assets: BaseAssets, annotations: AnnotationDict):
         super().__init__(llm, assets)
         self.grid_size = 25
         self.default_height = 150
         self.constraint_type = "llm"
-        self.annotations: dict = self.assets.read_json(OBJATHOR_ANNOTATIONS_PATH)
+        self.annotations = annotations
 
     def plan(
         self,
@@ -86,7 +86,7 @@ class WallObjectPlanner(BasePlanner):
             constraints = self._default_constraints(wall_object_names, scene_plan.wall_height)
 
         wall_object2dimension = {
-            name: get_bbox_dims(self.annotations[asset_id])
+            name: self.annotations[asset_id].bbox
             for name, asset_id in wall_object_name2id.items()
         }
         wall_objects_list = [
@@ -233,7 +233,7 @@ class WallObjectPlanner(BasePlanner):
 
     def _order_by_size(self, selected: list) -> list:
         with_size = [
-            (name, asset_id, get_bbox_dims(self.annotations[asset_id]).x)
+            (name, asset_id, self.annotations[asset_id].bbox.x)
             for name, asset_id in selected
         ]
         with_size.sort(key=lambda x: x[2], reverse=True)

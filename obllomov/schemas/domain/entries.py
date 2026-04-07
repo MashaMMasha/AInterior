@@ -40,6 +40,9 @@ class WallEntry(BaseModel):
     direction: Optional[str]
     segment: Segment2D
 
+class OpenWalls(BaseModel):
+    segments: list[Segment2D]
+    boxes: list
 
 class WallPlan(BaseModel):
     wall_height: float
@@ -153,5 +156,11 @@ class ScenePlan(BaseModel):
             if not dump[key]:
                 dump.pop(key)
         result.update(dump)
+        result["objects"] = (
+            result.get("floor_objects", [])
+            + result.get("wall_objects", [])
+            + result.get("small_objects", [])
+            + result.get("ceiling_objects", [])
+        )
         return result
 

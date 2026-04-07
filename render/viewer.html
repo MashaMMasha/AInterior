@@ -177,23 +177,49 @@ function buildDoor(door) {
   );
   const height = hp[1].y - hp[0].y;
 
-  const geometry = new THREE.BoxGeometry(width, height, 0.12);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x8B4513,
-    roughness: 0.7,
-    transparent: !door.openable,
-    opacity: door.openable ? 1.0 : 0.3,
-  });
-
-  const mesh = new THREE.Mesh(geometry, mat);
-  mesh.position.set(midX, hp[0].y + height / 2, midZ);
-
   const dx = seg.v2.x - seg.v1.x;
   const dz = seg.v2.z - seg.v1.z;
-  mesh.rotation.y = Math.atan2(-dz, dx);
+  const rotY = Math.atan2(-dz, dx);
 
-  mesh.castShadow = true;
-  scene.add(mesh);
+  const isDoorway = door.asset_id.toLowerCase().includes('doorway');
+
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.6 });
+  const frameThick = 0.06;
+  const frameDepth = 0.15;
+
+  const topGeo = new THREE.BoxGeometry(width + frameThick * 2, frameThick, frameDepth);
+  const top = new THREE.Mesh(topGeo, frameMat);
+  top.position.set(midX, hp[0].y + height + frameThick / 2, midZ);
+  top.rotation.y = rotY;
+  scene.add(top);
+
+  const sideGeo = new THREE.BoxGeometry(frameThick, height, frameDepth);
+  for (const sign of [-1, 1]) {
+    const side = new THREE.Mesh(sideGeo, frameMat);
+    const offsetX = sign * (width / 2 + frameThick / 2);
+    side.position.set(
+      midX + offsetX * Math.cos(-rotY),
+      hp[0].y + height / 2,
+      midZ + offsetX * Math.sin(-rotY)
+    );
+    side.rotation.y = rotY;
+    scene.add(side);
+  }
+
+  if (!isDoorway) {
+    const doorTex = textureLoader.load(`/doors/${door.asset_id}.png`);
+    const panelGeo = new THREE.PlaneGeometry(width, height);
+    const panelMat = new THREE.MeshStandardMaterial({
+      map: doorTex,
+      side: THREE.DoubleSide,
+      roughness: 0.5,
+    });
+    const panel = new THREE.Mesh(panelGeo, panelMat);
+    panel.position.set(midX, hp[0].y + height / 2, midZ);
+    panel.rotation.y = rotY;
+    panel.castShadow = true;
+    scene.add(panel);
+  }
 }
 
 function buildWindow(win) {
@@ -209,32 +235,113 @@ function buildWindow(win) {
   );
   const height = hp[1].y - hp[0].y;
 
-  const geometry = new THREE.BoxGeometry(width, height, 0.08);
-
-  const mat = new THREE.MeshPhysicalMaterial({
-    color: 0x88ccff,
-    transparent: true,
-    opacity: 0.35,
-    roughness: 0.05,
-    metalness: 0.1,
-    transmission: 0.9,
-  });
-
-  const mesh = new THREE.Mesh(geometry, mat);
-  mesh.position.set(midX, hp[0].y + height / 2, midZ);
-
   const dx = seg.v2.x - seg.v1.x;
   const dz = seg.v2.z - seg.v1.z;
-  mesh.rotation.y = Math.atan2(-dz, dx);
+  const rotY = Math.atan2(-dz, dx);
 
-  scene.add(mesh);
+  const group = new THREE.Group();
+  group.position.set(midX, hp[0].y + height / 2, midZ);
+  group.rotation.y = rotY;
 
-  const frameGeo = new THREE.BoxGeometry(width + 0.06, height + 0.06, 0.1);
-  const frameMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.3 });
-  const frame = new THREE.Mesh(frameGeo, frameMat);
-  frame.position.copy(mesh.position);
-  frame.rotation.copy(mesh.rotation);
-  scene.add(frame);
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.3, metalness: 0.2 });
+  const frameThick = 0.04;
+  const frameDepth = 0.1;
+
+  const outerTop = new THREE.Mesh(new THREE.BoxGeometry(width + frameThick * 2, frameThick, frameDepth), frameMat);
+  outerTop.position.y = height / 2 + frameThick / 2;
+  group.add(outerTop);
+
+  const outerBot = new THREE.Mesh(new THREE.BoxGeometry(width + frameThick * 2, frameThick, frameDepth), frameMat);
+  outerBot.position.y = -height / 2 - frameThick / 2;
+  group.add(outerBot);
+
+  const sideGeo = new THREE.BoxGeometry(frameThick, height, frameDepth);
+  for (const sign of [-1, 1]) {
+    const side = new THREE.Mesh(sideGeo, frameMat);
+    side.position.x = sign * (width / 2 + frameThick / 2);
+    group.add(side);
+  }
+
+  const assetId = win.asset_id || '';
+  let cols = 1;
+  let rows = 1;
+  if (assetId.includes('Double') || assetId.includes('Slider') || assetId.includes('96')) cols = 2;
+  if (assetId.includes('Hung')) rows = 2;
+  if (assetId.includes('Bay')) cols = 3;
+
+  const mullionThick = 0.025;
+  if (cols > 1) {
+    for (let c = 1; c < cols; c++) {
+      const x = -width / 2 + (width / cols) * c;
+      const mullion = new THREE.Mesh(new THREE.BoxGeometry(mullionThick, height, frameDepth * 0.8), frameMat);
+      mullion.position.x = x;
+      group.add(mullion);
+    }
+  }
+  if (rows > 1) {
+    for (let r = 1; r < rows; r++) {
+      const y = -height / 2 + (height / rows) * r;
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(width, mullionThick, frameDepth * 0.8), frameMat);
+      rail.position.y = y;
+      group.add(rail);
+    }
+  }
+
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 0.25,
+    roughness: 0.05,
+    metalness: 0.05,
+    transmission: 0.9,
+    side: THREE.DoubleSide,
+  });
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(width, height), glassMat);
+  glass.position.z = 0.02;
+  group.add(glass);
+
+  const sillMat = new THREE.MeshStandardMaterial({ color: 0xd0d0d0, roughness: 0.4 });
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(width + 0.1, 0.03, 0.18), sillMat);
+  sill.position.y = -height / 2 - 0.015;
+  sill.position.z = 0.05;
+  group.add(sill);
+
+  scene.add(group);
+}
+
+async function buildObject(obj) {
+  const resp = await fetch(`/mesh/${obj.assetId}`);
+  if (!resp.ok) {
+    console.warn(`Failed to load mesh ${obj.assetId}: ${resp.status}`);
+    return;
+  }
+  const mesh = await resp.json();
+
+  const positions = new Float32Array(mesh.vertices.flat());
+  const normals = new Float32Array(mesh.normals.flat());
+  const uvs = new Float32Array(mesh.uvs.flat());
+  const indices = mesh.triangles;
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+
+  const tex = textureLoader.load(mesh.albedoUrl);
+  tex.flipY = false;
+  const mat = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide });
+
+  const object3d = new THREE.Mesh(geometry, mat);
+  object3d.position.set(obj.position.x, obj.position.y, obj.position.z);
+  object3d.rotation.set(
+    THREE.MathUtils.degToRad(obj.rotation.x),
+    THREE.MathUtils.degToRad(obj.rotation.y),
+    THREE.MathUtils.degToRad(obj.rotation.z)
+  );
+  object3d.castShadow = true;
+  object3d.receiveShadow = true;
+  scene.add(object3d);
 }
 
 function wallDedupeKey(wall) {
@@ -275,6 +382,26 @@ async function loadScene() {
   for (const win of (data.windows || [])) {
     buildWindow(win);
   }
+
+  const allObjects = [
+    ...(data.objects || []),
+    ...(data.floor_objects || []),
+    ...(data.wall_objects || []),
+    ...(data.small_objects || []),
+    ...(data.ceiling_objects || []),
+  ];
+  const seenAssets = new Set();
+  const objectPromises = [];
+  for (const obj of allObjects) {
+    if (!obj.assetId) continue;
+    const key = `${obj.assetId}_${obj.id}`;
+    if (seenAssets.has(key)) continue;
+    seenAssets.add(key);
+    objectPromises.push(buildObject(obj));
+  }
+  await Promise.all(objectPromises);
+
+  info.textContent = `Scene: ${data.query || 'unknown'} | Rooms: ${data.rooms.length} | Objects: ${allObjects.length}`;
 
   centerX /= count || 1;
   centerZ /= count || 1;

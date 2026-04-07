@@ -23,7 +23,10 @@ Answer with a number, for example, 3.0. Do not add additional text at the beginn
 
 doorway_prompt = """I need assistance in designing the connections between rooms. The connections could be of three types: doorframe (no door installed), doorway (with a door), or open (no wall separating rooms). The sizes available for doorframes and doorways are single (1m wide) and double (2m wide).
 
-Ensure that the door style complements the design of the room.
+Ensure that the door style complements the design of the room. The output format should be: room 1 | room 2 | connection type | size | door style. For example:
+exterior | living room | doorway | double | dark brown metal door
+living room | kitchen | open | N/A | N/A
+living room | bedroom | doorway | single | wooden door with white frames
 
 The design under consideration is {input}, which includes these rooms: {rooms}. The length, width and height of each room in meters are:
 {room_sizes}
@@ -40,6 +43,9 @@ slider: (91, 92), (120, 61), (120, 91), (120, 120), (150, 92), (150, 120)
 
 Your task is to determine the appropriate type, size, and quantity of windows for each room, bearing in mind the room's design, dimensions, and function.
 
+Please format your suggestions as follows: room | wall direction | window type | size | quantity | window base height (cm from floor). For example:
+living room | west | fixed | (130, 130) | 1 | 50
+
 I am now designing {input}. The wall height is {wall_height} cm. The walls available for window installation (direction, width in cm) in each room are:
 {walls}
 Please note: It is not mandatory to install windows on every available wall. Within the same room, all windows must be the same type and size.
@@ -49,6 +55,12 @@ Provide a concise response, omitting any additional text at the beginning or end
 
 
 object_selection_prompt = """Assist me in selecting large, floor-based objects to furnish each room, excluding mats, carpets, and rugs. Provide a comprehensive description since I will use it to retrieve object. If multiple identical items are to be placed in the room, please indicate the quantity.
+
+Present your recommendations in this format: room type | object category | object description | quantity
+For example:
+living room | sofa | modern sectional, light grey sofa | 1
+living room | floor lamp | black, tripod floor lamp | 2
+kitchen | fridge | stainless steel, french door refrigerator | 1
 
 Currently, the design in progress is "{input}", featuring these rooms: {rooms}. Please also consider the following additional requirements: {additional_requirements}.
 
@@ -166,6 +178,13 @@ Your response should solely contain the information about the placement of objec
 
 object_selection_prompt_1 = """You are an experienced room designer, please assist me in selecting *large* floor and wall objects to furnish each room. I want the objects that can be directly placed on the floor or wall, *not* the small objects that need to be placed on the large objects.
 You must provide a comprehensive description for each object since I will use it to retrieve object. If multiple identical items are to be placed in the room, please indicate the quantity and variance type (same or varied).
+Present your recommendations in this format: room type | location | object category | object description | quantity, variance type
+For example:
+living room | floor | sofa | modern sectional, light grey sofa | 1, same
+living room | floor | floor lamp | black, tripod floor lamp | 2, same
+living room | wall | painting | abstract painting | 2, varied
+kitchen | fridge | stainless steel, french door refrigerator | 1, same
+kitchen | wall | clock | a modern style wall clock | 1, same
 
 Note: the variance type specifies whether the objects of this category are same or varied.
 Currently, the design in progress is "{input}", featuring these rooms: {rooms}.
@@ -200,17 +219,6 @@ Here are some guidelines for you:
 """
 # Please first use natural language to explain your high-level design strategy for *ROOM_TYPE*, and then follow the desired JSON format *strictly* (do not add any additional text at the beginning or end).
 
-object_selection_prompt_messages = [
-    {"user": "{object_selection_prompt_new_1}"},
-    {"ai": "{object_selection_1}"},
-    {"user": """
-     Thanks! After following your suggestions to retrieve objects, I found the *{room}* is still too empty. To enrich the *{room}*, you could:
-1. Add more *floor* objects to the *{room}* (excluding rug, carpet, windows, doors, curtains, and *ignore ceiling objects*).
-2. Increase the size and quantity of the objects.
-3. Add more *types* of small objects on top of the large objects.
-Could you update the entire JSON file with the same format as before and answer without additional text at the beginning or end?
-     """}
-]
 
 object_selection_prompt_new_2 = """User: {object_selection_prompt_new_1}
 

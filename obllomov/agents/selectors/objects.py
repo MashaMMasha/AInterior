@@ -17,13 +17,19 @@ from obllomov.schemas.domain.raw import (RawObjectEntry, RawRoomObjects,
 from obllomov.shared.dfs import DFS_Solver_Floor, DFS_Solver_Wall
 from obllomov.shared.geometry import Polygon2D, Vertex2D
 from obllomov.shared.log import logger
-from obllomov.shared.utils import get_annotations, get_bbox_dims
+from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 
 from .base import BaseSelector
-from .constraints import (Constraint, FloorAnnotationConstraint,
-                          FloorPlacementConstraint, ObjectSizeConstraint,
-                          ThinConstraint, UsedAssetsConstraint,
-                          WallAnnotationConstraint, WallPlacementConstraint)
+from .constraints import (
+    Constraint,
+    FloorAnnotationConstraint,
+    FloorPlacementConstraint,
+    ObjectSizeConstraint,
+    ThinConstraint,
+    UsedAssetsConstraint,
+    WallAnnotationConstraint,
+    WallPlacementConstraint,
+)
 
 
 class ObjectSelector(BaseAgent, BaseSelector):
@@ -32,6 +38,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         self,
         retriever: ObjathorRetriever,
         llm: BaseChatModel,
+        annotations: AnnotationDict,
         floor_capacity_ratio: float = 0.4,
         wall_capacity_ratio: float = 0.5,
         object_size_tolerance: float = 0.8,
@@ -47,7 +54,8 @@ class ObjectSelector(BaseAgent, BaseSelector):
         BaseSelector.__init__(self)
 
         self.retriever = retriever
-        self.annotations = retriever.items
+        # self.annotations = retriever.items
+        self.annotations = annotations
         self.llm = llm
 
         self.floor_capacity_ratio = floor_capacity_ratio
@@ -135,10 +143,10 @@ class ObjectSelector(BaseAgent, BaseSelector):
                 selected_objects[room_type]["wall"]  = result["wall"]
                 object_selection_plan[room_type]     = result["plan"]
 
-        print(
-            f"\n{Fore.GREEN}AI: Here is the object selection plan:\n"
-            f"{object_selection_plan}{Fore.RESET}"
-        )
+        # print(
+        #     f"\n{Fore.GREEN}AI: Here is the object selection plan:\n"
+        #     f"{object_selection_plan}{Fore.RESET}"
+        # )
         return object_selection_plan, selected_objects
 
 
@@ -192,12 +200,12 @@ class ObjectSelector(BaseAgent, BaseSelector):
         floor_object_list, wall_object_list = [], []
 
         for object_name, object_info in plan.objects.items():
-            object_info["object_name"] = object_name
+            entry = {"object_name": object_name, **object_info.model_dump()}
 
-            if object_info["location"] == "floor":
-                floor_object_list.append(object_info)
+            if object_info.location == "floor":
+                floor_object_list.append(entry)
             else:
-                wall_object_list.append(object_info)
+                wall_object_list.append(entry)
 
         floor_objects, floor_capacity = self._get_floor_objects(
             floor_object_list, floor_capacity, room_size, vertices, scene_plan
@@ -218,10 +226,14 @@ class ObjectSelector(BaseAgent, BaseSelector):
         similarity_threshold: float,
         constraints: list[Constraint],
     ) -> list[str] | None:
-        candidates = self.retriever.retrieve_single(
+        uids, scores = self.retriever.retrieve_single(
             f"a 3D model of {object_type}, {object_description}",
             threshold=similarity_threshold,
         )
+
+        candidates = list(zip(uids, scores))
+
+        logger.debug(f"candidates: {candidates}")
 
         for constraint in constraints:
             candidates = constraint.apply(candidates)
@@ -238,6 +250,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         self, floor_object_list, floor_capacity, room_size, room_vertices, scene_plan: ScenePlan,
     ):
         selected_all = []
+        initial_state = self._get_initial_state(room_vertices, scene_plan, mode="floor")
 
         for obj in floor_object_list:
             object_type        = obj["object_name"]
@@ -247,10 +260,13 @@ class ObjectSelector(BaseAgent, BaseSelector):
             variance_type      = obj.get("variance_type", "same")
 
             constraints = [
-                FloorAnnotationConstraint(self),
-                ObjectSizeConstraint(self, room_size),
-                FloorPlacementConstraint(self, room_vertices, scene_plan, max_candidates=20),
-                UsedAssetsConstraint(self),
+                FloorAnnotationConstraint(self.annotations),
+                ObjectSizeConstraint(self.annotations, room_size, self.object_size_tolerance),
+                FloorPlacementConstraint(
+                    self.annotations, room_vertices, initial_state,
+                    self.size_buffer, max_candidates=20,
+                ),
+                UsedAssetsConstraint(self.used_assets),
             ]
 
             selected_ids = self._select_candidates_for_object(
@@ -278,20 +294,24 @@ class ObjectSelector(BaseAgent, BaseSelector):
         self, wall_object_list, wall_capacity, room_size, room_vertices, scene_plan: ScenePlan,
     ):
         selected_all = []
+        initial_state = self._get_initial_state(room_vertices, scene_plan, mode="wall")
 
         for obj in wall_object_list:
             object_type        = obj["object_name"]
             object_description = obj["description"]
             object_size        = obj["size"]
             quantity           = min(obj["quantity"], 10)
-            variance_type      = obj["variance_type"]
+            variance_type      = obj.get("variance_type", "same")
 
             constraints = [
-                WallAnnotationConstraint(self),
-                ObjectSizeConstraint(self, room_size),
-                ThinConstraint(self),
-                WallPlacementConstraint(self, room_vertices, scene_plan, max_candidates=20),
-                UsedAssetsConstraint(self),
+                WallAnnotationConstraint(self.annotations),
+                ObjectSizeConstraint(self.annotations, room_size, self.object_size_tolerance),
+                ThinConstraint(self.annotations, self.thin_threshold),
+                WallPlacementConstraint(
+                    self.annotations, room_vertices, initial_state,
+                    max_candidates=20,
+                ),
+                UsedAssetsConstraint(self.used_assets),
             ]
 
             selected_ids = self._select_candidates_for_object(
@@ -314,7 +334,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
                 selected_all.append((f"{object_type}-{i}", asset_id))
 
         return self._apply_wall_capacity(selected_all, wall_capacity)
-
+    
     def _apply_size_difference(
         self,
         target_size: list,
@@ -322,7 +342,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
     ) -> list[tuple[str, float]]:
         candidate_sizes = []
         for uid, _ in candidates:
-            dim  = get_bbox_dims(self.annotations[uid])
+            dim  = self.annotations[uid].bbox
             s    = sorted(dim.convert_m_to_cm().size())
             candidate_sizes.append(s)
 
@@ -356,6 +376,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
                     pool = [c for c in pool if c[0] != chosen]
         return selected
 
+
     def _pick_candidate(self, candidates: list[tuple[str, float]]) -> str:
         if self.random_selection:
             return random.choice(candidates)[0]
@@ -377,7 +398,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
             for object_name, asset_id in list(selected_all):
                 if asset_id in current_ids:
                     continue
-                dim      = get_bbox_dims(self.annotations[asset_id])
+                dim      = self.annotations[asset_id].bbox
                 capacity = dim.x * dim.z
                 if floor_capacity[1] + capacity > floor_capacity[0] and selected:
                     continue
@@ -404,7 +425,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
             for object_name, asset_id in list(selected_all):
                 if asset_id in current_ids:
                     continue
-                dim      = get_bbox_dims(self.annotations[asset_id])
+                dim      = self.annotations[asset_id].bbox
                 capacity = dim.x
                 if wall_capacity[1] + capacity > wall_capacity[0] and selected:
                     continue

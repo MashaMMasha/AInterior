@@ -1,14 +1,19 @@
+import gzip
 import http.server
 import json
 import os
+import pickle
 import sys
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 
-SCENE_PATH = sys.argv[1] if len(sys.argv) > 1 else "scenes/A_lightful_living_room,_small_/A_lightful_living_room,_small_.json"
+import numpy as np
+
+SCENE_PATH = sys.argv[1] if len(sys.argv) > 1 else "scenes/A_lightful_living_room,_small/A_lightful_living_room,_small.json"
 MATERIALS_DIR = os.path.expanduser("~/.objathor-assets/holodeck/2023_09_23/materials/images")
 ASSETS_DIR = os.path.expanduser("~/.objathor-assets/2023_09_23/assets")
-PORT = 8080
+DOORS_IMG_DIR = os.path.expanduser("~/.objathor-assets/holodeck/2023_09_23/doors/images")
+PORT = 8088
 
 VIEWER_HTML = Path(__file__).parent / "viewer.html"
 
@@ -24,6 +29,12 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
         elif path.startswith("/materials/"):
             name = path.split("/materials/")[-1]
             self._serve_file(os.path.join(MATERIALS_DIR, name), "image/png")
+        elif path.startswith("/doors/"):
+            name = path.split("/doors/")[-1]
+            self._serve_file(os.path.join(DOORS_IMG_DIR, name), "image/png")
+        elif path.startswith("/mesh/"):
+            asset_id = path.split("/mesh/")[-1]
+            self._serve_mesh(asset_id)
         elif path.startswith("/assets/"):
             parts = path.split("/assets/")[-1]
             self._serve_file(os.path.join(ASSETS_DIR, parts), self._guess_mime(parts))
@@ -41,6 +52,36 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         with open(filepath, "rb") as f:
             self.wfile.write(f.read())
+
+    def _serve_mesh(self, asset_id):
+        pkl_path = os.path.join(ASSETS_DIR, asset_id, f"{asset_id}.pkl.gz")
+        if not os.path.isfile(pkl_path):
+            self.send_error(404, f"Asset not found: {asset_id}")
+            return
+
+        with gzip.open(pkl_path, "rb") as f:
+            data = pickle.load(f)
+
+        def to_list(v):
+            return [float(v["x"]), float(v["y"]), float(v["z"])]
+
+        def to_uv(v):
+            return [float(v["x"]), float(v["y"])]
+
+        mesh = {
+            "vertices": [to_list(v) for v in data["vertices"]],
+            "normals": [to_list(n) for n in data["normals"]],
+            "uvs": [to_uv(u) for u in data["uvs"]],
+            "triangles": [int(i) for i in data["triangles"]],
+            "albedoUrl": f"/assets/{asset_id}/albedo.jpg",
+        }
+
+        body = json.dumps(mesh).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _guess_mime(self, path):
         if path.endswith(".jpg"):

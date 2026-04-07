@@ -32,7 +32,7 @@ class RawWallPlan(BaseModel):
 class RawDoorEntry(BaseModel):
     room_type0: str = Field(description="First room type")
     room_type1: str = Field(description="Second room type, use 'exterior' for outside")
-    connection_type: str = Field(description="One of: door, doorway, doorframe, open")
+    connection_type: str = Field(description="One of: doorway, doorframe, open")
     size: str = Field(description="One of: single, double")
     style: str = Field(description="Style description, e.g. 'modern wooden'")
 
@@ -71,7 +71,7 @@ class RawObjectEntry(BaseModel):
 
 class RawRoomObjects(BaseModel):
     objects: Dict[str, RawObjectEntry] = Field(
-        description="Map of object_name to object info"
+        description="Map of object name to object info. object name can be something like: 'sofa', 'floor lamp', 'fridge', etc. So keys in dictionary should be names of objects"
     )
 
 class RawWallObjectConstraintEntry(BaseModel):
@@ -99,6 +99,21 @@ class RawCeilingPlan(BaseModel):
     )
 
 
+class RawFloorConstraint(BaseModel):
+    type: str = Field(description="Constraint type: global, relative, direction, alignment, or distance")
+    constraint: str = Field(description="Constraint name: edge, middle, near, far, in front of, behind, left of, right of, side of, around, face to, center aligned")
+    target: Optional[str] = Field(default=None, description="Target object name for non-global constraints")
+
+
+class RawFloorObjectConstraintEntry(BaseModel):
+    object_name: str = Field(description="Object name, e.g. 'sofa-0'")
+    constraints: List[RawFloorConstraint]
+
+
+class RawFloorObjectConstraints(BaseModel):
+    entries: List[RawFloorObjectConstraintEntry]
+
+
 class RawScenePlan(BaseModel):
     raw_floor_plan: Optional[RawFloorPlan] = None
     raw_wall_plan: Optional[RawWallPlan] = None
@@ -106,4 +121,5 @@ class RawScenePlan(BaseModel):
     raw_window_plan: Optional[RawWindowPlan] = None
     raw_ceiling_plan: Optional[RawCeilingPlan] = None
     raw_object_selection: Optional[Dict[str, RawRoomObjects]] = None
+    raw_floor_object_constraints: Optional[Dict[str, RawFloorObjectConstraints]] = None
     raw_wall_object_constraints: Optional[Dict[str, RawWallObjectConstraints]] = None

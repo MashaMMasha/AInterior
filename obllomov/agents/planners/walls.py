@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field
 
 import obllomov.agents.prompts as prompts
 from obllomov.schemas.domain.entries import (ScenePlan, WallConnection,
-                                             WallEntry, WallPlan)
+                                             WallEntry, WallPlan, OpenWalls)
+
 from obllomov.schemas.domain.raw import RawWallPlan
 from obllomov.shared.geometry import (Polygon2D, Segment2D, Vertex2D, Vertex3D,
                                       create_offset_rectangles,
@@ -43,6 +44,8 @@ class WallPlanner(BasePlanner):
 
         return WallPlan(wall_height=wall_height, walls=walls), raw
 
+
+
     def update_walls(self, wall_plan: WallPlan, open_room_pairs: list) -> Tuple[WallPlan, dict]:
         updated_walls = []
         deleted_wall_ids = []
@@ -75,6 +78,8 @@ class WallPlanner(BasePlanner):
             open_wall_rectangles.append(top)
             open_wall_rectangles.append(bottom)
 
+        # OpenWalls(segments=open_wall_segments, boxes=open_wall_rectangles)
+        
         open_walls = {
             "segments": [s.model_dump() for s in open_wall_segments],
             "openWallBoxes": open_wall_rectangles,

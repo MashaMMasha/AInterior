@@ -30,7 +30,7 @@ class ItemRetriever(BaseRetriever):
     def score(self, features: torch.Tensor) -> torch.Tensor:
         return self.scale * (features @ self.features.T)
 
-    def retrieve(self, queries: list[str], topk: int = 5) -> tuple[list[list[str]], torch.Tensor]:
+    def retrieve(self, queries: list[str], topk: int = 5, threshold: float | None = None) -> tuple[list[list[str]], torch.Tensor]:
         features = self.encoder.encode_text(queries)
         scores = self.score(features)
         return self.get_top_k(scores, self.items, topk)

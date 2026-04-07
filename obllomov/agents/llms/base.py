@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from obllomov.shared.log import logger
 from obllomov.storage.assets.base import BaseAssets
 
-MAX_NEW_TOKENS=1024
+MAX_NEW_TOKENS=2048
 
 FROM_LANGCHAIN_MSG_TYPE = {
     "ai": "assistant",

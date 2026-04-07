@@ -1,0 +1,2788 @@
+{
+    "doors": [
+        {
+            "asset_id": "Doorframe_8",
+            "id": "door|0|living_room|bedroom",
+            "openable": true,
+            "openness": 1,
+            "room0": "living_room",
+            "room1": "bedroom",
+            "wall0": "wall|living_room|east|3",
+            "wall1": "wall|bedroom|west|0",
+            "hole_polygon": [
+                {
+                    "x": 0.47983735721996457,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 1.5303456179468933,
+                    "y": 2.0993969440460205,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 1.005091487583429,
+                "y": 1.0496984720230103,
+                "z": 0.0
+            },
+            "door_boxes": [
+                [
+                    [
+                        7.0,
+                        4.020162642780035
+                    ],
+                    [
+                        7.0,
+                        2.9696543820531067
+                    ],
+                    [
+                        6.0,
+                        2.9696543820531067
+                    ],
+                    [
+                        6.0,
+                        4.020162642780035
+                    ]
+                ],
+                [
+                    [
+                        6.0,
+                        4.020162642780035
+                    ],
+                    [
+                        6.0,
+                        2.9696543820531067
+                    ],
+                    [
+                        5.0,
+                        2.9696543820531067
+                    ],
+                    [
+                        5.0,
+                        4.020162642780035
+                    ]
+                ]
+            ],
+            "door_segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 4.020162642780035
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 2.9696543820531067
+                }
+            }
+        },
+        {
+            "asset_id": "Doorframe_8",
+            "id": "door|1|bedroom|kitchen",
+            "openable": false,
+            "openness": 0,
+            "room0": "bedroom",
+            "room1": "kitchen",
+            "wall0": "wall|bedroom|south|3",
+            "wall1": "wall|kitchen|north|1",
+            "hole_polygon": [
+                {
+                    "x": 0.7860358331240443,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 1.8365440938509732,
+                    "y": 2.0993969440460205,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 1.3112899634875088,
+                "y": 1.0496984720230103,
+                "z": 0.0
+            },
+            "door_boxes": [
+                [
+                    [
+                        7.2139641668759555,
+                        0.5
+                    ],
+                    [
+                        6.163455906149027,
+                        0.5
+                    ],
+                    [
+                        6.163455906149027,
+                        1.5
+                    ],
+                    [
+                        7.2139641668759555,
+                        1.5
+                    ]
+                ],
+                [
+                    [
+                        7.2139641668759555,
+                        1.5
+                    ],
+                    [
+                        6.163455906149027,
+                        1.5
+                    ],
+                    [
+                        6.163455906149027,
+                        2.5
+                    ],
+                    [
+                        7.2139641668759555,
+                        2.5
+                    ]
+                ]
+            ],
+            "door_segment": {
+                "v1": {
+                    "x": 7.2139641668759555,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 6.163455906149027,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "asset_id": "Doorway_Double_3",
+            "id": "door|2|exterior|living_room",
+            "openable": false,
+            "openness": 0,
+            "room0": "exterior",
+            "room1": "living_room",
+            "wall0": "wall|living_room|north|1|exterior",
+            "wall1": "wall|living_room|north|1",
+            "hole_polygon": [
+                {
+                    "x": 0.4534880585345607,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 2.396298117128311,
+                    "y": 2.09014630317688,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 1.4248930878314359,
+                "y": 1.04507315158844,
+                "z": 0.0
+            },
+            "door_boxes": [
+                [
+                    [
+                        5.54651194146544,
+                        4.0
+                    ],
+                    [
+                        3.603701882871689,
+                        4.0
+                    ],
+                    [
+                        3.603701882871689,
+                        5.0
+                    ],
+                    [
+                        5.54651194146544,
+                        5.0
+                    ]
+                ],
+                [
+                    [
+                        5.54651194146544,
+                        5.0
+                    ],
+                    [
+                        3.603701882871689,
+                        5.0
+                    ],
+                    [
+                        3.603701882871689,
+                        6.0
+                    ],
+                    [
+                        5.54651194146544,
+                        6.0
+                    ]
+                ]
+            ],
+            "door_segment": {
+                "v1": {
+                    "x": 5.54651194146544,
+                    "z": 5.0
+                },
+                "v2": {
+                    "x": 3.603701882871689,
+                    "z": 5.0
+                }
+            }
+        }
+    ],
+    "objects": [
+        {
+            "assetId": "9e82add156194835b892d67849cf37e2",
+            "id": "large_floor_wall-0 (living_room)",
+            "kinematic": true,
+            "position": {
+                "x": 2.1,
+                "y": 0.2158014001407324,
+                "z": 4.532575295454643
+            },
+            "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "living_room",
+            "vertices": [
+                [
+                    261.2431706169937,
+                    504.5
+                ],
+                [
+                    261.2431706169937,
+                    402.0150590909286
+                ],
+                [
+                    158.7568293830063,
+                    402.0150590909286
+                ],
+                [
+                    158.7568293830063,
+                    504.5
+                ]
+            ],
+            "object_name": "large_floor_wall-0"
+        },
+        {
+            "assetId": "9e82add156194835b892d67849cf37e2",
+            "id": "large_floor_wall-1 (living_room)",
+            "kinematic": true,
+            "position": {
+                "x": 0.9,
+                "y": 0.2158014001407324,
+                "z": 4.532575295454643
+            },
+            "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "living_room",
+            "vertices": [
+                [
+                    141.2431706169937,
+                    504.5
+                ],
+                [
+                    141.2431706169937,
+                    402.0150590909286
+                ],
+                [
+                    38.7568293830063,
+                    402.0150590909286
+                ],
+                [
+                    38.7568293830063,
+                    504.5
+                ]
+            ],
+            "object_name": "large_floor_wall-1"
+        },
+        {
+            "assetId": "ea3983b0ca9b412ab4fb6eb327a0edf0",
+            "id": "large_floor_wall-0 (bedroom)",
+            "kinematic": true,
+            "position": {
+                "x": 7.7180751292027905,
+                "y": 0.4500025999326561,
+                "z": 3.45
+            },
+            "rotation": {
+                "x": 0,
+                "y": 270,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "bedroom",
+            "vertices": [
+                [
+                    739.115025840558,
+                    284.61598952732845
+                ],
+                [
+                    739.115025840558,
+                    405.38401047267155
+                ],
+                [
+                    804.5,
+                    405.38401047267155
+                ],
+                [
+                    804.5,
+                    284.61598952732845
+                ]
+            ],
+            "object_name": "large_floor_wall-0"
+        },
+        {
+            "assetId": "bc25692c5a6e429997d393d6b9e08067",
+            "id": "large-0 (kitchen)",
+            "kinematic": true,
+            "position": {
+                "x": 7.707609058886552,
+                "y": 0.5611611392686113,
+                "z": 0.6
+            },
+            "rotation": {
+                "x": 0,
+                "y": 270,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "kitchen",
+            "vertices": [
+                [
+                    737.0218117773104,
+                    16.06065961276763
+                ],
+                [
+                    737.0218117773104,
+                    103.93934038723236
+                ],
+                [
+                    804.5,
+                    103.93934038723236
+                ],
+                [
+                    804.5,
+                    16.06065961276763
+                ]
+            ],
+            "object_name": "large-0"
+        }
+    ],
+    "proceduralParameters": {
+        "ceilingColor": {
+            "b": 0.3058823529411765,
+            "g": 0.3843137254901961,
+            "r": 0.42745098039215684
+        },
+        "ceilingMaterial": {
+            "name": "PureWhite",
+            "color": {
+                "b": 0.3058823529411765,
+                "g": 0.3843137254901961,
+                "r": 0.42745098039215684
+            }
+        },
+        "floorColliderThickness": 1.0,
+        "lights": [],
+        "receptacleHeight": 0.7,
+        "reflections": [],
+        "skyboxId": "SkyAlbany"
+    },
+    "rooms": [
+        {
+            "room_type": "living_room",
+            "floor_design": "light_oak_parquet",
+            "wall_design": "white_eggshell_paint",
+            "vertices": [
+                {
+                    "x": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "z": 0.0
+                }
+            ],
+            "id": "living_room",
+            "floor_polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "full_vertices": [
+                {
+                    "x": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "z": 0.0
+                }
+            ],
+            "floor_material": {
+                "name": "WoodFloorsCross"
+            },
+            "wall_material": {
+                "name": "PVCLit"
+            }
+        },
+        {
+            "room_type": "bedroom",
+            "floor_design": "warm_gray_laminate",
+            "wall_design": "soft_blue_matte_paint",
+            "vertices": [
+                {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 1.5
+                }
+            ],
+            "id": "bedroom",
+            "floor_polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "full_vertices": [
+                {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 1.5
+                }
+            ],
+            "floor_material": {
+                "name": "WoodGrains"
+            },
+            "wall_material": {
+                "name": "EggshellDrywall 3"
+            }
+        },
+        {
+            "room_type": "kitchen",
+            "floor_design": "white_ceramic_tile",
+            "wall_design": "light_gray_waterproof_paint",
+            "vertices": [
+                {
+                    "x": 6.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 0.0
+                }
+            ],
+            "id": "kitchen",
+            "floor_polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "full_vertices": [
+                {
+                    "x": 6.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "z": 0.0
+                }
+            ],
+            "floor_material": {
+                "name": "CeramicTiles1"
+            },
+            "wall_material": {
+                "name": "DrywallBeige"
+            }
+        }
+    ],
+    "walls": [
+        {
+            "id": "wall|living_room|west|0|exterior",
+            "room_id": "living_room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 5.0,
+            "height": 2.7,
+            "direction": "west",
+            "segment": {
+                "v1": {
+                    "x": 0.0,
+                    "z": 5.0
+                },
+                "v2": {
+                    "x": 0.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|west|0",
+            "room_id": "living_room",
+            "material": {
+                "name": "PVCLit"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 5.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 5.0,
+            "height": 2.7,
+            "direction": "west",
+            "segment": {
+                "v1": {
+                    "x": 0.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 0.0,
+                    "z": 5.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|north|1|exterior",
+            "room_id": "living_room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 5.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 6.0,
+            "height": 2.7,
+            "direction": "north",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 5.0
+                },
+                "v2": {
+                    "x": 0.0,
+                    "z": 5.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|north|1",
+            "room_id": "living_room",
+            "material": {
+                "name": "PVCLit"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 5.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 6.0,
+            "height": 2.7,
+            "direction": "north",
+            "segment": {
+                "v1": {
+                    "x": 0.0,
+                    "z": 5.0
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 5.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|east|2|exterior",
+            "room_id": "living_room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 5.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 0.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 4.5
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 5.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|east|2",
+            "room_id": "living_room",
+            "material": {
+                "name": "PVCLit"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 5.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                }
+            ],
+            "connected_rooms": [],
+            "width": 0.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 5.0
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 4.5
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|east|3",
+            "room_id": "living_room",
+            "material": {
+                "name": "PVCLit"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "room_id": "bedroom",
+                    "wall_id": "wall|bedroom|west|0",
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 4.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 4.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 4.5
+                        }
+                    ]
+                }
+            ],
+            "width": 3.0,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 4.5
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|east|4",
+            "room_id": "living_room",
+            "material": {
+                "name": "PVCLit"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "room_id": "kitchen",
+                    "wall_id": "wall|kitchen|west|0",
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 0.0
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 0.0
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 0.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ]
+                }
+            ],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|south|5",
+            "room_id": "living_room",
+            "material": {
+                "name": "PVCLit"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 6.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 0.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|west|0",
+            "room_id": "bedroom",
+            "material": {
+                "name": "EggshellDrywall 3"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "room_id": "living_room",
+                    "wall_id": "wall|living_room|east|3",
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 4.5
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 4.5
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 4.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ]
+                }
+            ],
+            "width": 3.0,
+            "height": 2.7,
+            "direction": "west",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 4.5
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|north|1|exterior",
+            "room_id": "bedroom",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 2.7,
+            "direction": "north",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 4.5
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 4.5
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|north|1",
+            "room_id": "bedroom",
+            "material": {
+                "name": "EggshellDrywall 3"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 4.5
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 2.7,
+            "direction": "north",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 4.5
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 4.5
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|east|2",
+            "room_id": "bedroom",
+            "material": {
+                "name": "EggshellDrywall 3"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 4.5
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|south|3",
+            "room_id": "bedroom",
+            "material": {
+                "name": "EggshellDrywall 3"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "room_id": "kitchen",
+                    "wall_id": "wall|kitchen|north|1",
+                    "intersection": [
+                        {
+                            "x": 8.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 8.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 8.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ]
+                }
+            ],
+            "width": 2.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "id": "wall|kitchen|west|0",
+            "room_id": "kitchen",
+            "material": {
+                "name": "DrywallBeige"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "room_id": "living_room",
+                    "wall_id": "wall|living_room|east|4",
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 0.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 0.0
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 0.0
+                        }
+                    ]
+                }
+            ],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "west",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "id": "wall|kitchen|north|1",
+            "room_id": "kitchen",
+            "material": {
+                "name": "DrywallBeige"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "connected_rooms": [
+                {
+                    "room_id": "bedroom",
+                    "wall_id": "wall|bedroom|south|3",
+                    "intersection": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 8.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line0": [
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 8.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ],
+                    "line1": [
+                        {
+                            "x": 8.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        },
+                        {
+                            "x": 6.0,
+                            "y": 0.0,
+                            "z": 1.5
+                        }
+                    ]
+                }
+            ],
+            "width": 2.0,
+            "height": 2.7,
+            "direction": "north",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "id": "wall|kitchen|east|2|exterior",
+            "room_id": "kitchen",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "connected_rooms": [],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "id": "wall|kitchen|east|2",
+            "room_id": "kitchen",
+            "material": {
+                "name": "DrywallBeige"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|kitchen|south|3|exterior",
+            "room_id": "kitchen",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|kitchen|south|3",
+            "room_id": "kitchen",
+            "material": {
+                "name": "DrywallBeige"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 2.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|south|5|exterior|0",
+            "room_id": "living_room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 3.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 3.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 0.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 3.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|south|5|exterior|0|exterior",
+            "room_id": "living_room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 3.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 3.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 3.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 0.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|south|5|exterior|1",
+            "room_id": "living_room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 3.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 3.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 3.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 6.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|living_room|south|5|exterior|1|exterior",
+            "room_id": "living_room",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 6.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 6.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 3.0,
+                    "y": 2.7,
+                    "z": 0.0
+                },
+                {
+                    "x": 3.0,
+                    "y": 0.0,
+                    "z": 0.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 3.0,
+            "height": 2.7,
+            "direction": "south",
+            "segment": {
+                "v1": {
+                    "x": 6.0,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 3.0,
+                    "z": 0.0
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|east|2|exterior|0",
+            "room_id": "bedroom",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 3.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 3.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 3.0
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|east|2|exterior|0|exterior",
+            "room_id": "bedroom",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 3.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 3.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 1.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 1.5
+                }
+            ],
+            "connected_rooms": [],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 3.0
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 1.5
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|east|2|exterior|1",
+            "room_id": "bedroom",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 3.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 3.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 4.5
+                }
+            ],
+            "connected_rooms": [],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 3.0
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 4.5
+                }
+            }
+        },
+        {
+            "id": "wall|bedroom|east|2|exterior|1|exterior",
+            "room_id": "bedroom",
+            "material": {
+                "name": "Walldrywall4Tiled"
+            },
+            "polygon": [
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 4.5
+                },
+                {
+                    "x": 8.0,
+                    "y": 2.7,
+                    "z": 3.0
+                },
+                {
+                    "x": 8.0,
+                    "y": 0.0,
+                    "z": 3.0
+                }
+            ],
+            "connected_rooms": [],
+            "width": 1.5,
+            "height": 2.7,
+            "direction": "east",
+            "segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 4.5
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 3.0
+                }
+            }
+        }
+    ],
+    "windows": [
+        {
+            "asset_id": "Window_Fixed_96x72",
+            "id": "window|wall|living_room|south|5|exterior|0|0",
+            "room0": "living_room",
+            "room1": "living_room",
+            "wall0": "wall|living_room|south|5|exterior|0",
+            "wall1": "wall|living_room|south|5|exterior|0|exterior",
+            "room_id": "living_room",
+            "hole_polygon": [
+                {
+                    "x": 0.5253209702728343,
+                    "y": 0.9,
+                    "z": 0.0
+                },
+                {
+                    "x": 2.9175535790680005,
+                    "y": 2.6788002014160157,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 1.7214372746704174,
+                "y": 1.7894001007080078,
+                "z": 0.0
+            },
+            "window_segment": {
+                "v1": {
+                    "x": 0.5253209702728343,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 2.9175535790680005,
+                    "z": 0.0
+                }
+            },
+            "window_boxes": [
+                [
+                    [
+                        0.5253209702728343,
+                        0.1
+                    ],
+                    [
+                        2.9175535790680005,
+                        0.1
+                    ],
+                    [
+                        2.9175535790680005,
+                        0.0
+                    ],
+                    [
+                        0.5253209702728343,
+                        0.0
+                    ]
+                ],
+                [
+                    [
+                        0.5253209702728343,
+                        0.0
+                    ],
+                    [
+                        2.9175535790680005,
+                        0.0
+                    ],
+                    [
+                        2.9175535790680005,
+                        -0.1
+                    ],
+                    [
+                        0.5253209702728343,
+                        -0.1
+                    ]
+                ]
+            ]
+        },
+        {
+            "asset_id": "Window_Fixed_96x72",
+            "id": "window|wall|living_room|south|5|exterior|1|1",
+            "room0": "living_room",
+            "room1": "living_room",
+            "wall0": "wall|living_room|south|5|exterior|1",
+            "wall1": "wall|living_room|south|5|exterior|1|exterior",
+            "room_id": "living_room",
+            "hole_polygon": [
+                {
+                    "x": 0.493040334150468,
+                    "y": 0.9,
+                    "z": 0.0
+                },
+                {
+                    "x": 2.885272942945634,
+                    "y": 2.6788002014160157,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 1.689156638548051,
+                "y": 1.7894001007080078,
+                "z": 0.0
+            },
+            "window_segment": {
+                "v1": {
+                    "x": 3.493040334150468,
+                    "z": 0.0
+                },
+                "v2": {
+                    "x": 5.885272942945634,
+                    "z": 0.0
+                }
+            },
+            "window_boxes": [
+                [
+                    [
+                        3.493040334150468,
+                        0.1
+                    ],
+                    [
+                        5.885272942945634,
+                        0.1
+                    ],
+                    [
+                        5.885272942945634,
+                        0.0
+                    ],
+                    [
+                        3.493040334150468,
+                        0.0
+                    ]
+                ],
+                [
+                    [
+                        3.493040334150468,
+                        0.0
+                    ],
+                    [
+                        5.885272942945634,
+                        0.0
+                    ],
+                    [
+                        5.885272942945634,
+                        -0.1
+                    ],
+                    [
+                        3.493040334150468,
+                        -0.1
+                    ]
+                ]
+            ]
+        },
+        {
+            "asset_id": "Window_Hung_48x44",
+            "id": "window|wall|bedroom|east|2|exterior|0|0",
+            "room0": "bedroom",
+            "room1": "bedroom",
+            "wall0": "wall|bedroom|east|2|exterior|0",
+            "wall1": "wall|bedroom|east|2|exterior|0|exterior",
+            "room_id": "bedroom",
+            "hole_polygon": [
+                {
+                    "x": 0.25557940056415973,
+                    "y": 0.9,
+                    "z": 0.0
+                },
+                {
+                    "x": 1.4941836600551266,
+                    "y": 2.124735689163208,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 0.8748815303096431,
+                "y": 1.512367844581604,
+                "z": 0.0
+            },
+            "window_segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 1.7555794005641596
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 2.9941836600551266
+                }
+            },
+            "window_boxes": [
+                [
+                    [
+                        7.9,
+                        1.7555794005641596
+                    ],
+                    [
+                        7.9,
+                        2.9941836600551266
+                    ],
+                    [
+                        8.0,
+                        2.9941836600551266
+                    ],
+                    [
+                        8.0,
+                        1.7555794005641596
+                    ]
+                ],
+                [
+                    [
+                        8.0,
+                        1.7555794005641596
+                    ],
+                    [
+                        8.0,
+                        2.9941836600551266
+                    ],
+                    [
+                        8.1,
+                        2.9941836600551266
+                    ],
+                    [
+                        8.1,
+                        1.7555794005641596
+                    ]
+                ]
+            ]
+        },
+        {
+            "asset_id": "Window_Hung_48x44",
+            "id": "window|wall|bedroom|east|2|exterior|1|1",
+            "room0": "bedroom",
+            "room1": "bedroom",
+            "wall0": "wall|bedroom|east|2|exterior|1",
+            "wall1": "wall|bedroom|east|2|exterior|1|exterior",
+            "room_id": "bedroom",
+            "hole_polygon": [
+                {
+                    "x": 0.17193100671095882,
+                    "y": 0.9,
+                    "z": 0.0
+                },
+                {
+                    "x": 1.4105352662019255,
+                    "y": 2.124735689163208,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 0.7912331364564421,
+                "y": 1.512367844581604,
+                "z": 0.0
+            },
+            "window_segment": {
+                "v1": {
+                    "x": 8.0,
+                    "z": 3.1719310067109587
+                },
+                "v2": {
+                    "x": 8.0,
+                    "z": 4.410535266201926
+                }
+            },
+            "window_boxes": [
+                [
+                    [
+                        7.9,
+                        3.1719310067109587
+                    ],
+                    [
+                        7.9,
+                        4.410535266201926
+                    ],
+                    [
+                        8.0,
+                        4.410535266201926
+                    ],
+                    [
+                        8.0,
+                        3.1719310067109587
+                    ]
+                ],
+                [
+                    [
+                        8.0,
+                        3.1719310067109587
+                    ],
+                    [
+                        8.0,
+                        4.410535266201926
+                    ],
+                    [
+                        8.1,
+                        4.410535266201926
+                    ],
+                    [
+                        8.1,
+                        3.1719310067109587
+                    ]
+                ]
+            ]
+        },
+        {
+            "asset_id": "Window_Slider_60x48",
+            "id": "window|wall|kitchen|north|1|0",
+            "room0": "kitchen",
+            "room1": "kitchen",
+            "wall0": "wall|kitchen|north|1",
+            "wall1": "wall|kitchen|north|1|exterior",
+            "room_id": "kitchen",
+            "hole_polygon": [
+                {
+                    "x": 0.3938651417153287,
+                    "y": 0.9,
+                    "z": 0.0
+                },
+                {
+                    "x": 1.874303564872067,
+                    "y": 2.069436526298523,
+                    "z": 0.0
+                }
+            ],
+            "asset_position": {
+                "x": 1.134084353293698,
+                "y": 1.4847182631492615,
+                "z": 0.0
+            },
+            "window_segment": {
+                "v1": {
+                    "x": 6.393865141715329,
+                    "z": 1.5
+                },
+                "v2": {
+                    "x": 7.874303564872067,
+                    "z": 1.5
+                }
+            },
+            "window_boxes": [
+                [
+                    [
+                        6.393865141715329,
+                        1.6
+                    ],
+                    [
+                        7.874303564872067,
+                        1.6
+                    ],
+                    [
+                        7.874303564872067,
+                        1.5
+                    ],
+                    [
+                        6.393865141715329,
+                        1.5
+                    ]
+                ],
+                [
+                    [
+                        6.393865141715329,
+                        1.5
+                    ],
+                    [
+                        7.874303564872067,
+                        1.5
+                    ],
+                    [
+                        7.874303564872067,
+                        1.4
+                    ],
+                    [
+                        6.393865141715329,
+                        1.4
+                    ]
+                ]
+            ]
+        }
+    ],
+    "query": "A lightful living room, small bedroom and tiny kitchen",
+    "wall_height": 2.7,
+    "room_pairs": [
+        [
+            "living_room",
+            "bedroom"
+        ],
+        [
+            "bedroom",
+            "kitchen"
+        ],
+        [
+            "exterior",
+            "living_room"
+        ]
+    ],
+    "open_room_pairs": [],
+    "open_walls": {
+        "segments": [],
+        "openWallBoxes": []
+    },
+    "object_selection_plan": {
+        "living_room": {
+            "objects": {
+                "large_floor_wall": {
+                    "description": "side table with round marble top and gold metal base",
+                    "location": "floor",
+                    "size": [
+                        50,
+                        50,
+                        55
+                    ],
+                    "quantity": 2,
+                    "variance_type": "same",
+                    "objects_on_top": [
+                        {
+                            "object_name": "mini table lamp",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "coaster set (2 pcs)",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "small potted cactus",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        }
+                    ]
+                }
+            }
+        },
+        "bedroom": {
+            "objects": {
+                "large_floor_wall": {
+                    "description": "compact desk with clean white finish and single drawer",
+                    "location": "floor",
+                    "size": [
+                        80,
+                        50,
+                        75
+                    ],
+                    "quantity": 1,
+                    "variance_type": "same",
+                    "objects_on_top": [
+                        {
+                            "object_name": "ergonomic desk chair with light gray fabric",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "minimalist desk lamp with adjustable arm",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "notebook and pen set",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "small potted peace lily in white ceramic pot",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        }
+                    ]
+                }
+            }
+        },
+        "kitchen": {
+            "objects": {
+                "large": {
+                    "description": "kitchen cabinet with sink",
+                    "location": "floor",
+                    "size": [
+                        120,
+                        60,
+                        90
+                    ],
+                    "quantity": 1,
+                    "variance_type": "same",
+                    "objects_on_top": [
+                        {
+                            "object_name": "kitchen sink",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "faucet",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "cutting board",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "knife set",
+                            "quantity": 1,
+                            "variance_type": "same"
+                        },
+                        {
+                            "object_name": "spice jars",
+                            "quantity": 3,
+                            "variance_type": "varied"
+                        }
+                    ]
+                },
+                "description": {
+                    "description": "refrigerator",
+                    "location": "floor",
+                    "size": [
+                        70,
+                        70,
+                        100
+                    ],
+                    "quantity": 1,
+                    "variance_type": "same",
+                    "objects_on_top": [
+                        {
+                            "object_name": "magnetic note",
+                            "quantity": 2,
+                            "variance_type": "varied"
+                        },
+                        {
+                            "object_name": "fridge magnet",
+                            "quantity": 3,
+                            "variance_type": "varied"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "selected_objects": {
+        "living_room": {
+            "floor": [
+                [
+                    "large_floor_wall-0",
+                    "9e82add156194835b892d67849cf37e2"
+                ],
+                [
+                    "large_floor_wall-1",
+                    "9e82add156194835b892d67849cf37e2"
+                ]
+            ],
+            "wall": []
+        },
+        "bedroom": {
+            "floor": [
+                [
+                    "large_floor_wall-0",
+                    "ea3983b0ca9b412ab4fb6eb327a0edf0"
+                ]
+            ],
+            "wall": []
+        },
+        "kitchen": {
+            "floor": [
+                [
+                    "large-0",
+                    "bc25692c5a6e429997d393d6b9e08067"
+                ]
+            ],
+            "wall": []
+        }
+    },
+    "floor_objects": [
+        {
+            "assetId": "9e82add156194835b892d67849cf37e2",
+            "id": "large_floor_wall-0 (living_room)",
+            "kinematic": true,
+            "position": {
+                "x": 2.1,
+                "y": 0.2158014001407324,
+                "z": 4.532575295454643
+            },
+            "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "living_room",
+            "vertices": [
+                [
+                    261.2431706169937,
+                    504.5
+                ],
+                [
+                    261.2431706169937,
+                    402.0150590909286
+                ],
+                [
+                    158.7568293830063,
+                    402.0150590909286
+                ],
+                [
+                    158.7568293830063,
+                    504.5
+                ]
+            ],
+            "object_name": "large_floor_wall-0"
+        },
+        {
+            "assetId": "9e82add156194835b892d67849cf37e2",
+            "id": "large_floor_wall-1 (living_room)",
+            "kinematic": true,
+            "position": {
+                "x": 0.9,
+                "y": 0.2158014001407324,
+                "z": 4.532575295454643
+            },
+            "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "living_room",
+            "vertices": [
+                [
+                    141.2431706169937,
+                    504.5
+                ],
+                [
+                    141.2431706169937,
+                    402.0150590909286
+                ],
+                [
+                    38.7568293830063,
+                    402.0150590909286
+                ],
+                [
+                    38.7568293830063,
+                    504.5
+                ]
+            ],
+            "object_name": "large_floor_wall-1"
+        },
+        {
+            "assetId": "ea3983b0ca9b412ab4fb6eb327a0edf0",
+            "id": "large_floor_wall-0 (bedroom)",
+            "kinematic": true,
+            "position": {
+                "x": 7.7180751292027905,
+                "y": 0.4500025999326561,
+                "z": 3.45
+            },
+            "rotation": {
+                "x": 0,
+                "y": 270,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "bedroom",
+            "vertices": [
+                [
+                    739.115025840558,
+                    284.61598952732845
+                ],
+                [
+                    739.115025840558,
+                    405.38401047267155
+                ],
+                [
+                    804.5,
+                    405.38401047267155
+                ],
+                [
+                    804.5,
+                    284.61598952732845
+                ]
+            ],
+            "object_name": "large_floor_wall-0"
+        },
+        {
+            "assetId": "bc25692c5a6e429997d393d6b9e08067",
+            "id": "large-0 (kitchen)",
+            "kinematic": true,
+            "position": {
+                "x": 7.707609058886552,
+                "y": 0.5611611392686113,
+                "z": 0.6
+            },
+            "rotation": {
+                "x": 0,
+                "y": 270,
+                "z": 0
+            },
+            "material": null,
+            "roomId": "kitchen",
+            "vertices": [
+                [
+                    737.0218117773104,
+                    16.06065961276763
+                ],
+                [
+                    737.0218117773104,
+                    103.93934038723236
+                ],
+                [
+                    804.5,
+                    103.93934038723236
+                ],
+                [
+                    804.5,
+                    16.06065961276763
+                ]
+            ],
+            "object_name": "large-0"
+        }
+    ],
+    "wall_objects": [],
+    "small_objects": [],
+    "ceiling_objects": []
+}

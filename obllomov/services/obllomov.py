@@ -9,25 +9,28 @@ from langchain_core.language_models import BaseChatModel
 from sentence_transformers import SentenceTransformer
 
 from obllomov.agents.encoders import CLIPEncoder, SBERTEncoder
-from obllomov.agents.planners import (DoorPlanner, FloorPlanner, WallPlanner,
-                                      WindowPlanner)
+from obllomov.agents.planners import (CeilingPlanner, DoorPlanner,
+                                      FloorObjectPlanner, FloorPlanner,
+                                      SmallObjectPlanner, WallObjectPlanner,
+                                      WallPlanner, WindowPlanner)
 from obllomov.agents.retrievers import (BaseRetriever, ItemRetriever,
                                         ObjathorRetriever, ObjectRetriever)
-from obllomov.agents.selectors import MaterialSelector
+from obllomov.agents.selectors import MaterialSelector, ObjectSelector
 
+from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.entries import ScenePlan
 from obllomov.schemas.domain.raw import RawScenePlan
 
 from obllomov.shared.log import logger
 from obllomov.shared.path import (ABS_ROOT_PATH, HOLODECK_BASE_DATA_DIR,
-                                  HOLODECK_MATERIALS_DIR,
-                                  HOLODECK_THOR_ANNOTATIONS_PATH,
-                                  HOLODECK_THOR_FEATURES_DIR,
-                                  OBJATHOR_ANNOTATIONS_PATH,
+                                  HOLODECK_MATERIALS_DIR, HOLODECK_THOR_ANNOTATIONS_PATH,
+                                  HOLODECK_THOR_FEATURES_DIR, OBJATHOR_ANNOTATIONS_PATH,
                                   OBJATHOR_FEATURES_DIR)
+
 from obllomov.shared.time import NOW
 
 from obllomov.storage.assets import BaseAssets
+from obllomov.storage.annotations import load_annotations
 
 
 class ObLLoMov:
@@ -66,11 +69,11 @@ class ObLLoMov:
     def _init_retrievers(self):
         logger.debug("Initing retrievers...")
 
-        materials_data = self.assets.read_json(HOLODECK_MATERIALS_DIR / "material-database.json")
+        materials_data = self.assets.read_json(HOLODECK_BASE_DATA_DIR / "materials/material-database.json")
         self.selected_materials = materials_data["Wall"] + materials_data["Wood"] + materials_data["Fabric"]
         self.material_retriever = ItemRetriever.from_assets(
             self.assets,
-            feature_path=HOLODECK_MATERIALS_DIR / "material_feature_clip.pkl",
+            feature_path=HOLODECK_BASE_DATA_DIR / "materials/material_feature_clip.pkl",
             encoder=self.clip_encoder,
             items=self.selected_materials
         )
@@ -78,7 +81,7 @@ class ObLLoMov:
         colors = list(mcolors.CSS4_COLORS.keys())
         self.color_retriever = ItemRetriever.from_assets(
             self.assets,
-            feature_path=HOLODECK_MATERIALS_DIR / "color_feature_clip.pkl",
+            feature_path=HOLODECK_BASE_DATA_DIR / "materials/color_feature_clip.pkl",
             encoder=self.clip_encoder,
             items=colors
         )
@@ -94,24 +97,29 @@ class ObLLoMov:
 
         self.window_data =  self.assets.read_json(HOLODECK_BASE_DATA_DIR / "windows/window-database.json")
 
+        self.annotations = load_annotations(self.assets, 
+                                            sources=[OBJATHOR_ANNOTATIONS_PATH, HOLODECK_THOR_ANNOTATIONS_PATH]
+                                            )
+
         self.objathor_retriever = ObjathorRetriever.from_assets(
             self.assets,
             clip_encoder=self.clip_encoder,
             sbert_encoder=self.sbert_encoder,
             sources=[
-                {
-                    "annotations_path": OBJATHOR_ANNOTATIONS_PATH,
-                    "features_dir": OBJATHOR_FEATURES_DIR,
-                },
-                {
-                    "annotations_path": HOLODECK_THOR_ANNOTATIONS_PATH,
-                    "features_dir": HOLODECK_THOR_FEATURES_DIR,
-                },
+                {"features_dir": OBJATHOR_FEATURES_DIR},
+                {"features_dir": HOLODECK_THOR_FEATURES_DIR},
             ],
+            items=list(self.annotations.keys())
         )
 
     def _init_selectors(self):
         self.material_selector = MaterialSelector(self.material_retriever, self.color_retriever)
+
+        self.object_selector = ObjectSelector(self.objathor_retriever, self.llm,
+                                              self.annotations,
+                                              similarity_threshold_floor=15,
+                                              similarity_threshold_wall=15,
+                                              )
 
     def _init_planners(self):
         logger.debug("Initing planners...")
@@ -122,6 +130,14 @@ class ObLLoMov:
         self.door_planner = DoorPlanner(self.door_retriever, self.door_data, self.llm)
 
         self.window_planner = WindowPlanner(self.window_data, self.llm)
+
+        self.floor_object_planner = FloorObjectPlanner(self.llm, self.assets, self.annotations)
+
+        self.wall_object_planner = WallObjectPlanner(self.llm, self.assets, self.annotations)
+
+        self.ceiling_planner = CeilingPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations)
+
+        self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations)
 
 
     def get_empty_scene(self):
@@ -139,7 +155,7 @@ class ObLLoMov:
         return scene
 
     def save_scene(self, scene, query, save_dir, add_time=True):
-        query_name = query.replace(" ", "_").replace("'", "")[:30]
+        query_name = query.replace(" ", "_").replace("'", "")[:30].rstrip("_")
 
         if add_time:
             create_time = (
@@ -219,6 +235,36 @@ class ObLLoMov:
         )
         scene_plan.windows = window_plan.windows
         scene_plan.walls = window_plan.walls
+
+        self.object_selector.used_assets = used_assets
+        object_selection_plan, selected_objects = self.object_selector.select(
+            scene_plan,
+            raw=raw_scene_plan.raw_object_selection,
+        )
+        scene_plan.object_selection_plan = object_selection_plan
+        scene_plan.selected_objects = selected_objects
+        raw_scene_plan.raw_object_selection = object_selection_plan
+
+        floor_objects, raw_scene_plan.raw_floor_object_constraints = self.floor_object_planner.plan(
+            scene_plan,
+            raw=raw_scene_plan.raw_floor_object_constraints,
+            use_constraint=use_constraint,
+        )
+        scene_plan.floor_objects = floor_objects
+
+        wall_object_plan, raw_scene_plan.raw_wall_object_constraints = self.wall_object_planner.plan(
+            scene_plan,
+            raw=raw_scene_plan.raw_wall_object_constraints,
+            use_constraint=use_constraint,
+        )
+        scene_plan.wall_objects = wall_object_plan.wall_objects
+
+        if add_ceiling:
+            ceiling_plan, raw_scene_plan.raw_ceiling_plan = self.ceiling_planner.plan(
+                scene_plan,
+                raw=raw_scene_plan.raw_ceiling_plan,
+            )
+            scene_plan.ceiling_objects = ceiling_plan.ceiling_objects
 
         final_scene = scene_plan.to_scene(base_scene)
         self.save_scene(final_scene, query, save_dir, add_time)

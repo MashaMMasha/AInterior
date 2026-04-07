@@ -6,13 +6,13 @@ from pydantic import BaseModel, Field
 import obllomov.agents.prompts as prompts
 from obllomov.agents.retrievers import BaseRetriever
 from obllomov.agents.selectors.base import BaseSelector
+from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.entries import (CeilingObjectEntry, CeilingPlan,
                                              ScenePlan)
 from obllomov.schemas.domain.raw import RawCeilingEntry, RawCeilingPlan
 from obllomov.shared.geometry import Polygon2D, Vertex2D, Vertex3D
 from obllomov.shared.log import logger
-from obllomov.shared.path import OBJATHOR_ANNOTATIONS_PATH
-from obllomov.shared.utils import get_annotations, get_bbox_dims
+from obllomov.agents.retrievers import ObjathorRetriever
 from obllomov.storage.assets import BaseAssets
 
 from .base import BasePlanner
@@ -24,10 +24,11 @@ class CeilingPlanner(BasePlanner):
         llm: BaseChatModel,
         assets: BaseAssets,
         objathor_retriever: BaseRetriever,
+        annotations: AnnotationDict,
     ):
         super().__init__(llm, assets)
         self.objathor_retriever = objathor_retriever
-        self.annotations: dict = self.assets.read_json(OBJATHOR_ANNOTATIONS_PATH)
+        self.annotations = annotations
 
     def plan(
         self,
@@ -65,8 +66,8 @@ class CeilingPlanner(BasePlanner):
             if asset_id is None:
                 continue
 
-            asset_annotation = self.annotations[asset_id]
-            dims = get_bbox_dims(asset_annotation)
+            annotation = self.annotations[asset_id]
+            dims = annotation.bbox
             floor_polygon = Polygon2D(vertices=room.vertices)
             centroid = floor_polygon.centroid
             y = scene_plan.wall_height - dims.y / 2
@@ -77,7 +78,7 @@ class CeilingPlanner(BasePlanner):
                 position=Vertex3D(x=centroid.x, y=y, z=centroid.z),
                 rotation=Vertex3D(x=0, y=0, z=0),
                 room_id=room.id,
-                object_name=asset_annotation["category"],
+                object_name=annotation.category,
             ))
 
         return CeilingPlan(ceiling_objects=ceiling_objects)
@@ -90,8 +91,8 @@ class CeilingPlanner(BasePlanner):
 
         candidates = [
             c for c in candidates
-            if self.annotations[c[0]]["onCeiling"]
-            and get_bbox_dims(self.annotations[c[0]]).y <= 1.0
+            if self.annotations[c[0]].onCeiling
+            and self.annotations[c[0]].bbox.y <= 1.0
         ]
 
         if not candidates:
