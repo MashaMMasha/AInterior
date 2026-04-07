@@ -49,6 +49,11 @@ class BaseAssets(ABC):
         return Path(relative_path)
 
 
+    def read_bytes_or_none(self, relative_path: Path | str) -> Optional[bytes]:
+        if self.exists(relative_path):
+            return self.read_bytes(relative_path)
+        return None
+
     def read_text(self, relative_path: Path | str, encoding: str = "utf-8") -> str:
         return self.read_bytes(relative_path).decode(encoding)
 
@@ -88,13 +93,18 @@ class BaseAssets(ABC):
         raw = json.dumps(data, indent=indent, **json_kwargs).encode("utf-8")
         self.write_bytes(path, raw)
 
-
+    def _get_compression(self, path: Path):
+        ext = path.suffix.lstrip(".")
+        if ext == "gz":
+            return "gzip"
+        return ext
+        
     def read_pickle(self, relative_path: Path | str, **pickle_kwargs) -> Any:
         path = self._to_path(relative_path)
 
         if path.suffix in COMPRESSED_EXTS:
             buf = io.BytesIO(self.read_bytes(path))
-            return compress_pickle.load(buf, **pickle_kwargs)
+            return compress_pickle.load(buf, compression=self._get_compression(path), **pickle_kwargs)
 
         return pickle.loads(self.read_bytes(path), **pickle_kwargs)
 

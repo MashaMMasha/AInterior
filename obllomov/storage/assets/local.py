@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Optional
 
 from obllomov.shared.env import env
 
@@ -22,6 +22,13 @@ class LocalAssets(BaseAssets):
 
     def read_bytes(self, relative_path: Path | str) -> bytes:
         return self._abs(relative_path).read_bytes()
+
+    # def read_bytes_or_none(self, relative_path: Path | str) -> Optional[bytes]:
+    #     abs_path = self._abs(relative_path)
+    #     try:
+    #         return abs_path.read_bytes()
+    #     except (FileNotFoundError, IsADirectoryError):
+    #         return None
 
     def write_bytes(self, relative_path: Path | str, data: bytes) -> None:
         abs_path = self._abs(relative_path)

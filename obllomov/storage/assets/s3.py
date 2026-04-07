@@ -103,6 +103,18 @@ class S3Assets(BaseAssets):
         logger.debug("read bytes")
         return response["Body"].read()
 
+    def read_bytes_or_none(self, relative_path: Path | str) -> Optional[bytes]:
+        try:
+            response = self._s3.get_object(
+                Bucket=self.bucket_name,
+                Key=self._s3_key(relative_path),
+            )
+            return response["Body"].read()
+        except ClientError as e:
+            if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
+                return None
+            raise
+
     def write_bytes(self, relative_path: Path | str, data: bytes) -> None:
         self._s3.put_object(
             Bucket=self.bucket_name,
