@@ -31,6 +31,20 @@ class MLClient:
         response.raise_for_status()
         return response.json()
     
+    async def generate_scene(self, text: str):
+        response = await self.client.post(
+            f"{self.base_url}/generate_scene",
+            json={"text": text}
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    async def get_generation_status(self, generation_id: str):
+        response = await self.client.get(
+            f"{self.base_url}/generation/{generation_id}"
+        )
+        return response
+    
     async def close(self):
         await self.client.aclose()
 

@@ -90,3 +90,22 @@ CREATE TABLE IF NOT EXISTS interior.room_history (
     changes JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS interior.generation_progress (
+    id SERIAL PRIMARY KEY,
+    generation_id UUID UNIQUE NOT NULL,
+    user_id INTEGER REFERENCES users.users(id) ON DELETE CASCADE,
+    query TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    current_step VARCHAR(100),
+    total_steps INTEGER DEFAULT 8,
+    completed_steps INTEGER DEFAULT 0,
+    scene_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_generation_progress_generation_id ON interior.generation_progress(generation_id);
+CREATE INDEX IF NOT EXISTS idx_generation_progress_user_id ON interior.generation_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_generation_progress_status ON interior.generation_progress(status);

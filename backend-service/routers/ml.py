@@ -28,3 +28,17 @@ async def chat(req: TextRequest, user: dict = Depends(get_current_user)):
 async def generate(req: TextRequest, user: dict = Depends(get_current_user)):
     ml_client = get_ml_client()
     return await ml_client.generate_furniture(req.text, req.style)
+
+
+@router.post("/generate_scene")
+async def generate_scene(req: TextRequest, user: dict = Depends(get_current_user)):
+    ml_client = get_ml_client()
+    return await ml_client.generate_scene(req.text)
+
+
+@router.get("/generation/{generation_id}")
+async def get_generation_status(generation_id: str, user: dict = Depends(get_current_user)):
+    ml_client = get_ml_client()
+    response = await ml_client.get_generation_status(generation_id)
+    response.raise_for_status()
+    return response.json()

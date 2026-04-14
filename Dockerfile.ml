@@ -11,8 +11,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ml-service/ ./ml-service/
-COPY static/ ./static/
+COPY ml-service/ ./ml_service/
+COPY obllomov/ ./obllomov/
 
 RUN mkdir -p /tmp /app/logs
 

@@ -4,12 +4,18 @@ from ml_service.db.furniture_db import FURNITURE_DB
 
 from ml_service.services.agents_service import AgentsService
 from ml_service.services.s3_service import get_s3_service
+from ml_service.services.rabbitmq_service import get_rabbitmq_service
+from ml_service.database import get_db_session, GenerationProgress
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
 from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+import uuid
+import asyncio
 
 
 app = FastAPI(
@@ -27,6 +33,17 @@ app.add_middleware(
 
 agents_service = AgentsService()
 s3_service = get_s3_service()
+rabbitmq_service = get_rabbitmq_service()
+
+
+@app.on_event("startup")
+async def startup():
+    await rabbitmq_service.connect()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await rabbitmq_service.close()
 
 
 @app.post("/generate", response_model=Dict[str, Any])
@@ -122,6 +139,73 @@ async def auto_arrange_furniture(request: TextRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка расстановки: {str(e)}")
+
+
+@app.post("/generate_scene", response_model=Dict[str, Any])
+async def generate_scene(
+    request: TextRequest,
+    db: AsyncSession = Depends(get_db_session)
+):
+    try:
+        generation_id = uuid.uuid4()
+        
+        progress = GenerationProgress(
+            generation_id=generation_id,
+            user_id=None,
+            query=request.text,
+            status='pending',
+            scene_json={}
+        )
+        db.add(progress)
+        await db.commit()
+        
+        asyncio.create_task(
+            agents_service.generate_scene_streaming(
+                generation_id=str(generation_id),
+                query=request.text
+            )
+        )
+        
+        return {
+            "status": "success",
+            "generation_id": str(generation_id),
+            "message": "Генерация сцены начата"
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка запуска генерации: {str(e)}")
+
+
+@app.get("/generation/{generation_id}", response_model=Dict[str, Any])
+async def get_generation_status(
+    generation_id: str,
+    db: AsyncSession = Depends(get_db_session)
+):
+    try:
+        result = await db.execute(
+            select(GenerationProgress).where(GenerationProgress.generation_id == uuid.UUID(generation_id))
+        )
+        progress = result.scalar_one_or_none()
+        
+        if not progress:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        
+        return {
+            "generation_id": str(progress.generation_id),
+            "status": progress.status,
+            "current_step": progress.current_step,
+            "completed_steps": progress.completed_steps,
+            "total_steps": progress.total_steps,
+            "scene_json": progress.scene_json,
+            "error_message": progress.error_message,
+            "created_at": progress.created_at.isoformat(),
+            "updated_at": progress.updated_at.isoformat()
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка получения статуса: {str(e)}")
 
 
 @app.get("/health")

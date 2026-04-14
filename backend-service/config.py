@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = "minioadmin"
     S3_BUCKET: str = "ainterior-models"
     S3_REGION: str = "us-east-1"
+    
+    RABBITMQ_HOST: str = "localhost"
+    RABBITMQ_PORT: int = 5672
+    RABBITMQ_USER: str = "guest"
+    RABBITMQ_PASSWORD: str = "guest"
 
     class Config:
         env_file = ".env"
@@ -17,3 +22,5 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+RABBITMQ_URL = f"amqp://{settings.RABBITMQ_USER}:{settings.RABBITMQ_PASSWORD}@{settings.RABBITMQ_HOST}:{settings.RABBITMQ_PORT}/"
