@@ -127,13 +127,9 @@ class Segment2D(BaseModel):
         return self.to_shapely().intersects(other.to_shapely())
 
     def intersection(self, other: "Segment2D") -> Optional["Segment2D"]:
-        logger.debug(self.to_shapely())
-        logger.debug(other.to_shapely())
         result = self.to_shapely().intersection(other.to_shapely())
-        logger.debug(result)
         if result.geom_type == "LineString":
             coords = list(result.coords)
-            logger.debug(coords)
             return Segment2D(
                 v1=Vertex2D(x=coords[0][0], z=coords[0][1]),
                 v2=Vertex2D(x=coords[1][0], z=coords[1][1]),

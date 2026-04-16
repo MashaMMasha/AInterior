@@ -61,6 +61,7 @@ class RawTopObjectEntry(BaseModel):
 
 
 class RawObjectEntry(BaseModel):
+    object_name: str = Field(description="Object name, e.g. 'sofa', 'floor lamp', 'fridge'")
     description: str
     location: Literal["floor", "wall"] = "floor"
     size: Optional[List[int]] = Field(default=None, description="[x, y, z] in cm")
@@ -70,8 +71,8 @@ class RawObjectEntry(BaseModel):
 
 
 class RawRoomObjects(BaseModel):
-    objects: Dict[str, RawObjectEntry] = Field(
-        description="Map of object name to object info. object name can be something like: 'sofa', 'floor lamp', 'fridge', etc. So keys in dictionary should be names of objects"
+    objects: List[RawObjectEntry] = Field(
+        description="List of objects for the room"
     )
 
 class RawWallObjectConstraintEntry(BaseModel):

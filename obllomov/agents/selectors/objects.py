@@ -12,9 +12,8 @@ import obllomov.agents.prompts as prompts
 from obllomov.agents.base import BaseAgent
 from obllomov.agents.retrievers import ObjathorRetriever
 from obllomov.schemas.domain.entries import ScenePlan
-from obllomov.schemas.domain.raw import (RawObjectEntry, RawRoomObjects,
-                                         RawTopObjectEntry)
-from obllomov.shared.dfs import DFS_Solver_Floor, DFS_Solver_Wall
+from obllomov.schemas.domain.raw import RawRoomObjects, RawTopObjectEntry
+from obllomov.agents.selectors.placement import DFS_Solver_Floor, DFS_Solver_Wall
 from obllomov.shared.geometry import Polygon2D, Vertex2D
 from obllomov.shared.log import logger
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
@@ -44,7 +43,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         object_size_tolerance: float = 0.8,
         similarity_threshold_floor: float = 31.0,
         similarity_threshold_wall: float = 31.0,
-        thin_threshold: float = 3.0,
+        thin_threshold: float = 5.0,
         size_buffer: int = 10,
         consider_size: bool = True,
         random_selection: bool = False,
@@ -199,8 +198,8 @@ class ObjectSelector(BaseAgent, BaseSelector):
     ):
         floor_object_list, wall_object_list = [], []
 
-        for object_name, object_info in plan.objects.items():
-            entry = {"object_name": object_name, **object_info.model_dump()}
+        for object_info in plan.objects:
+            entry = object_info.model_dump()
 
             if object_info.location == "floor":
                 floor_object_list.append(entry)
@@ -229,14 +228,17 @@ class ObjectSelector(BaseAgent, BaseSelector):
         uids, scores = self.retriever.retrieve_single(
             f"a 3D model of {object_type}, {object_description}",
             threshold=similarity_threshold,
+            topk=200
         )
 
         candidates = list(zip(uids, scores))
 
-        logger.debug(f"candidates: {candidates}")
+        # logger.debug(f"candidates: {candidates}")
 
         for constraint in constraints:
+            
             candidates = constraint.apply(candidates)
+            # logger.debug(f"After {constraint.__class__.__name__}: canditates: {candidates}")
             if not candidates:
                 return None
 
@@ -280,7 +282,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
             )
 
             if not selected_ids:
-                print(
+                logger.error(
                     f"No candidates found for {object_type} {object_description}"
                 )
                 continue
@@ -325,7 +327,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
             )
 
             if not selected_ids:
-                print(
+                logger.error(
                     f"No candidates found for {object_type} {object_description}"
                 )
                 continue

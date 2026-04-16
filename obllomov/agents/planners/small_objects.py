@@ -18,6 +18,7 @@ from obllomov.agents.retrievers import ObjathorRetriever
 from obllomov.schemas.domain.entries import (ScenePlan, SmallObjectEntry,
                                              SmallObjectPlan)
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
+from obllomov.schemas.domain.raw import RawRoomObjects
 from obllomov.shared.geometry import BBox3D, Box3D, Vertex3D
 from obllomov.shared.log import logger
 from obllomov.shared.path import OBJATHOR_ASSETS_DIR
@@ -43,7 +44,9 @@ class SmallObjectPlanner(BasePlanner):
 
     def plan(self, scene_plan: ScenePlan, controller, receptacle_ids) -> SmallObjectPlan:
         object_selection_plan = scene_plan.object_selection_plan
-        receptacle2asset_id = {}
+        receptacle2asset_id = {
+            obj["id"]: obj["asset_id"] for obj in scene_plan.floor_objects
+        }
 
         if scene_plan.receptacle2small_objects and self.reuse_assets:
             receptacle2small_objects = scene_plan.receptacle2small_objects
@@ -52,9 +55,11 @@ class SmallObjectPlanner(BasePlanner):
                 object_selection_plan, receptacle_ids, receptacle2asset_id
             )
 
+        logger.debug(f"selected small objects: {receptacle2small_objects}")
         small_objects = self._place_objects(
             scene_plan.wall_height, controller, receptacle2small_objects,
         )
+        logger.debug(f"placed small objects: {len(small_objects)}")
 
         return SmallObjectPlan(
             small_objects=small_objects,
@@ -62,17 +67,21 @@ class SmallObjectPlanner(BasePlanner):
         )
 
     def _select_small_objects(
-        self, object_selection_plan: dict, receptacle_ids: list, receptacle2asset_id: dict
+        self, object_selection_plan: Dict[str, RawRoomObjects], receptacle_ids: list, receptacle2asset_id: dict
     ) -> dict:
         children_plans = []
+        logger.debug(object_selection_plan)
         for room_type, objects in object_selection_plan.items():
-            for object_name, object_info in objects.items():
-                for child in object_info["objects_on_top"]:
-                    child_plan = dict(child)
+            for object in objects.objects:
+            # for object_name, object_info in objects.items():
+                for child in object.objects_on_top:
+                    logger.debug(f"child: {child}")
+                    child_plan = child.model_dump()
                     child_plan["room_type"] = room_type
-                    child_plan["parent"] = object_name
+                    child_plan["parent"] = object.object_name
                     children_plans.append(child_plan)
 
+        logger.debug(f"receptacle_ids: {receptacle_ids}")
         receptacle2plans = {}
         for receptacle_id in receptacle_ids:
             plans = [
@@ -81,16 +90,16 @@ class SmallObjectPlanner(BasePlanner):
             ]
             if plans:
                 receptacle2plans[receptacle_id] = plans
-
+        logger.debug(f"receptacle2plans: {receptacle2plans}")
         packed_args = [(receptacle, plans, receptacle2asset_id) for receptacle, plans in receptacle2plans.items()]
 
-        with ThreadPoolExecutor(max_workers=4) as ex:
-            results = list(ex.map(self._select_per_receptacle, packed_args))
+        results = [self._select_per_receptacle(args) for args in packed_args]
 
         return {receptacle: objects for receptacle, objects in results}
 
     def _select_per_receptacle(self, args) -> Tuple[str, list]:
         receptacle, small_objects, receptacle2asset_id = args
+        logger.debug(f"selecting for receptacle: {receptacle}")
 
         receptacle_dims = self.annotations[receptacle2asset_id[receptacle]].bbox
         receptacle_area = receptacle_dims.x * receptacle_dims.z
@@ -107,12 +116,15 @@ class SmallObjectPlanner(BasePlanner):
                 [f"a 3D model of {object_name}"], topk=80
             )
             candidates = list(zip(items[0], scores[0]))
+            logger.debug(f"  {object_name}: {len(candidates)} raw candidates")
+            on_object = [c for c in candidates if self.annotations[c[0]].onObject]
+            logger.debug(f"  {object_name}: {len(on_object)} onObject candidates")
             candidates = [
-                c for c in candidates
-                if self.annotations[c[0]].onObject
-                and self.annotations[c[0]].bbox.x < receptacle_dims.x * 0.9
+                c for c in on_object
+                if self.annotations[c[0]].bbox.x < receptacle_dims.x * 0.9
                 and self.annotations[c[0]].bbox.z < receptacle_dims.z * 0.9
             ]
+            logger.debug(f"  {object_name}: {len(candidates)} size-filtered (recept: {receptacle_dims.x:.3f}x{receptacle_dims.z:.3f})")
 
             if not candidates:
                 continue
@@ -199,7 +211,7 @@ class SmallObjectPlanner(BasePlanner):
 
     def _place_object(self, controller, asset_id, receptacle_id, rotation) -> Optional[dict]:
         generated_id = f"small|{asset_id}"
-        controller.step(
+        spawn_event = controller.step(
             action="SpawnAsset",
             assetId=asset_id,
             generatedId=generated_id,
@@ -207,6 +219,9 @@ class SmallObjectPlanner(BasePlanner):
             rotation=Vector3(x=0, y=0, z=0),
             renderImage=False,
         )
+        if not spawn_event.metadata.get("lastActionSuccess"):
+            logger.debug(f"  SpawnAsset failed: {asset_id} -> {spawn_event.metadata.get('errorMessage')}")
+            return None
         event = controller.step(
             action="InitialRandomSpawn",
             randomSeed=random.randint(0, 1_000_000_000),
@@ -218,8 +233,15 @@ class SmallObjectPlanner(BasePlanner):
             allowMoveable=True,
             numPlacementAttempts=10,
         )
-        obj = next(o for o in event.metadata["objects"] if o["objectId"] == generated_id)
-        if event and obj["axisAlignedBoundingBox"]["center"]["y"] > FLOOR_Y:
+        if not event.metadata.get("lastActionSuccess"):
+            logger.debug(f"  InitialRandomSpawn failed: {asset_id} on {receptacle_id} -> {event.metadata.get('errorMessage')}")
+        obj = next((o for o in event.metadata["objects"] if o["objectId"] == generated_id), None)
+        if obj is None:
+            logger.debug(f"  object not found: {generated_id}")
+            return None
+        center_y = obj["axisAlignedBoundingBox"]["center"]["y"]
+        logger.debug(f"  {asset_id} center_y={center_y:.3f} FLOOR_Y={FLOOR_Y}")
+        if event and center_y > FLOOR_Y:
             return obj
         controller.step(action="DisableObject", objectId=generated_id, renderImage=False)
         return None
@@ -288,7 +310,7 @@ class SmallObjectPlanner(BasePlanner):
         center = placement.position.convert_m_to_cm()
         return Box3D.from_center_and_size(center, dims)
 
-    def start_controller(self, scene) -> Controller:
+    def start_controller(self, scene: dict) -> Controller:
         objathor_assets_dir = self.assets.get_local_dir(OBJATHOR_ASSETS_DIR)
         return Controller(
             commit_id=THOR_COMMIT_ID,

@@ -44,6 +44,8 @@ def _load_mesh_json(asset_id: str) -> bytes:
         "uvs": [to_uv(u) for u in data["uvs"]],
         "triangles": [int(i) for i in data["triangles"]],
         "albedoUrl": f"/assets/{asset_id}/albedo.jpg",
+        "normalUrl": f"/assets/{asset_id}/normal.jpg",
+        "emissionUrl": f"/assets/{asset_id}/emission.jpg",
     }
     return json.dumps(mesh).encode()
 

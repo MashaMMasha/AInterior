@@ -182,6 +182,8 @@ class DFS_Solver_Floor:
                 continue
 
             func = self.func_dict.get(constraint["type"])
+            if func is None:
+                continue
             valid_solutions = func(
                 constraint["constraint"],
                 placed_objects[constraint["target"]],

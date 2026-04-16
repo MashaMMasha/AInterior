@@ -1,5 +1,6 @@
-query ?= "A lightful living room, small bedroom and tiny kitchen"
-save_dir ?= "./scenes"
+query ?= A lightful living room, small bedroom and tiny kitchen
+save_dir ?= ./scenes
+scene_path = ./scenes/A_lightful_living_room,_small/A_lightful_living_room,_small.json
 mock ?= 0
 
 run: 
@@ -9,8 +10,11 @@ req:
 	pipreqs --mode gt --force . 
 
 generate:
-	export PYTHONPATH="." && python scripts/generate.py --query $(query) --save-dir $(save_dir) \
+	export PYTHONPATH="." && python scripts/generate.py --query "$(query)" --save-dir "$(save_dir)" \
 	$(if $(filter 1,$(mock)),--mock)
+
+rendering:
+	export PYTHONPATH="." && python -u render/render.py "$(scene_path)" 
 
 minio:
 	docker run -d \
@@ -21,5 +25,7 @@ minio:
 	-e MINIO_ROOT_PASSWORD=minioadmin \
 	-v ~/minio-data:/data \
 	quay.io/minio/minio server /data --console-address ":9001"
+
+
 
 

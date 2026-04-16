@@ -49,7 +49,7 @@ class BaseRetriever(ABC):
         else:
             top_scores, indices = scores.topk(topk)
 
-        logger.debug(f"indices: {indices} dim {indices.dim()}")
+        # logger.debug(f"indices: {indices} dim {indices.dim()}")
         # if indices.dim() < 2:
         #     indices = indices.unsqueeze(0)
         #     logger.debug(f"indices.unsqueeze: {indices} dim {indices.dim()}")

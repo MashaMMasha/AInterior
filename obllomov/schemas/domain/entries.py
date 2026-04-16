@@ -1,8 +1,13 @@
-from typing import List, Optional, Tuple
+from typing import ClassVar, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
 from obllomov.shared.geometry import Polygon2D, Segment2D, Vertex2D, Vertex3D
+
+
+def _to_camel(key: str) -> str:
+    parts = key.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
 
 
 class RoomPlan(BaseModel):
@@ -149,6 +154,14 @@ class ScenePlan(BaseModel):
     ceiling_objects: List[CeilingObjectEntry] = []
     receptacle2small_objects: dict = {}
 
+    @staticmethod
+    def _camel_keys(obj):
+        if isinstance(obj, dict):
+            return {_to_camel(k): ScenePlan._camel_keys(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [ScenePlan._camel_keys(i) for i in obj]
+        return obj
+
     def to_scene(self, base_scene: dict) -> dict:
         result = {**base_scene}
         dump = self.model_dump()
@@ -163,4 +176,39 @@ class ScenePlan(BaseModel):
             + result.get("ceiling_objects", [])
         )
         return result
+
+    THOR_METADATA: ClassVar[Dict] = {
+        "schema": "1.0.0",
+        "agent": {
+            "horizon": 30,
+            "position": {"x": 0, "y": 0.95, "z": 0},
+            "rotation": {"x": 0, "y": 0, "z": 0},
+            "standing": True,
+        },
+        "agentPoses": {},
+        "roomSpecId": "",
+        "warnings": {},
+    }
+
+    def to_thor_scene(self, base_scene: dict) -> dict:
+        dump = self._camel_keys(self.model_dump())
+        rooms = dump.get("rooms", [])
+        for room in rooms:
+            room.setdefault("children", [])
+            room.setdefault("ceilings", [])
+        objects = (
+            dump.get("floorObjects", [])
+            + dump.get("wallObjects", [])
+            + dump.get("smallObjects", [])
+            + dump.get("ceilingObjects", [])
+        )
+        return {
+            "metadata": base_scene.get("metadata", self.THOR_METADATA),
+            "rooms": rooms,
+            "walls": dump.get("walls", []),
+            "doors": dump.get("doors", []),
+            "windows": dump.get("windows", []),
+            "objects": objects,
+            "proceduralParameters": base_scene.get("proceduralParameters", {}),
+        }
 

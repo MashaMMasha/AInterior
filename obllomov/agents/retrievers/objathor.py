@@ -5,7 +5,6 @@ import torch
 
 from obllomov.agents.encoders import TextEncoder
 from obllomov.schemas.domain.annotations import Annotation
-from obllomov.shared.path import NORMALIZED_ANNOTATIONS_PATH
 from obllomov.shared.log import logger
 from obllomov.storage.assets import BaseAssets
 
@@ -98,6 +97,6 @@ class ObjathorRetriever(BaseRetriever):
         combined = self.clip_weight * clip_scores + self.sbert_weight * sbert_scores
         clip_mask = clip_scores > retrieval_threshold
 
-        logger.debug(f"combined: {combined}")
+        # logger.debug(f"combined: {combined}")
 
         return self.get_top_k(combined, self.items, topk, clip_mask)
