@@ -13,6 +13,7 @@ from obllomov.agents.planners import (CeilingPlanner, DoorPlanner,
                                       FloorObjectPlanner, FloorPlanner,
                                       SmallObjectPlanner, WallObjectPlanner,
                                       WallPlanner, WindowPlanner)
+from obllomov.agents.planners.controllers import AI2thorObjectController
 from obllomov.agents.retrievers import (BaseRetriever, ItemRetriever,
                                         ObjathorRetriever, ObjectRetriever)
 from obllomov.agents.selectors import MaterialSelector, ObjectSelector
@@ -137,7 +138,8 @@ class ObLLoMov:
 
         self.ceiling_planner = CeilingPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations)
 
-        self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations)
+        self.object_controller = AI2thorObjectController(self.assets)
+        self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations, self.object_controller)
 
 
     def get_empty_scene(self):
@@ -155,7 +157,7 @@ class ObLLoMov:
         return scene
 
     def save_scene(self, scene, query, save_dir, add_time=True):
-        query_name = query.replace(" ", "_").replace("'", "")[:30].rstrip("_")
+        query_name = query.replace(" ", "_").replace("'", "")[50].rstrip("_")
 
         if add_time:
             create_time = (
@@ -259,25 +261,8 @@ class ObLLoMov:
         )
         scene_plan.wall_objects = wall_object_plan.wall_objects
 
-        thor_scene = scene_plan.to_thor_scene(base_scene)
-        import json
-        with open("/tmp/thor_scene_debug.json", "w") as f:
-            json.dump(thor_scene, f, indent=2, default=str)
-        logger.debug(f"thor_scene objects count: {len(thor_scene.get('objects', []))}")
-        logger.debug(f"thor_scene object ids: {[o.get('id') for o in thor_scene.get('objects', [])]}")
-        controller = self.small_object_planner.start_controller(thor_scene)
-        event = controller.reset()
-        logger.debug(f"thor reset success: {event.metadata.get('lastActionSuccess')}, error: {event.metadata.get('errorMessage')}")
-        thor_object_ids = [obj["objectId"] for obj in event.metadata["objects"]]
-        logger.debug(f"thor_object_ids: {thor_object_ids}")
-        scene_object_ids = {obj["id"] for obj in scene_plan.floor_objects}
-        logger.debug(f"scene_object_ids: {scene_object_ids}")
-        receptacle_ids = [
-            obj["objectId"]
-            for obj in event.metadata["objects"]
-            if obj["objectId"] in scene_object_ids and "___" not in obj["objectId"]
-        ]
-        small_object_plan = self.small_object_planner.plan(scene_plan, controller, receptacle_ids)
+        receptacle_ids = self.object_controller.start(scene_plan, base_scene)
+        small_object_plan = self.small_object_planner.plan(scene_plan, receptacle_ids)
 
         # logger.debug(f"small_object_plan: {small_object_plan}")
         scene_plan.small_objects = small_object_plan.small_objects

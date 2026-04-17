@@ -27,7 +27,7 @@ Ensure that the door style complements the design of the room.
 
 The design under consideration is {input}, which includes these rooms: {rooms}. The length, width and height of each room in meters are:
 {room_sizes}
-Certain pairs of rooms share a wall: {room_pairs}. There must be a door to the exterior.
+Certain pairs of rooms share a wall: {room_pairs}. There must be an openable door to the exterior.
 Adhere to these additional requirements: {additional_requirements}.
 Provide your response succinctly, without additional text at the beginning or end."""
 

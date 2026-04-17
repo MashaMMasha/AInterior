@@ -11,12 +11,12 @@ from obllomov.shared.log import logger
 
 T = TypeVar("T", bound=BaseModel)
 
-class LogCallbackHandler(BaseCallbackHandler):
-    def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
-    ) -> Any:
-        formatted_prompts = "\n".join(prompts)
-        _log.info(f"Prompt:\n{formatted_prompts}")
+# class LogCallbackHandler(BaseCallbackHandler):
+#     def on_llm_start(
+#         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
+#     ) -> Any:
+#         formatted_prompts = "\n".join(prompts)
+#         _log.info(f"Prompt:\n{formatted_prompts}")
 class BaseAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm

@@ -1,31 +1,20 @@
 import random
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from typing import List, Optional, Tuple, Dict
 
-import torch
-import torch.nn.functional as F
-from ai2thor.controller import Controller
-from ai2thor.hooks.procedural_asset_hook import ProceduralAssetHookRunner
 from langchain_core.language_models import BaseChatModel
-from procthor.constants import FLOOR_Y
-from procthor.utils.types import Vector3
-from pydantic import BaseModel, Field
 
 from obllomov.agents.retrievers import BaseRetriever
 from obllomov.agents.selectors import BaseSelector
-from obllomov.agents.retrievers import ObjathorRetriever
 from obllomov.schemas.domain.entries import (ScenePlan, SmallObjectEntry,
                                              SmallObjectPlan)
-from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
+from obllomov.schemas.domain.annotations import AnnotationDict
 from obllomov.schemas.domain.raw import RawRoomObjects
-from obllomov.shared.geometry import BBox3D, Box3D, Vertex3D
+from obllomov.shared.geometry import Box3D, Vertex3D
 from obllomov.shared.log import logger
-from obllomov.shared.path import OBJATHOR_ASSETS_DIR
-from obllomov.shared.utils import THOR_COMMIT_ID
 from obllomov.storage.assets import BaseAssets
 
 from .base import BasePlanner
+from .controllers import BaseObjectController
 
 
 class SmallObjectPlanner(BasePlanner):
@@ -35,14 +24,16 @@ class SmallObjectPlanner(BasePlanner):
         assets: BaseAssets,
         objathor_retriever: BaseRetriever,
         annotations: AnnotationDict,
+        object_controller: BaseObjectController,
     ):
         super().__init__(llm, assets)
         self.objathor_retriever = objathor_retriever
         self.annotations = annotations
+        self.object_controller = object_controller
         self.clip_threshold = 30
         self.reuse_assets = True
 
-    def plan(self, scene_plan: ScenePlan, controller, receptacle_ids) -> SmallObjectPlan:
+    def plan(self, scene_plan: ScenePlan, receptacle_ids: list) -> SmallObjectPlan:
         object_selection_plan = scene_plan.object_selection_plan
         receptacle2asset_id = {
             obj["id"]: obj["asset_id"] for obj in scene_plan.floor_objects
@@ -57,7 +48,7 @@ class SmallObjectPlanner(BasePlanner):
 
         logger.debug(f"selected small objects: {receptacle2small_objects}")
         small_objects = self._place_objects(
-            scene_plan.wall_height, controller, receptacle2small_objects,
+            scene_plan.wall_height, receptacle2small_objects,
         )
         logger.debug(f"placed small objects: {len(small_objects)}")
 
@@ -160,7 +151,7 @@ class SmallObjectPlanner(BasePlanner):
 
 
     def _place_objects(
-        self, wall_height: float, controller: Controller, receptacle2small_objects: dict,
+        self, wall_height: float, receptacle2small_objects: dict,
     ) -> List[SmallObjectEntry]:
         results = []
 
@@ -171,7 +162,7 @@ class SmallObjectPlanner(BasePlanner):
                 thin, rotation = self._check_thin(asset_id)
                 small, y_rotation = self._check_small(asset_id)
 
-                obj = self._place_object(controller, asset_id, receptacle, rotation)
+                obj = self.object_controller.place_object(asset_id, receptacle, rotation)
                 if obj is None:
                     continue
 
@@ -208,44 +199,6 @@ class SmallObjectPlanner(BasePlanner):
             results.extend(self._filter_collisions(placements))
 
         return results
-
-    def _place_object(self, controller, asset_id, receptacle_id, rotation) -> Optional[dict]:
-        generated_id = f"small|{asset_id}"
-        spawn_event = controller.step(
-            action="SpawnAsset",
-            assetId=asset_id,
-            generatedId=generated_id,
-            position=Vector3(x=0, y=FLOOR_Y - 20, z=0),
-            rotation=Vector3(x=0, y=0, z=0),
-            renderImage=False,
-        )
-        if not spawn_event.metadata.get("lastActionSuccess"):
-            logger.debug(f"  SpawnAsset failed: {asset_id} -> {spawn_event.metadata.get('errorMessage')}")
-            return None
-        event = controller.step(
-            action="InitialRandomSpawn",
-            randomSeed=random.randint(0, 1_000_000_000),
-            objectIds=[generated_id],
-            receptacleObjectIds=[receptacle_id],
-            forceVisible=False,
-            allowFloor=False,
-            renderImage=False,
-            allowMoveable=True,
-            numPlacementAttempts=10,
-        )
-        if not event.metadata.get("lastActionSuccess"):
-            logger.debug(f"  InitialRandomSpawn failed: {asset_id} on {receptacle_id} -> {event.metadata.get('errorMessage')}")
-        obj = next((o for o in event.metadata["objects"] if o["objectId"] == generated_id), None)
-        if obj is None:
-            logger.debug(f"  object not found: {generated_id}")
-            return None
-        center_y = obj["axisAlignedBoundingBox"]["center"]["y"]
-        logger.debug(f"  {asset_id} center_y={center_y:.3f} FLOOR_Y={FLOOR_Y}")
-        if event and center_y > FLOOR_Y:
-            return obj
-        controller.step(action="DisableObject", objectId=generated_id, renderImage=False)
-        return None
-
 
     def _check_thin(self, asset_id: str) -> Tuple[bool, list]:
         dims_cm = self.annotations[asset_id].bbox.convert_m_to_cm()
@@ -309,21 +262,3 @@ class SmallObjectPlanner(BasePlanner):
         dims = self.annotations[placement.asset_id].bbox.convert_m_to_cm()
         center = placement.position.convert_m_to_cm()
         return Box3D.from_center_and_size(center, dims)
-
-    def start_controller(self, scene: dict) -> Controller:
-        objathor_assets_dir = self.assets.get_local_dir(OBJATHOR_ASSETS_DIR)
-        return Controller(
-            commit_id=THOR_COMMIT_ID,
-            agentMode="default",
-            makeAgentsVisible=False,
-            visibilityDistance=1.5,
-            scene=scene,
-            width=224,
-            height=224,
-            fieldOfView=40,
-            action_hook_runner=ProceduralAssetHookRunner(
-                asset_directory=str(objathor_assets_dir),
-                asset_symlink=True,
-                verbose=True,
-            ),
-        )

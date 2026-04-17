@@ -43,7 +43,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         object_size_tolerance: float = 0.8,
         similarity_threshold_floor: float = 31.0,
         similarity_threshold_wall: float = 31.0,
-        thin_threshold: float = 5.0,
+        thin_threshold: float = 10.0,
         size_buffer: int = 10,
         consider_size: bool = True,
         random_selection: bool = False,
@@ -238,7 +238,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         for constraint in constraints:
             
             candidates = constraint.apply(candidates)
-            # logger.debug(f"After {constraint.__class__.__name__}: canditates: {candidates}")
+            logger.debug(f"After {constraint.__class__.__name__} canditates for {object_type}: {candidates}")
             if not candidates:
                 return None
 
