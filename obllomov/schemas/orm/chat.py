@@ -27,8 +27,22 @@ class InteractionRow(Base):
     session_id: Mapped[str] = mapped_column(ForeignKey("sessions.session_id"), index=True)
     sequence: Mapped[int] = mapped_column(Integer)
     query: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    session: Mapped["SessionRow"] = relationship(back_populates="interactions")
+    stages: Mapped[list["StageRow"]] = relationship(
+        back_populates="interaction", order_by="StageRow.id"
+    )
+
+
+class StageRow(Base):
+    __tablename__ = "stages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    interaction_id: Mapped[int] = mapped_column(ForeignKey("interactions.id"), index=True)
+    stage_name: Mapped[str] = mapped_column(String)
     scene_plan: Mapped[dict] = mapped_column(JSON, default=dict)
     raw_scene_plan: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    session: Mapped["SessionRow"] = relationship(back_populates="interactions")
+    interaction: Mapped["InteractionRow"] = relationship(back_populates="stages")
