@@ -21,6 +21,7 @@ from obllomov.agents.selectors import MaterialSelector, ObjectSelector
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.entries import ScenePlan
 from obllomov.schemas.domain.raw import RawScenePlan
+from obllomov.services.chat import ChatService
 
 from obllomov.shared.log import logger
 from obllomov.shared.path import (ABS_ROOT_PATH, HOLODECK_BASE_DATA_DIR,
@@ -142,19 +143,13 @@ class ObLLoMov:
         self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations, self.object_controller)
 
 
-    def get_empty_scene(self):
-        return compress_json.load(
+    def _default_procedural_parameters(self) -> dict:
+        base = compress_json.load(
             os.path.join(ABS_ROOT_PATH, "agents/empty_house.json")
         )
-
-    def empty_house(self, scene):
-        scene["rooms"] = []
-        scene["walls"] = []
-        scene["doors"] = []
-        scene["windows"] = []
-        scene["objects"] = []
-        scene["proceduralParameters"]["lights"] = []
-        return scene
+        params = base.get("proceduralParameters", {})
+        params["lights"] = []
+        return params
 
     def save_scene(self, scene, query, save_dir, add_time=True):
         query_name = query.replace(" ", "_").replace("'", "")[50].rstrip("_")
@@ -180,7 +175,6 @@ class ObLLoMov:
 
     def generate_scene(
         self,
-        base_scene,
         query: str,
         save_dir: str,
         used_assets=[],
@@ -191,11 +185,15 @@ class ObLLoMov:
         use_constraint=True,
         random_selection=False,
         use_milp=False,
+        chat: Optional[ChatService] = None,
+        session_id: Optional[str] = None,
     ) -> Tuple[Dict[str, Any], str]:
         query = query.replace("_", " ")
-        base_scene = self.empty_house(base_scene)
 
-        scene_plan = ScenePlan(query=query)
+        scene_plan = ScenePlan(
+            query=query,
+            procedural_parameters=self._default_procedural_parameters(),
+        )
         raw_scene_plan = RawScenePlan()
 
         floor_plan, raw_scene_plan.raw_floor_plan = self.floor_planner.plan(
@@ -261,7 +259,7 @@ class ObLLoMov:
         )
         scene_plan.wall_objects = wall_object_plan.wall_objects
 
-        receptacle_ids = self.object_controller.start(scene_plan, base_scene)
+        receptacle_ids = self.object_controller.start(scene_plan)
         small_object_plan = self.small_object_planner.plan(scene_plan, receptacle_ids)
 
         # logger.debug(f"small_object_plan: {small_object_plan}")
@@ -275,7 +273,10 @@ class ObLLoMov:
             )
             scene_plan.ceiling_objects = ceiling_plan.ceiling_objects
 
-        final_scene = scene_plan.to_scene(base_scene)
+        final_scene = scene_plan.to_scene()
         self.save_scene(final_scene, query, save_dir, add_time)
+
+        if chat and session_id:
+            chat.save_interaction(session_id, query, scene_plan, raw_scene_plan)
 
         return final_scene, save_dir

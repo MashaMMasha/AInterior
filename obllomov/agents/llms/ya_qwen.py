@@ -15,13 +15,13 @@ from .base import *
 
 class StructuredOutputRunnable(RunnableSerializable):
     llm: "ChatYandexQwen"
-    schema: Any
+    _schema: Any
 
     model_config = {"arbitrary_types_allowed": True}
 
     def invoke(self, input: Any, config: Optional[RunnableConfig] = None, **kwargs) -> BaseModel:
         result: AIMessage = self.llm.invoke(input, config=config, **kwargs)
-        return self.schema.model_validate_json(result.content)
+        return self._schema.model_validate_json(result.content)
 
 
 class ChatYandexQwen(BaseChatModel):
@@ -70,7 +70,7 @@ class ChatYandexQwen(BaseChatModel):
     def with_structured_output(self, schema: type[BaseModel], **kwargs: Any) -> StructuredOutputRunnable:
         clone = self.model_copy()
         clone._structured_output_schema = schema
-        return StructuredOutputRunnable(llm=clone, schema=schema)
+        return StructuredOutputRunnable(llm=clone, _schema=schema)
 
     @property
     def _llm_type(self) -> str:

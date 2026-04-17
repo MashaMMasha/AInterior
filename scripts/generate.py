@@ -5,13 +5,15 @@ import compress_json
 import open_clip
 from langchain_openai import ChatOpenAI
 
-from obllomov.agents.llms import (ChatMock, ChatYandexQwen,
-                                  get_chat_yandex_model, MAX_NEW_TOKENS)
+from obllomov.agents.llms import (ChatMock, get_chat_yandex_model, MAX_NEW_TOKENS)
 from obllomov.services.obllomov import ObLLoMov
 from obllomov.shared.env import env
 from obllomov.shared.log import logger
 from obllomov.shared.path import ABS_ROOT_PATH, OBJATHOR_ANNOTATIONS_PATH
 from obllomov.storage.assets import LocalAssets, S3Assets
+from obllomov.services.chat import ChatService
+from obllomov.storage.db.repository import SessionRepository
+from obllomov.storage.db.engine import create_db_engine
 
 
 from pydantic import BaseModel
@@ -53,8 +55,16 @@ else:
 assets = LocalAssets()
 
 model = ObLLoMov(llm, assets)
+user_id = "terbium"
+engine = create_db_engine()
+chat = ChatService(SessionRepository(engine))
 
-scene = model.get_empty_scene()
+session = chat.start_session(user_id)
+logger.info(f"started chat session for {user_id}: {session.id}")
+# session_id = "test_scene"
 
-# logger.info("Start generating")
-model.generate_scene(scene, args.query, args.save_dir, add_time=False)
+model.generate_scene(args.query, args.save_dir, 
+                     chat=chat, 
+                     session_id=session.id, 
+                     add_time=False
+                     )

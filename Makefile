@@ -1,6 +1,6 @@
 query ?= A lightful living room, small bedroom and tiny kitchen
 save_dir ?= ./scenes
-scene_path = ./scenes/A_lightful_living_room,_small/A_lightful_living_room,_small.json
+session_id ?=
 mock ?= 0
 
 run: 
@@ -14,7 +14,7 @@ generate:
 	$(if $(filter 1,$(mock)),--mock)
 
 rendering:
-	export PYTHONPATH="." && python -u render/render.py "$(scene_path)" 
+	export PYTHONPATH="." && python -u render/render.py "$(session_id)"
 
 minio:
 	docker run -d \
