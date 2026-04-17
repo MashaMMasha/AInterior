@@ -40,15 +40,15 @@ Backend Service (FastAPI, :8000)  ←→  Auth Service (FastAPI, :8001)
 - Управление пользователями и сессиями
 
 **Backend Service (порт 8000)** — основной API-шлюз:
-- Управление проектами (CRUD)
-- Загрузка 3D-моделей
+- Управление проектами (CRUD) — требует авторизации
+- Загрузка 3D-моделей — требует авторизации
 - Интеграция с S3 для хранения файлов
-- Проксирование запросов к ML Service
+- Проксирование запросов к ML Service — требует авторизации
 
 **ML Service (порт 8002)** — изолированный ML-сервис:
-- AI-агенты (парсинг запросов, генерация, планировка)
-- Генерация 3D-моделей из текста
-- Автоматическая расстановка мебели
+- AI-агенты (парсинг запросов, генерация, планировка) — требует авторизации
+- Генерация 3D-моделей из текста — требует авторизации
+- Автоматическая расстановка мебели — требует авторизации
 
 **Frontend (React + Vite, порт 3000)** — интерактивный 3D-редактор с чатом, панелью объектов и управлением проектами.
 
@@ -77,8 +77,10 @@ AInterior/
 │   ├── agents/           # AI-агенты (парсинг, генерация, планировка)
 │   ├── db/               # Каталог мебели
 │   ├── schema/           # Pydantic DTO
-│   ├── services/         # ML logic, S3
+│   ├── services/         # ML logic, S3, auth-client
 │   ├── config.py         # Настройки ml-service
+│   ├── dependencies.py   # Auth middleware
+│   ├── database.py       # Подключение к БД
 │   └── main.py           # Точка входа
 ├── frontend/
 │   └── src/
@@ -114,6 +116,8 @@ AInterior/
 
 ### Backend Service (:8000)
 
+**Все эндпоинты требуют JWT токен в заголовке `Authorization: Bearer <token>`**
+
 **Модели:**
 - `POST /upload_model` — загрузка 3D-модели
 - `GET /list_models` — список моделей
@@ -121,7 +125,7 @@ AInterior/
 - `GET /generated_models/{filename}` — скачать сгенерированную модель
 
 **Проекты:**
-- `GET /projects` — список проектов
+- `GET /projects` — список проектов пользователя
 - `POST /projects` — создать проект
 - `PUT /projects/{id}` — обновить
 - `DELETE /projects/{id}` — удалить
@@ -131,13 +135,24 @@ AInterior/
 - `POST /generate_furniture` — генерация мебели
 - `POST /auto_arrange` — автоматическая расстановка
 - `POST /chat` — чат с ассистентом
+- `POST /generate_scene` — генерация сцены
+- `GET /generation/{generation_id}` — статус генерации
+
+**WebSocket:**
+- `WS /ws/generation/{generation_id}?token=<jwt>` — стрим прогресса генерации
 
 ### ML Service (:8002)
 
+**Все эндпоинты требуют JWT токен в заголовке `Authorization: Bearer <token>`**
+
 **ML Операции:**
+- `POST /generate` — генерация модели
 - `POST /generate_furniture` — генерация мебели из текста
 - `POST /auto_arrange` — автоматическая расстановка
 - `POST /chat` — парсинг запроса
+- `POST /generate_scene` — генерация сцены (streaming)
+- `GET /generation/{generation_id}` — статус генерации
+- `GET /health` — проверка здоровья сервиса (публичный)
 
 Swagger UI:
 - Auth: http://localhost:8001/docs

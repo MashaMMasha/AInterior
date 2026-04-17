@@ -6,6 +6,7 @@ from ml_service.services.agents_service import AgentsService
 from ml_service.services.s3_service import get_s3_service
 from ml_service.services.rabbitmq_service import get_rabbitmq_service
 from ml_service.database import get_db_session, GenerationProgress
+from ml_service.dependencies import get_current_user
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,7 +48,7 @@ async def shutdown():
 
 
 @app.post("/generate", response_model=Dict[str, Any])
-async def generate_model(request: TextRequest):
+async def generate_model(request: TextRequest, user: dict = Depends(get_current_user)):
     try:
         parsed = agents_service.parse_request(request.text)
         
@@ -84,7 +85,7 @@ async def generate_model(request: TextRequest):
 
 
 @app.post("/chat", response_model=Dict[str, Any])
-async def chat(request: TextRequest):
+async def chat(request: TextRequest, user: dict = Depends(get_current_user)):
     try:
         parsed = agents_service.parse_request(request.text)
         import hashlib
@@ -99,7 +100,7 @@ async def chat(request: TextRequest):
 
 
 @app.post("/generate_furniture", response_model=Dict[str, Any])
-async def generate_furniture(request: TextRequest):
+async def generate_furniture(request: TextRequest, user: dict = Depends(get_current_user)):
     try:
         result = agents_service.generate_from_text(request.text)
 
@@ -122,7 +123,7 @@ async def generate_furniture(request: TextRequest):
 
 
 @app.post("/auto_arrange", response_model=Dict[str, Any])
-async def auto_arrange_furniture(request: TextRequest):
+async def auto_arrange_furniture(request: TextRequest, user: dict = Depends(get_current_user)):
     try:
         result = agents_service.auto_arrange_furniture(request.text)
         import hashlib
@@ -144,6 +145,7 @@ async def auto_arrange_furniture(request: TextRequest):
 @app.post("/generate_scene", response_model=Dict[str, Any])
 async def generate_scene(
     request: TextRequest,
+    user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     try:
@@ -151,7 +153,7 @@ async def generate_scene(
         
         progress = GenerationProgress(
             generation_id=generation_id,
-            user_id=None,
+            user_id=user["id"],
             query=request.text,
             status='pending',
             scene_json={}
@@ -179,6 +181,7 @@ async def generate_scene(
 @app.get("/generation/{generation_id}", response_model=Dict[str, Any])
 async def get_generation_status(
     generation_id: str,
+    user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     try:
@@ -189,6 +192,9 @@ async def get_generation_status(
         
         if not progress:
             raise HTTPException(status_code=404, detail="Generation not found")
+        
+        if progress.user_id != user["id"]:
+            raise HTTPException(status_code=403, detail="Доступ запрещён")
         
         return {
             "generation_id": str(progress.generation_id),
