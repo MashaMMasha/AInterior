@@ -27,7 +27,7 @@ Ensure that the door style complements the design of the room.
 
 The design under consideration is {input}, which includes these rooms: {rooms}. The length, width and height of each room in meters are:
 {room_sizes}
-Certain pairs of rooms share a wall: {room_pairs}. There must be a door to the exterior.
+Certain pairs of rooms share a wall: {room_pairs}. There must be an openable door to the exterior.
 Adhere to these additional requirements: {additional_requirements}.
 Provide your response succinctly, without additional text at the beginning or end."""
 
@@ -79,16 +79,7 @@ Here are the constraints and their definitions:
 5. Rotation constraint:
     1) face to, object: face to the center of another object.
 
-For each object, you must have one global constraint and you can select various numbers of constraints and any combinations of them and the output format must be:
-object | global constraint | constraint 1 | constraint 2 | ...
-For example:
-sofa-0 | edge
-coffee table-0 | middle | near, sofa-0 | in front of, sofa-0 | center aligned, sofa-0 | face to, sofa-0
-tv stand-0 | edge | far, coffee table-0 | in front of, coffee table-0 | center aligned, coffee table-0 | face to, coffee table-0
-desk-0 | edge | far, tv stand-0
-chair-0 | middle | in front of, desk-0 | near, desk-0 | center aligned, desk-0 | face to, desk-0
-floot lamp-0 | middle | near, chair-0 | side of, chair-0
-
+For each object, you must have one global constraint and you can select various numbers of constraints and any combinations
 Here are some guidelines for you:
 1. I will use your guideline to arrange the objects *iteratively*, so please start with an anchor object which doesn't depend on the other objects (with only one global constraint).
 2. Place the larger objects first.
@@ -104,11 +95,7 @@ Please first use natural language to explain your high-level design strategy, an
 
 
 wall_object_selection_prompt = """Assist me in selecting wall-based objects to furnish each room.
-Present your recommendations in this format: room type | object category | object description | quantity
-For example:
-living room | painting | abstract painting | 2
-kitchen | cabinet | white, shaker-style, wall cabinet | 2
-bathroom | mirror | rectangular, frameless, wall mirror | 1
+Provide the following infrotmation: room type, object category, object description, quantity
 
 Now I want you to design {input} which has these rooms: {rooms}.
 Please also consider the following additional requirements: {additional_requirements}.
@@ -117,9 +104,7 @@ Your response should be precise, without additional text at the beginning or end
 
 wall_object_constraints_prompt = """You are an experienced room designer.
 Please help me arrange wall objects in the room by providing their relative position and distance from the floor.
-The output format must be: wall object | above, floor object  | distance from floor (cm). For example:
-painting-0 | above, sofa-0 | 160
-switch-0 | N/A | 120
+
 Note the distance is the distance from the *bottom* of the wall object to the floor. The second column is optional and can be N/A. The object of the same type should be placed at the same height.
 Now I am designing {room_type} of which the wall height is {wall_height} cm, and the floor objects in the room are: {floor_objects}.
 The wall objects I want to place in the {room_type} are: {wall_objects}.
@@ -127,9 +112,6 @@ Please do not add additional text at the beginning or in the end."""
 
 
 ceiling_selection_prompt = """Assist me in selecting ceiling objects (light/fan) to furnish each room.
-Present your recommendations in this format: room type | ceiling object description
-For example:
-living room | modern, 3-light, semi-flush mount ceiling light
 
 Currently, the design in progress is "{input}", featuring these rooms: {rooms}. You need to provide one ceiling object for each room.
 Please also consider the following additional requirements: {additional_requirements}.
@@ -138,10 +120,6 @@ Your response should be precise, without additional text at the beginning or end
 
 
 small_object_selection_prompt = """As an experienced room designer, you are tasked to bring life into the room by strategically placing more *small* objects. Those objects should only be arranged *on top of* large objects which serve as receptacles. 
-The output should be formatted as follows: receptacle | small object-1, quantity, variance type | small object-2, quantity, variance type | ...
-Here, the variance type specifies whether the small objects are same or varied. There's no restriction on the number of small objects you can select for each receptacle. An example of this format is as follows:
-sofa-0 (living room) | remote control for TV, 1, same | book, 2, varied | gray fabric pillow, 2, varied
-tv stand-0 (living room) | 49 inch TV, 1, same | speaker, 2, same
 
 Now, we are designing {input} and the available receptacles in the room include: {receptacles}. Additional requirements for this design project are as follows: {additional_requirements}.
 Your response should solely contain the information about the placement of objects and should not include any additional text before or after the main content."""
@@ -214,7 +192,7 @@ Could you update the entire JSON file with the same format as before and answer 
 
 object_selection_prompt_new_2 = """User: {object_selection_prompt_new_1}
 
-Agent: {object_selection_1}
+AI: {object_selection_1}
 
 User: Thanks! After following your suggestions to retrieve objects, I found the *{room}* is still too empty. To enrich the *{room}*, you could:
 1. Add more *floor* objects to the *{room}* (excluding rug, carpet, windows, doors, curtains, and *ignore ceiling objects*).
@@ -222,29 +200,4 @@ User: Thanks! After following your suggestions to retrieve objects, I found the 
 3. Add more *types* of small objects on top of the large objects.
 Could you update the entire JSON file with the same format as before and answer without additional text at the beginning or end?
 
-Agent: """
-
-
-floor_baseline_prompt = """
-You are an experienced room designer.
-
-You operate in a 2D Space. You work in a X,Y coordinate system. (0, 0) denotes the bottom-left corner of the room.
-All objects should be placed in the positive quadrant. That is, coordinates of objects should be positive integer in centimeters.
-Objects by default face +Y axis.
-You answer by only generating JSON files that contain a list of the following information for each object:
-
-- object_name: name of the object, follow the name strictly.
-- position: coordinate of the object (center of the object bounding box) in the form of a dictionary, e.g. {{"X": 120, "Y": 200}}.
-- rotation: the object rotation angle in clockwise direction when viewed by an observer looking along the z-axis towards the origin, e.g. 90. The default rotation is 0 which is +Y axis.
-
-For example: {{"object_name": "sofa-0", "position": {{"X": 120, "Y": 200}}, "rotation": 90}}
-
-Keep in mind, objects should be disposed in the area to create a meaningful layout. It is important that all objects provided are placed in the room.
-Also keep in mind that the objects should be disposed all over the area in respect to the origin point of the area, and you can use negative values as well to display items correctly, since origin of the area is always at the center of the area.
-
-Now I want you to design {room_type} and the room size is {room_size}.
-Here are the objects (with their sizes) that I want to place in the {room_type}:
-{objects}
-
-Remember, you only generate JSON code, nothing else. It's very important. Respond in markdown (```).
-"""
+AI: """

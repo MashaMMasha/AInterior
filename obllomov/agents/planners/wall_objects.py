@@ -11,7 +11,7 @@ from obllomov.schemas.domain.entries import (ScenePlan, WallObjectEntry,
                                              WallObjectPlan)
 from obllomov.schemas.domain.raw import (RawWallObjectConstraintEntry,
                                          RawWallObjectConstraints)
-from obllomov.shared.dfs import DFS_Solver_Wall
+from obllomov.agents.selectors.placement import DFS_Solver_Wall
 from obllomov.shared.geometry import Polygon2D, Vertex2D, Vertex3D
 from obllomov.shared.log import logger
 from obllomov.agents.retrievers import ObjathorRetriever

@@ -6,7 +6,7 @@ import obllomov.agents.prompts as prompts
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.entries import ScenePlan
 from obllomov.schemas.domain.raw import RawFloorObjectConstraints
-from obllomov.shared.dfs import DFS_Solver_Floor
+from obllomov.agents.selectors.placement import DFS_Solver_Floor
 from obllomov.shared.geometry import Polygon2D, Vertex2D
 from obllomov.shared.log import logger
 from obllomov.storage.assets import BaseAssets
@@ -112,7 +112,7 @@ class FloorObjectPlanner(BasePlanner):
                 continue
             dims = self.annotations[object_name2id[name]].bbox
             placements.append({
-                "assetId": object_name2id[name],
+                "asset_id": object_name2id[name],
                 "id": f"{name} ({room_id})",
                 "kinematic": True,
                 "position": {
@@ -129,15 +129,16 @@ class FloorObjectPlanner(BasePlanner):
         return placements
 
     def _get_initial_state(self, scene_plan: ScenePlan, room_poly: Polygon2D) -> dict:
-        shapely_poly = room_poly.to_shapely()
+        # shapely_poly = room_poly.to_shapely()
         initial_state = {}
         i = 0
+
 
         for door in scene_plan.doors:
             for door_box in door.door_boxes:
                 verts = [(x * 100, z * 100) for x, z in door_box]
                 poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in verts])
-                if shapely_poly.contains(poly.to_shapely().centroid):
+                if room_poly.contains(poly.centroid):
                     c = poly.centroid
                     initial_state[f"door-{i}"] = ((c.x, c.z), 0, verts, 1)
                     i += 1
@@ -147,7 +148,7 @@ class FloorObjectPlanner(BasePlanner):
             for open_box in open_walls.get("openWallBoxes", []):
                 verts = [(x * 100, z * 100) for x, z in open_box]
                 poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in verts])
-                if shapely_poly.contains(poly.to_shapely().centroid):
+                if room_poly.contains(poly.centroid):
                     c = poly.centroid
                     initial_state[f"open-{i}"] = ((c.x, c.z), 0, verts, 1)
                     i += 1

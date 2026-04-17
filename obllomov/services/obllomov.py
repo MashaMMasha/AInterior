@@ -13,6 +13,7 @@ from obllomov.agents.planners import (CeilingPlanner, DoorPlanner,
                                       FloorObjectPlanner, FloorPlanner,
                                       SmallObjectPlanner, WallObjectPlanner,
                                       WallPlanner, WindowPlanner)
+from obllomov.agents.planners.controllers import AI2thorObjectController
 from obllomov.agents.retrievers import (BaseRetriever, ItemRetriever,
                                         ObjathorRetriever, ObjectRetriever)
 from obllomov.agents.selectors import MaterialSelector, ObjectSelector
@@ -137,7 +138,8 @@ class ObLLoMov:
 
         self.ceiling_planner = CeilingPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations)
 
-        self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations)
+        self.object_controller = AI2thorObjectController(self.assets)
+        self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations, self.object_controller)
 
 
     def get_empty_scene(self):
@@ -155,7 +157,7 @@ class ObLLoMov:
         return scene
 
     def save_scene(self, scene, query, save_dir, add_time=True):
-        query_name = query.replace(" ", "_").replace("'", "")[:30].rstrip("_")
+        query_name = query.replace(" ", "_").replace("'", "")[50].rstrip("_")
 
         if add_time:
             create_time = (
@@ -258,6 +260,13 @@ class ObLLoMov:
             use_constraint=use_constraint,
         )
         scene_plan.wall_objects = wall_object_plan.wall_objects
+
+        receptacle_ids = self.object_controller.start(scene_plan, base_scene)
+        small_object_plan = self.small_object_planner.plan(scene_plan, receptacle_ids)
+
+        # logger.debug(f"small_object_plan: {small_object_plan}")
+        scene_plan.small_objects = small_object_plan.small_objects
+        scene_plan.receptacle2small_objects = small_object_plan.receptacle2small_objects
 
         if add_ceiling:
             ceiling_plan, raw_scene_plan.raw_ceiling_plan = self.ceiling_planner.plan(

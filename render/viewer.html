@@ -34,7 +34,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.5;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -99,7 +100,7 @@ function buildFloor(room) {
   const mat = makeMaterial(room.floor_material, 3, 3);
   const mesh = new THREE.Mesh(geometry, mat);
   mesh.receiveShadow = true;
-  mesh.position.y = 0.001;
+  mesh.position.y = 0.000;
   scene.add(mesh);
 }
 
@@ -310,9 +311,9 @@ function buildWindow(win) {
 }
 
 async function buildObject(obj) {
-  const resp = await fetch(`/mesh/${obj.assetId}`);
+  const resp = await fetch(`/mesh/${obj.asset_id}`);
   if (!resp.ok) {
-    console.warn(`Failed to load mesh ${obj.assetId}: ${resp.status}`);
+    console.warn(`Failed to load mesh ${obj.asset_id}: ${resp.status}`);
     return;
   }
   const mesh = await resp.json();
@@ -328,12 +329,31 @@ async function buildObject(obj) {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
 
-  const tex = textureLoader.load(mesh.albedoUrl);
-  tex.flipY = false;
-  const mat = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide });
+  const albedo = textureLoader.load(mesh.albedoUrl);
+  albedo.flipY = false;
+  albedo.colorSpace = THREE.SRGBColorSpace;
+
+  const normal = textureLoader.load(mesh.normalUrl);
+  normal.flipY = false;
+
+  const emission = textureLoader.load(mesh.emissionUrl);
+  emission.flipY = false;
+  emission.colorSpace = THREE.SRGBColorSpace;
+
+  const mat = new THREE.MeshStandardMaterial({
+    map: albedo,
+    normalMap: normal,
+    emissiveMap: emission,
+    emissive: new THREE.Color(0xffffff),
+    side: THREE.DoubleSide,
+  });
+
+  geometry.computeBoundingBox();
+  const bbox = geometry.boundingBox;
+  const meshCenterY = (bbox.min.y + bbox.max.y) / 2;
 
   const object3d = new THREE.Mesh(geometry, mat);
-  object3d.position.set(obj.position.x, obj.position.y, obj.position.z);
+  object3d.position.set(obj.position.x, obj.position.y - meshCenterY, obj.position.z);
   object3d.rotation.set(
     THREE.MathUtils.degToRad(obj.rotation.x),
     THREE.MathUtils.degToRad(obj.rotation.y),
@@ -392,9 +412,9 @@ async function loadScene() {
   ];
   const seenAssets = new Set();
   const objectPromises = [];
-  for (const obj of allObjects) {
-    if (!obj.assetId) continue;
-    const key = `${obj.assetId}_${obj.id}`;
+  for (const obj of data.objects) {
+    if (!obj.asset_id) continue;
+    const key = `${obj.asset_id}_${obj.id}`;
     if (seenAssets.has(key)) continue;
     seenAssets.add(key);
     objectPromises.push(buildObject(obj));

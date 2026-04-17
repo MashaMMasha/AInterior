@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
 from obllomov.schemas.domain.annotations import Annotation
-from obllomov.shared.dfs import DFS_Solver_Floor, DFS_Solver_Wall
+from obllomov.agents.selectors.placement import DFS_Solver_Floor, DFS_Solver_Wall, FloorPlacement, WallPlacement
 from obllomov.shared.geometry import Polygon2D, Vertex2D
+from obllomov.shared.log import logger
 
 Candidate = tuple[str, float]
 
@@ -18,6 +19,7 @@ class FloorAnnotationConstraint(Constraint):
         self._annotations = annotations
 
     def apply(self, candidates: list[Candidate]) -> list[Candidate]:
+        # logger.debug(f"Floor annotations: {[self._annotations[c[0]] for c in candidates]}")
         return [
             c for c in candidates
             if self._annotations[c[0]].onFloor
@@ -29,6 +31,7 @@ class WallAnnotationConstraint(Constraint):
         self._annotations = annotations
 
     def apply(self, candidates: list[Candidate]) -> list[Candidate]:
+        # logger.debug(f"Wall annotations: {[self._annotations[c[0]] for c in candidates]}")
         return [
             c for c in candidates
             if self._annotations[c[0]].onWall
@@ -45,6 +48,7 @@ class ObjectSizeConstraint(Constraint):
         max_x = self._room_size[0] * self._tolerance
         max_z = self._room_size[2] * self._tolerance
         result = []
+        # logger.debug(f"Bbox: {[self._annotations[c[0]].bbox for c in candidates]}")
         for c in candidates:
             dim = self._annotations[c[0]].bbox
             obj_x, obj_z = max(dim.x, dim.z), min(dim.x, dim.z)
@@ -91,12 +95,13 @@ class FloorPlacementConstraint(Constraint):
         grid_size = int(max(room_x // 20, room_z // 20))
 
         solver = DFS_Solver_Floor(grid_size=grid_size)
+        initial_state = solver._convert_initial_state(self._initial_state)
         room_poly = Polygon2D(
             vertices=[Vertex2D(x=v[0], z=v[1]) for v in self._room_vertices]
         ).to_shapely()
 
         grid_points = solver.create_grids(room_poly)
-        grid_points = solver.remove_points(grid_points, self._initial_state)
+        grid_points = solver.remove_points(grid_points, initial_state)
 
         valid = []
         for c in candidates:
@@ -106,12 +111,12 @@ class FloorPlacementConstraint(Constraint):
                 dim.z * 100 + self._size_buffer,
             )
             solutions = solver.get_all_solutions(room_poly, grid_points, object_dim)
-            solutions = solver.filter_collision(self._initial_state, solutions)
+            solutions = solver.filter_collision(initial_state, solutions)
             solutions = solver.place_edge(room_poly, solutions, object_dim)
             if solutions:
                 valid.append(c)
             else:
-                print(f"Floor Object {c[0]} (size: {object_dim}) cannot be placed in room")
+                logger.info(f"Floor Object {c[0]} (size: {object_dim}) cannot be placed in room")
         return valid
 
 
@@ -136,6 +141,7 @@ class WallPlacementConstraint(Constraint):
         grid_size = int(max(room_x // 20, room_z // 20))
 
         solver = DFS_Solver_Wall(grid_size=grid_size)
+        initial_state = solver._convert_initial_state(self._initial_state)
         room_poly = Polygon2D(
             vertices=[Vertex2D(x=v[0], z=v[1]) for v in self._room_vertices]
         ).to_shapely()
@@ -147,11 +153,11 @@ class WallPlacementConstraint(Constraint):
             dim = self._annotations[c[0]].bbox
             object_dim = (dim.x * 100, dim.y * 100, dim.z * 100)
             solutions = solver.get_all_solutions(room_poly, grid_points, object_dim, height=0)
-            solutions = solver.filter_collision(self._initial_state, solutions)
+            solutions = solver.filter_collision(initial_state, solutions)
             if solutions:
                 valid.append(c)
             else:
-                print(f"Wall Object {c[0]} (size: {object_dim}) cannot be placed in room")
+                logger.info(f"Wall Object {c[0]} (size: {object_dim}) cannot be placed in room")
         return valid
 
 

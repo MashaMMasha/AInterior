@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import *
 
 import torch
-import torch.functional as F
+import torch.nn.functional as F
 from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
