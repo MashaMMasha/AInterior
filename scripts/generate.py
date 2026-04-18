@@ -35,6 +35,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--query", type=str, required=True)
 parser.add_argument("--save-dir", type=str, required=True, dest="save_dir")
 parser.add_argument("--mock", action='store_true')
+parser.add_argument("--session-id", type=str, default=None, dest="session_id")
 args = parser.parse_args()
 
 
@@ -55,16 +56,19 @@ else:
 assets = LocalAssets()
 
 model = ObLLoMov(llm, assets)
-user_id = "terbium"
 engine = create_db_engine()
 chat = ChatService(SessionRepository(engine))
 
-session = chat.start_session(user_id)
-logger.info(f"started chat session for {user_id}: {session.id}")
-# session_id = "test_scene"
+session_id = args.session_id
+if session_id:
+    logger.info(f"Using existing session: {session_id}")
+else:
+    session = chat.start_session(user_id="terbium")
+    session_id = session.id
+    logger.info(f"Created new session: {session_id}")
 
-model.generate_scene(args.query, args.save_dir, 
-                     chat=chat, 
-                     session_id=session.id, 
+model.generate_scene(args.query, args.save_dir,
+                     chat=chat,
+                     session_id=session_id,
                      add_time=False
                      )

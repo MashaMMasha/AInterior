@@ -10,8 +10,10 @@ req:
 	pipreqs --mode gt --force . 
 
 generate:
-	export PYTHONPATH="." && python scripts/generate.py --query "$(query)" --save-dir "$(save_dir)" \
-	$(if $(filter 1,$(mock)),--mock)
+	export PYTHONPATH="." && python scripts/generate.py \
+	--query "$(query)" --save-dir "$(save_dir)" \
+	$(if $(filter 1,$(mock)),--mock) \
+	$(if $(session_id),--session-id "$(session_id)")
 
 rendering:
 	export PYTHONPATH="." && python -u render/render.py "$(session_id)"
