@@ -2,7 +2,7 @@ import aio_pika
 import json
 from typing import Dict, Any, Optional
 import asyncio
-from ml_service.config import RABBITMQ_URL
+from render_service.config import RABBITMQ_URL
 
 
 class RabbitMQService:

@@ -1,12 +1,12 @@
-from ml_service.schema.dto import *
+from render_service.schema.dto import *
 
-from ml_service.db.furniture_db import FURNITURE_DB
+from render_service.db.furniture_db import FURNITURE_DB
 
-from ml_service.services.agents_service import AgentsService
-from ml_service.services.s3_service import get_s3_service
-from ml_service.services.rabbitmq_service import get_rabbitmq_service
-from ml_service.database import get_db_session, GenerationProgress
-from ml_service.dependencies import get_current_user
+from render_service.services.agents_service import AgentsService
+from render_service.services.s3_service import get_s3_service
+from render_service.services.rabbitmq_service import get_rabbitmq_service
+from render_service.database import get_db_session, GenerationProgress
+from render_service.dependencies import get_current_user
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware

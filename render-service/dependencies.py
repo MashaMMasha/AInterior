@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, Request
-from ml_service.services.auth_client import get_auth_client
+from render_service.services.auth_client import get_auth_client
 
 
 async def get_current_user(request: Request):

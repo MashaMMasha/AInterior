@@ -1,6 +1,6 @@
 import httpx
 from typing import Optional
-from ml_service.config import settings
+from render_service.config import settings
 
 
 class AuthClient:

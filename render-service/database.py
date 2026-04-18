@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from datetime import datetime
 import uuid
 
-from ml_service.config import DATABASE_URL
+from render_service.config import DATABASE_URL
 
 
 engine = create_async_engine(DATABASE_URL, echo=False)

@@ -2,9 +2,9 @@ import httpx
 from backend_service.config import settings
 
 
-class MLClient:
+class RenderClient:
     def __init__(self, base_url: str = None):
-        self.base_url = base_url or settings.ML_SERVICE_URL
+        self.base_url = base_url or settings.RENDER_SERVICE_URL
         self.client = httpx.AsyncClient(timeout=60.0)
     
     def _get_headers(self, token: str = None):
@@ -60,11 +60,11 @@ class MLClient:
         await self.client.aclose()
 
 
-_ml_client = None
+_render_client = None
 
 
-def get_ml_client() -> MLClient:
-    global _ml_client
-    if _ml_client is None:
-        _ml_client = MLClient()
-    return _ml_client
+def get_render_client() -> RenderClient:
+    global _render_client
+    if _render_client is None:
+        _render_client = RenderClient()
+    return _render_client

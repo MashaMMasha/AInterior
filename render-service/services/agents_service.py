@@ -1,14 +1,14 @@
 from datetime import datetime
 import hashlib
 import trimesh
-from ml_service.schema.dto import FurnitureItem
-from ml_service.services.s3_service import get_s3_service
-from ml_service.services.rabbitmq_service import get_rabbitmq_service
-from ml_service.database import async_session_maker, GenerationProgress
+from render_service.schema.dto import FurnitureItem
+from render_service.services.s3_service import get_s3_service
+from render_service.services.rabbitmq_service import get_rabbitmq_service
+from render_service.database import async_session_maker, GenerationProgress
 
-from ml_service.agents.chat_assistant import AIAssistant, assistant
-from ml_service.agents.generator import FurnitureGenerator, furniture_generator
-from ml_service.agents.planner import LayoutPlanner, layout_planner
+from render_service.agents.chat_assistant import AIAssistant, assistant
+from render_service.agents.generator import FurnitureGenerator, furniture_generator
+from render_service.agents.planner import LayoutPlanner, layout_planner
 
 import numpy as np
 import tempfile

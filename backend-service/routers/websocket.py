@@ -1,13 +1,13 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query
 from backend_service.services.rabbitmq_service import get_rabbitmq_service
-from backend_service.services.ml_client import MLClient
+from backend_service.services.ml_client import RenderClient
 from backend_service.services.auth_client import get_auth_client
 import json
 import asyncio
 
 router = APIRouter(prefix="/ws", tags=["websocket"])
 
-ml_client = MLClient()
+render_client = RenderClient()
 rabbitmq = get_rabbitmq_service()
 
 
@@ -23,7 +23,7 @@ async def generation_stream(websocket: WebSocket, generation_id: str, token: str
     await websocket.accept()
     
     try:
-        status_response = await ml_client.get_generation_status(generation_id)
+        status_response = await render_client.get_generation_status(generation_id)
         
         if status_response.status_code == 404:
             await websocket.send_json({"error": "Generation not found"})

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, BinaryIO
 import logging
 import os
-from ml_service.config import settings as ml_settings
+from render_service.config import settings as ml_settings
 
 logger = logging.getLogger(__name__)
 

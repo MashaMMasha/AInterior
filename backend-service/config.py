@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     AUTH_SERVICE_URL: str = "http://localhost:8001"
-    ML_SERVICE_URL: str = "http://localhost:8002"
+    RENDER_SERVICE_URL: str = "http://localhost:8002"
     
     S3_ENDPOINT: str = "http://localhost:9000"
     S3_ACCESS_KEY: str = "minioadmin"
