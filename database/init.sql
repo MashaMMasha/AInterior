@@ -1,6 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS users;
 CREATE SCHEMA IF NOT EXISTS furniture;
 CREATE SCHEMA IF NOT EXISTS interior;
+CREATE SCHEMA IF NOT EXISTS chat;
 
 CREATE TABLE IF NOT EXISTS users.users (
     id SERIAL PRIMARY KEY,
@@ -109,3 +110,41 @@ CREATE TABLE IF NOT EXISTS interior.generation_progress (
 CREATE INDEX IF NOT EXISTS idx_generation_progress_generation_id ON interior.generation_progress(generation_id);
 CREATE INDEX IF NOT EXISTS idx_generation_progress_user_id ON interior.generation_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_generation_progress_status ON interior.generation_progress(status);
+
+-- Chat schema tables
+CREATE TABLE IF NOT EXISTS chat.conversations (
+    id SERIAL PRIMARY KEY,
+    conversation_id UUID UNIQUE NOT NULL,
+    user_id INTEGER REFERENCES users.users(id) ON DELETE CASCADE,
+    title VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS chat.messages (
+    id SERIAL PRIMARY KEY,
+    message_id UUID UNIQUE NOT NULL,
+    conversation_id UUID REFERENCES chat.conversations(conversation_id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON chat.conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON chat.messages(conversation_id);
+
+-- Projects table
+CREATE TABLE IF NOT EXISTS interior.projects (
+    id SERIAL PRIMARY KEY,
+    project_id UUID UNIQUE NOT NULL,
+    user_id INTEGER REFERENCES users.users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    scene_data JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_user_id ON interior.projects(user_id);
+CREATE INDEX IF NOT EXISTS idx_projects_project_id ON interior.projects(project_id);
+

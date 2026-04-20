@@ -23,34 +23,63 @@ docker-compose up -d
 ## Архитектура
 
 ```
-Frontend (React + Three.js)
-         ↓
-Backend Service (FastAPI, :8000)  ←→  Auth Service (FastAPI, :8001)
-         ↓                                       ↓
-    ML Service (FastAPI, :8002)            PostgreSQL
-         ↓
-    MinIO / S3
+                    Frontend (React + Three.js, :3000)
+                              ↓
+                    Backend (API Gateway, :8000)
+                              ↓
+        ┌─────────────────────┼─────────────────────┐
+        ↓                     ↓                     ↓
+  Auth Service          Render Service        Chat Service
+    (:8001)                 (:8002)              (:8003)
+  - JWT Auth            - 3D Generation        - AI Chat (mock)
+  - Email verify        - ObLLoMov            - Conversations
+        ↓                     ↓                     ↓
+        │              Project Service       Storage Service
+        │                 (:8004)               (:8005)
+        │              - CRUD Projects        - S3/MinIO
+        │              - Scene Management     - File Upload
+        └─────────────────────┼─────────────────────┘
+                              ↓
+              ┌───────────────┴───────────────┐
+              ↓                               ↓
+         PostgreSQL                      MinIO (S3)
+         RabbitMQ                        Redis
 ```
 
-### Сервисы
+### Микросервисы
 
-**Auth Service (порт 8001)** — изолированный сервис авторизации:
-- Регистрация и вход (JWT)
-- Подтверждение email
-- Управление пользователями и сессиями
+**Auth Service (порт 8001)** — авторизация и аутентификация:
+- Регистрация, логин (JWT)
+- Email verification
+- Управление пользователями
 
-**Backend Service (порт 8000)** — основной API-шлюз:
-- Управление проектами (CRUD) — требует авторизации
-- Загрузка 3D-моделей — требует авторизации
-- Интеграция с S3 для хранения файлов
-- Проксирование запросов к ML Service — требует авторизации
+**Backend Service (порт 8000)** — API Gateway (роутинг):
+- Единая точка входа для фронтенда
+- Проксирование запросов к микросервисам
+- Базовая валидация и маршрутизация
 
-**ML Service (порт 8002)** — изолированный ML-сервис:
-- AI-агенты (парсинг запросов, генерация, планировка) — требует авторизации
-- Генерация 3D-моделей из текста — требует авторизации
-- Автоматическая расстановка мебели — требует авторизации
+**Render Service (порт 8002)** — генерация 3D сцен:
+- Генерация интерьеров (ObLLoMov)
+- Генерация мебели
+- Автоматическая расстановка
+- Streaming generation через RabbitMQ
 
-**Frontend (React + Vite, порт 3000)** — интерактивный 3D-редактор с чатом, панелью объектов и управлением проектами.
+**Chat Service (порт 8003)** — AI-ассистент (mock):
+- Чат с AI (пока моки)
+- История бесед
+- Парсинг намерений пользователя
+
+**Project Service (порт 8004)** — управление проектами:
+- CRUD операции с проектами
+- Сохранение/загрузка сцен
+- История изменений
+
+**Storage Service (порт 8005)** — файловое хранилище:
+- Upload/Download файлов
+- Presigned URLs
+- S3/MinIO integration
+
+**Frontend (React + Vite, порт 3000)** — интерактивный 3D-редактор с чатом.
 
 **Инфраструктура (Docker Compose):** PostgreSQL, MinIO (S3), Redis, RabbitMQ.
 
