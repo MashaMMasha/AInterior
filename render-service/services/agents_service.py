@@ -1,16 +1,22 @@
 from datetime import datetime
 import hashlib
 import trimesh
-from ml_service.schema.dto import FurnitureItem
-from ml_service.services.s3_service import get_s3_service
+from render_service.schema.dto import FurnitureItem
+from render_service.services.s3_service import get_s3_service
+from render_service.services.rabbitmq_service import get_rabbitmq_service
+from render_service.database import async_session_maker, GenerationProgress
 
-from ml_service.agents.chat_assistant import AIAssistant, assistant
-from ml_service.agents.generator import FurnitureGenerator, furniture_generator
-from ml_service.agents.planner import LayoutPlanner, layout_planner
+from render_service.agents.chat_assistant import AIAssistant, assistant
+from render_service.agents.generator import FurnitureGenerator, furniture_generator
+from render_service.agents.planner import LayoutPlanner, layout_planner
 
 import numpy as np
 import tempfile
 import os
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
+import json
 
 
 class AgentsService:
@@ -19,6 +25,7 @@ class AgentsService:
         self.furniture_generator = FurnitureGenerator()
         self.layout_planner = LayoutPlanner()
         self.s3 = get_s3_service()
+        self.rabbitmq = get_rabbitmq_service()
 
     def parse_request(self, query):
         return self.assistant.parse_request(query)
@@ -152,4 +159,90 @@ class AgentsService:
             scene.add_geometry(mesh, node_name=f"{item.type}_{i:02d}")
         
         return scene
+
+    async def generate_scene_streaming(self, generation_id: str, query: str):
+        async with async_session_maker() as db:
+            try:
+                await db.execute(
+                    update(GenerationProgress)
+                    .where(GenerationProgress.generation_id == uuid.UUID(generation_id))
+                    .values(status='generating', updated_at=datetime.utcnow())
+                )
+                await db.commit()
+
+                from obllomov.services.obllomov_streaming import ObLLoMov
+                from obllomov.agents.llms import get_chat_yandex_model, MAX_NEW_TOKENS
+                from obllomov.storage.assets import LocalAssets
+
+                llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
+                assets = LocalAssets()
+                model = ObLLoMov(llm, assets)
+                
+                scene = model.get_empty_scene()
+                
+                async def progress_callback(step: str, completed: int, total: int, scene_json: dict):
+                    await db.execute(
+                        update(GenerationProgress)
+                        .where(GenerationProgress.generation_id == uuid.UUID(generation_id))
+                        .values(
+                            current_step=step,
+                            completed_steps=completed,
+                            total_steps=total,
+                            scene_json=scene_json,
+                            updated_at=datetime.utcnow()
+                        )
+                    )
+                    await db.commit()
+                    
+                    await self.rabbitmq.publish_progress(
+                        generation_id=generation_id,
+                        step=step,
+                        progress={
+                            'completed': completed,
+                            'total': total,
+                            'scene_json': scene_json
+                        }
+                    )
+                
+                final_scene, save_dir = await model.generate_scene(
+                    scene,
+                    query,
+                    save_dir="/tmp/scenes",
+                    progress_callback=progress_callback
+                )
+                
+                await db.execute(
+                    update(GenerationProgress)
+                    .where(GenerationProgress.generation_id == uuid.UUID(generation_id))
+                    .values(
+                        status='completed',
+                        scene_json=final_scene,
+                        updated_at=datetime.utcnow()
+                    )
+                )
+                await db.commit()
+                
+                await self.rabbitmq.publish_progress(
+                    generation_id=generation_id,
+                    step='completed',
+                    progress={'scene_json': final_scene}
+                )
+                
+            except Exception as e:
+                await db.execute(
+                    update(GenerationProgress)
+                    .where(GenerationProgress.generation_id == uuid.UUID(generation_id))
+                    .values(
+                        status='failed',
+                        error_message=str(e),
+                        updated_at=datetime.utcnow()
+                    )
+                )
+                await db.commit()
+                
+                await self.rabbitmq.publish_progress(
+                    generation_id=generation_id,
+                    step='failed',
+                    progress={'error': str(e)}
+                )
 

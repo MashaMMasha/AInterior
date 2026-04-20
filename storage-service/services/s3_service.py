@@ -4,26 +4,19 @@ from botocore.exceptions import ClientError
 from pathlib import Path
 from typing import Optional, BinaryIO
 import logging
-import os
-from ml_service.config import settings as ml_settings
+
+from storage_service.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class S3Service:
-    def __init__(
-        self,
-        endpoint_url: Optional[str] = None,
-        access_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
-        bucket_name: Optional[str] = None,
-        region: str = "us-east-1"
-    ):
-        self.endpoint_url = endpoint_url or os.getenv("S3_ENDPOINT", "http://localhost:9000")
-        self.access_key = access_key or os.getenv("S3_ACCESS_KEY", "minioadmin")
-        self.secret_key = secret_key or os.getenv("S3_SECRET_KEY", "minioadmin")
-        self.bucket_name = bucket_name or os.getenv("S3_BUCKET", "ainterior-models")
-        self.region = region
+    def __init__(self):
+        self.endpoint_url = settings.S3_ENDPOINT
+        self.access_key = settings.S3_ACCESS_KEY
+        self.secret_key = settings.S3_SECRET_KEY
+        self.bucket_name = settings.S3_BUCKET
+        self.region = settings.S3_REGION
 
         self.client = boto3.client(
             's3',

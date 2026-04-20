@@ -1,5 +1,5 @@
-from ml_service.db.furniture_db import FURNITURE_DB
-from ml_service.schema.dto import FurnitureItem
+from render_service.db.furniture_db import FURNITURE_DB
+from render_service.schema.dto import FurnitureItem
 
 from typing import List, Dict
 import numpy as np

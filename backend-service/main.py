@@ -7,6 +7,7 @@ from datetime import datetime
 from backend_service.routers.projects import router as projects_router
 from backend_service.routers.models import router as models_router
 from backend_service.routers.ml import router as ml_router
+from backend_service.routers.websocket import router as websocket_router
 from backend_service.services.s3_service import get_s3_service
 
 app = FastAPI(
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(projects_router)
 app.include_router(models_router)
 app.include_router(ml_router)
+app.include_router(websocket_router)
 
 STATIC_DIR = Path("static")
 STATIC_DIR.mkdir(exist_ok=True)

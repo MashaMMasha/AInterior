@@ -1,14 +1,16 @@
 FROM python:3.11-slim
 
-WORKDIR /app
-
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY auth-service/ ./auth_service/
+COPY storage-service/ ./storage_service/
 
-EXPOSE 8001
+ENV PYTHONPATH=/app
 
-CMD ["uvicorn", "auth_service.main:app", "--host", "0.0.0.0", "--port", "8001"]
+EXPOSE 8005
+
+CMD ["uvicorn", "storage_service.main:app", "--host", "0.0.0.0", "--port", "8005"]

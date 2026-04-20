@@ -111,7 +111,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./auth-service:/app/auth-service
+      - ./auth-service:/app/auth_service
     command: uvicorn auth_service.main:app --host 0.0.0.0 --port 8001 --reload
     networks:
       - ainterior-network
@@ -121,11 +121,11 @@ services:
       timeout: 10s
       retries: 3
 
-  ml-service:
+  render-service:
     build:
       context: .
-      dockerfile: Dockerfile.ml
-    container_name: ainterior-ml-service
+      dockerfile: Dockerfile.render
+    container_name: ainterior-render-service
     ports:
       - "8002:8002"
     env_file:
@@ -136,12 +136,26 @@ services:
       - S3_SECRET_KEY=minioadmin
       - S3_BUCKET=ainterior-models
       - S3_REGION=us-east-1
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=ainterior
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
     depends_on:
       minio:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     volumes:
-      - ./ml-service:/app/ml-service
-    command: uvicorn ml_service.main:app --host 0.0.0.0 --port 8002 --reload
+      - ./render-service:/app/render_service
+      - ./obllomov:/app/obllomov
+    command: uvicorn render_service.main:app --host 0.0.0.0 --port 8002 --reload
     networks:
       - ainterior-network
     healthcheck:
@@ -161,27 +175,118 @@ services:
       - .env
     environment:
       - AUTH_SERVICE_URL=http://auth-service:8001
-      - ML_SERVICE_URL=http://ml-service:8002
+      - RENDER_SERVICE_URL=http://render-service:8002
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_BUCKET=ainterior-models
+      - S3_REGION=us-east-1
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+    depends_on:
+      - auth-service
+      - render-service
+      - minio
+      - rabbitmq
+    volumes:
+      - ./backend-service:/app/backend_service
+    command: uvicorn backend_service.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - ainterior-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.chat
+    container_name: ainterior-chat-service
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=ainterior
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./chat-service:/app/chat_service
+    command: uvicorn chat_service.main:app --host 0.0.0.0 --port 8003 --reload
+    networks:
+      - ainterior-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  project-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.project
+    container_name: ainterior-project-service
+    ports:
+      - "8004:8004"
+    env_file:
+      - .env
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=ainterior
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./project-service:/app/project_service
+    command: uvicorn project_service.main:app --host 0.0.0.0 --port 8004 --reload
+    networks:
+      - ainterior-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  storage-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.storage
+    container_name: ainterior-storage-service
+    ports:
+      - "8005:8005"
+    env_file:
+      - .env
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
       - S3_BUCKET=ainterior-models
       - S3_REGION=us-east-1
     depends_on:
-      auth-service:
-        condition: service_healthy
-      ml-service:
-        condition: service_healthy
       minio:
         condition: service_healthy
     volumes:
-      - ./backend-service:/app/backend-service
-      - ./static:/app/static
-    command: uvicorn backend_service.main:app --host 0.0.0.0 --port 8000 --reload
+      - ./storage-service:/app/storage_service
+    command: uvicorn storage_service.main:app --host 0.0.0.0 --port 8005 --reload
     networks:
       - ainterior-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
       interval: 30s
       timeout: 10s
       retries: 3

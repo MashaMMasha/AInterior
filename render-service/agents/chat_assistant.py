@@ -1,4 +1,4 @@
-from ml_service.db.furniture_db import FURNITURE_DB
+from render_service.db.furniture_db import FURNITURE_DB
 
 from typing import Dict, Any
 
