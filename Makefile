@@ -3,20 +3,20 @@ save_dir ?= ./scenes
 session_id ?=
 mock ?= 0
 
-run: 
-	uvicorn obllomov.main:app --reload
+run:
+	export PYTHONPATH="./agents-service" && uvicorn main:app --reload --app-dir agents-service
 	
 req:
 	pipreqs --mode gt --force . 
 
 generate:
-	export PYTHONPATH="." && python scripts/generate.py \
+	export PYTHONPATH="./agents-service" && python scripts/generate.py \
 	--query "$(query)" --save-dir "$(save_dir)" \
 	$(if $(filter 1,$(mock)),--mock) \
 	$(if $(session_id),--session-id "$(session_id)")
 
 rendering:
-	export PYTHONPATH="." && python -u render/render.py "$(session_id)"
+	export PYTHONPATH="." && python -u scripts/render/render.py "$(session_id)"
 
 minio:
 	docker run -d \

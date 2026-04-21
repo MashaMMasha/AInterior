@@ -1,9 +1,5 @@
 import argparse
-import os
-
-import compress_json
-import open_clip
-from langchain_openai import ChatOpenAI
+import asyncio
 
 from obllomov.agents.llms import (ChatMock, get_chat_yandex_model, MAX_NEW_TOKENS)
 from obllomov.services.obllomov import ObLLoMov
@@ -12,6 +8,7 @@ from obllomov.shared.log import logger
 from obllomov.shared.path import ABS_ROOT_PATH, OBJATHOR_ANNOTATIONS_PATH
 from obllomov.storage.assets import LocalAssets, S3Assets
 from obllomov.services.chat import ChatService
+from obllomov.services.events import ChatEventCallback, LogEventCallback, CompositeEventCallback
 from obllomov.storage.db.repository import SessionRepository
 from obllomov.storage.db.engine import create_db_engine
 
@@ -67,8 +64,13 @@ else:
     session_id = session.id
     logger.info(f"Created new session: {session_id}")
 
-model.generate_scene(args.query, args.save_dir,
-                     chat=chat,
-                     session_id=session_id,
-                     add_time=False
-                     )
+interaction = chat.start_interaction(session_id, args.query)
+callback = CompositeEventCallback([
+    LogEventCallback(),
+    ChatEventCallback(chat, interaction.id),
+])
+
+asyncio.run(model.generate_scene(args.query, args.save_dir,
+                                 callback=callback,
+                                 add_time=False
+                                 ))

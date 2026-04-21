@@ -23,6 +23,7 @@ class EnvConfig(BaseSettings):
     OBJATHOR_ASSETS_BASE_DIR: str = "~/.objathor-assets"
 
     DB_URL: str = "sqlite:///obllomov.db"
+    RABBITMQ_URL: Optional[str] = None
 
     S3_BUCKET_NAME: Optional[str] = None
     S3_KEY_PREFIX: str = "objathor-assets"

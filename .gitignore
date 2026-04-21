@@ -44,8 +44,8 @@ generated_models/
 edited_models/
 scenes/
 storage/
-!obllomov/storage
-obllomov/models
+!agents-service/obllomov/storage
+agents-service/obllomov/models
 
 # Temporary files
 tmp/
