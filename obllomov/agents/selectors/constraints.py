@@ -116,7 +116,7 @@ class FloorPlacementConstraint(Constraint):
             if solutions:
                 valid.append(c)
             else:
-                logger.info(f"Floor Object {c[0]} (size: {object_dim}) cannot be placed in room")
+                logger.debug(f"Floor Object {c[0]} (size: {object_dim}) cannot be placed in room")
         return valid
 
 
@@ -157,7 +157,7 @@ class WallPlacementConstraint(Constraint):
             if solutions:
                 valid.append(c)
             else:
-                logger.info(f"Wall Object {c[0]} (size: {object_dim}) cannot be placed in room")
+                logger.debug(f"Wall Object {c[0]} (size: {object_dim}) cannot be placed in room")
         return valid
 
 

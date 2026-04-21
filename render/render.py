@@ -11,12 +11,17 @@ from obllomov.shared.path import (
     OBJATHOR_ASSETS_DIR,
 )
 from obllomov.storage.assets import BaseAssets, LocalAssets
+from obllomov.services.chat import ChatService
+from obllomov.storage.db.repository import SessionRepository
+from obllomov.storage.db.engine import create_db_engine
 
-SCENE_PATH = sys.argv[1] if len(sys.argv) > 1 else "scenes/A_lightful_living_room,_small/A_lightful_living_room,_small.json"
+SESSION_ID = sys.argv[1] if len(sys.argv) > 1 else None
 PORT = 8088
 VIEWER_HTML = Path(__file__).parent / "viewer.html"
 
 assets: BaseAssets = LocalAssets()
+engine = create_db_engine()
+chat = ChatService(SessionRepository(engine))
 
 
 def _guess_mime(path: str) -> str:
@@ -57,7 +62,8 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
         if path == "/":
             self._serve_local_file(VIEWER_HTML, "text/html")
         elif path == "/scene.json":
-            self._serve_local_file(SCENE_PATH, "application/json")
+            scene = chat.get_last_scene_json(SESSION_ID)
+            self._respond(json.dumps(scene).encode(), "application/json")
         elif path.startswith("/materials/"):
             name = path.split("/materials/")[-1]
             self._serve_asset(HOLODECK_MATERIALS_IMAGES_DIR / name, "image/png")
@@ -103,7 +109,10 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"Rendering scene: {SCENE_PATH}")
+    if not SESSION_ID:
+        print("Usage: python render/render.py <session_id>")
+        sys.exit(1)
+    print(f"Rendering session: {SESSION_ID}")
     print(f"Open http://localhost:{PORT}")
     server = http.server.HTTPServer(("", PORT), SceneHandler)
     server.serve_forever()

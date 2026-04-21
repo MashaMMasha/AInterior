@@ -238,7 +238,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         for constraint in constraints:
             
             candidates = constraint.apply(candidates)
-            logger.debug(f"After {constraint.__class__.__name__} canditates for {object_type}: {candidates}")
+            # logger.debug(f"After {constraint.__class__.__name__} canditates for {object_type}: {candidates}")
             if not candidates:
                 return None
 

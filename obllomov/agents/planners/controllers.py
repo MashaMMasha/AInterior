@@ -16,7 +16,7 @@ from obllomov.storage.assets import BaseAssets
 
 class BaseObjectController(ABC):
     @abstractmethod
-    def start(self, scene_plan: ScenePlan, base_scene: dict) -> List[str]:
+    def start(self, scene_plan: ScenePlan) -> List[str]:
         pass
 
     @abstractmethod
@@ -33,8 +33,8 @@ class AI2thorObjectController(BaseObjectController):
         self.assets = assets
         self.controller: Optional[Controller] = None
 
-    def start(self, scene_plan: ScenePlan, base_scene: dict) -> List[str]:
-        thor_scene = scene_plan.to_thor_scene(base_scene)
+    def start(self, scene_plan: ScenePlan) -> List[str]:
+        thor_scene = scene_plan.to_thor_scene()
         logger.debug(f"thor_scene objects count: {len(thor_scene.get('objects', []))}")
         logger.debug(f"thor_scene object ids: {[o.get('id') for o in thor_scene.get('objects', [])]}")
 

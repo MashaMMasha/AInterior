@@ -21,6 +21,7 @@ from obllomov.agents.selectors import MaterialSelector, ObjectSelector
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.entries import ScenePlan
 from obllomov.schemas.domain.raw import RawScenePlan
+from obllomov.services.chat import ChatService
 
 from obllomov.shared.log import logger
 from obllomov.shared.path import (ABS_ROOT_PATH, HOLODECK_BASE_DATA_DIR,
@@ -142,19 +143,13 @@ class ObLLoMov:
         self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations, self.object_controller)
 
 
-    def get_empty_scene(self):
-        return compress_json.load(
+    def _default_procedural_parameters(self) -> dict:
+        base = compress_json.load(
             os.path.join(ABS_ROOT_PATH, "agents/empty_house.json")
         )
-
-    def empty_house(self, scene):
-        scene["rooms"] = []
-        scene["walls"] = []
-        scene["doors"] = []
-        scene["windows"] = []
-        scene["objects"] = []
-        scene["proceduralParameters"]["lights"] = []
-        return scene
+        params = base.get("proceduralParameters", {})
+        params["lights"] = []
+        return params
 
     def save_scene(self, scene, query, save_dir, add_time=True):
         query_name = query.replace(" ", "_").replace("'", "")[50].rstrip("_")
@@ -180,7 +175,6 @@ class ObLLoMov:
 
     def generate_scene(
         self,
-        base_scene,
         query: str,
         save_dir: str,
         used_assets=[],
@@ -191,12 +185,24 @@ class ObLLoMov:
         use_constraint=True,
         random_selection=False,
         use_milp=False,
+        chat: Optional[ChatService] = None,
+        session_id: Optional[str] = None,
     ) -> Tuple[Dict[str, Any], str]:
         query = query.replace("_", " ")
-        base_scene = self.empty_house(base_scene)
 
-        scene_plan = ScenePlan(query=query)
+        scene_plan = ScenePlan(
+            query=query,
+            procedural_parameters=self._default_procedural_parameters(),
+        )
         raw_scene_plan = RawScenePlan()
+
+        interaction = None
+        if chat and session_id:
+            interaction = chat.start_interaction(session_id, query)
+
+        def _save_stage(stage_name: str):
+            if interaction:
+                chat.save_stage(interaction.id, stage_name, scene_plan, raw_scene_plan)
 
         floor_plan, raw_scene_plan.raw_floor_plan = self.floor_planner.plan(
             scene_plan,
@@ -205,6 +211,7 @@ class ObLLoMov:
         )
         self.floor_planner.used_assets = used_assets
         scene_plan.rooms = floor_plan.rooms
+        _save_stage("floor")
 
         wall_plan, raw_scene_plan.raw_wall_plan = self.wall_planner.plan(
             scene_plan,
@@ -213,6 +220,7 @@ class ObLLoMov:
         )
         scene_plan.wall_height = wall_plan.wall_height
         scene_plan.walls = wall_plan.walls
+        _save_stage("walls")
 
         door_plan, raw_scene_plan.raw_door_plan = self.door_planner.plan(
             scene_plan,
@@ -223,12 +231,12 @@ class ObLLoMov:
         scene_plan.open_room_pairs = door_plan.open_room_pairs
 
         updated_wall_plan, open_walls = self.wall_planner.update_walls(
-            # WallPlan(wall_height=scene_plan.wall_height, walls=scene_plan.walls),
             wall_plan,
             scene_plan.open_room_pairs,
         )
         scene_plan.walls = updated_wall_plan.walls
         scene_plan.open_walls = open_walls
+        _save_stage("doors")
 
         window_plan, raw_scene_plan.raw_window_plan = self.window_planner.plan(
             scene_plan,
@@ -237,6 +245,7 @@ class ObLLoMov:
         )
         scene_plan.windows = window_plan.windows
         scene_plan.walls = window_plan.walls
+        _save_stage("windows")
 
         self.object_selector.used_assets = used_assets
         object_selection_plan, selected_objects = self.object_selector.select(
@@ -246,6 +255,7 @@ class ObLLoMov:
         scene_plan.object_selection_plan = object_selection_plan
         scene_plan.selected_objects = selected_objects
         raw_scene_plan.raw_object_selection = object_selection_plan
+        _save_stage("object_selection")
 
         floor_objects, raw_scene_plan.raw_floor_object_constraints = self.floor_object_planner.plan(
             scene_plan,
@@ -253,6 +263,7 @@ class ObLLoMov:
             use_constraint=use_constraint,
         )
         scene_plan.floor_objects = floor_objects
+        _save_stage("floor_objects")
 
         wall_object_plan, raw_scene_plan.raw_wall_object_constraints = self.wall_object_planner.plan(
             scene_plan,
@@ -260,13 +271,13 @@ class ObLLoMov:
             use_constraint=use_constraint,
         )
         scene_plan.wall_objects = wall_object_plan.wall_objects
+        _save_stage("wall_objects")
 
-        receptacle_ids = self.object_controller.start(scene_plan, base_scene)
+        receptacle_ids = self.object_controller.start(scene_plan)
         small_object_plan = self.small_object_planner.plan(scene_plan, receptacle_ids)
-
-        # logger.debug(f"small_object_plan: {small_object_plan}")
         scene_plan.small_objects = small_object_plan.small_objects
         scene_plan.receptacle2small_objects = small_object_plan.receptacle2small_objects
+        _save_stage("small_objects")
 
         if add_ceiling:
             ceiling_plan, raw_scene_plan.raw_ceiling_plan = self.ceiling_planner.plan(
@@ -274,8 +285,9 @@ class ObLLoMov:
                 raw=raw_scene_plan.raw_ceiling_plan,
             )
             scene_plan.ceiling_objects = ceiling_plan.ceiling_objects
+            _save_stage("ceiling")
 
-        final_scene = scene_plan.to_scene(base_scene)
-        self.save_scene(final_scene, query, save_dir, add_time)
+        final_scene = scene_plan.to_scene()
+        # self.save_scene(final_scene, query, save_dir, add_time)
 
         return final_scene, save_dir

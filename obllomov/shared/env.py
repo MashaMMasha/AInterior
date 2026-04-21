@@ -22,6 +22,8 @@ class EnvConfig(BaseSettings):
 
     OBJATHOR_ASSETS_BASE_DIR: str = "~/.objathor-assets"
 
+    DB_URL: str = "sqlite:///obllomov.db"
+
     S3_BUCKET_NAME: Optional[str] = None
     S3_KEY_PREFIX: str = "objathor-assets"
     S3_ENDPOINT_URL: Optional[str] = None

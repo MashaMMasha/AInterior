@@ -138,6 +138,7 @@ class CeilingPlan(BaseModel):
 
 class ScenePlan(BaseModel):
     query: str = ""
+    procedural_parameters: dict = {}
     rooms: List[RoomPlan] = []
     wall_height: float = 0.0
     walls: List[WallEntry] = []
@@ -162,20 +163,18 @@ class ScenePlan(BaseModel):
             return [ScenePlan._camel_keys(i) for i in obj]
         return obj
 
-    def to_scene(self, base_scene: dict) -> dict:
-        result = {**base_scene}
+    def to_scene(self) -> dict:
         dump = self.model_dump()
         for key in ["object_selection_plan", "selected_objects", "receptacle2small_objects"]:
             if not dump[key]:
                 dump.pop(key)
-        result.update(dump)
-        result["objects"] = (
-            result.get("floor_objects", [])
-            + result.get("wall_objects", [])
-            + result.get("small_objects", [])
-            + result.get("ceiling_objects", [])
+        dump["objects"] = (
+            dump.get("floor_objects", [])
+            + dump.get("wall_objects", [])
+            + dump.get("small_objects", [])
+            + dump.get("ceiling_objects", [])
         )
-        return result
+        return dump
 
     THOR_METADATA: ClassVar[Dict] = {
         "schema": "1.0.0",
@@ -190,7 +189,7 @@ class ScenePlan(BaseModel):
         "warnings": {},
     }
 
-    def to_thor_scene(self, base_scene: dict) -> dict:
+    def to_thor_scene(self) -> dict:
         dump = self._camel_keys(self.model_dump())
         rooms = dump.get("rooms", [])
         for room in rooms:
@@ -203,12 +202,12 @@ class ScenePlan(BaseModel):
             + dump.get("ceilingObjects", [])
         )
         return {
-            "metadata": base_scene.get("metadata", self.THOR_METADATA),
+            "metadata": self.THOR_METADATA,
             "rooms": rooms,
             "walls": dump.get("walls", []),
             "doors": dump.get("doors", []),
             "windows": dump.get("windows", []),
             "objects": objects,
-            "proceduralParameters": base_scene.get("proceduralParameters", {}),
+            "proceduralParameters": dump.get("proceduralParameters", {}),
         }
 
