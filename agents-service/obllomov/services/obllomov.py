@@ -21,7 +21,7 @@ from obllomov.agents.selectors import MaterialSelector, ObjectSelector
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.entries import ScenePlan
 from obllomov.schemas.domain.raw import RawScenePlan
-from obllomov.services.chat import ChatService
+from obllomov.services.events import AsyncEventCallback, EventCallback, StageEvent
 
 from obllomov.shared.log import logger
 from obllomov.shared.path import (ABS_ROOT_PATH, HOLODECK_BASE_DATA_DIR,
@@ -173,7 +173,41 @@ class ObLLoMov:
             json_kwargs=dict(indent=4),
         )
 
-    def generate_scene(
+    def _make_event(
+        self,
+        stage: str,
+        completed: int,
+        total: int,
+        scene_plan: ScenePlan,
+        raw_scene_plan: RawScenePlan,
+    ) -> StageEvent:
+        return StageEvent(
+            stage=stage,
+            completed=completed,
+            total=total,
+            scene_plan=scene_plan,
+            raw_scene_plan=raw_scene_plan,
+        )
+
+    async def _emit_stage(
+        self,
+        stage: str,
+        completed: int,
+        total: int,
+        scene_plan: ScenePlan,
+        raw_scene_plan: RawScenePlan,
+        callback: Optional[EventCallback] = None,
+        async_callback: Optional[AsyncEventCallback] = None,
+    ):
+        if not callback and not async_callback:
+            return
+        event = self._make_event(stage, completed, total, scene_plan, raw_scene_plan)
+        if callback:
+            callback.on_stage(event)
+        if async_callback:
+            await async_callback.on_stage(event)
+
+    async def generate_scene(
         self,
         query: str,
         save_dir: str,
@@ -185,8 +219,8 @@ class ObLLoMov:
         use_constraint=True,
         random_selection=False,
         use_milp=False,
-        chat: Optional[ChatService] = None,
-        session_id: Optional[str] = None,
+        callback: Optional[EventCallback] = None,
+        async_callback: Optional[AsyncEventCallback] = None,
     ) -> Tuple[Dict[str, Any], str]:
         query = query.replace("_", " ")
 
@@ -196,13 +230,8 @@ class ObLLoMov:
         )
         raw_scene_plan = RawScenePlan()
 
-        interaction = None
-        if chat and session_id:
-            interaction = chat.start_interaction(session_id, query)
-
-        def _save_stage(stage_name: str):
-            if interaction:
-                chat.save_stage(interaction.id, stage_name, scene_plan, raw_scene_plan)
+        total_steps = 9 if add_ceiling else 8
+        current_step = 0
 
         floor_plan, raw_scene_plan.raw_floor_plan = self.floor_planner.plan(
             scene_plan,
@@ -211,7 +240,8 @@ class ObLLoMov:
         )
         self.floor_planner.used_assets = used_assets
         scene_plan.rooms = floor_plan.rooms
-        _save_stage("floor")
+        current_step += 1
+        await self._emit_stage("floor", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         wall_plan, raw_scene_plan.raw_wall_plan = self.wall_planner.plan(
             scene_plan,
@@ -220,7 +250,8 @@ class ObLLoMov:
         )
         scene_plan.wall_height = wall_plan.wall_height
         scene_plan.walls = wall_plan.walls
-        _save_stage("walls")
+        current_step += 1
+        await self._emit_stage("walls", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         door_plan, raw_scene_plan.raw_door_plan = self.door_planner.plan(
             scene_plan,
@@ -236,7 +267,8 @@ class ObLLoMov:
         )
         scene_plan.walls = updated_wall_plan.walls
         scene_plan.open_walls = open_walls
-        _save_stage("doors")
+        current_step += 1
+        await self._emit_stage("doors", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         window_plan, raw_scene_plan.raw_window_plan = self.window_planner.plan(
             scene_plan,
@@ -245,7 +277,8 @@ class ObLLoMov:
         )
         scene_plan.windows = window_plan.windows
         scene_plan.walls = window_plan.walls
-        _save_stage("windows")
+        current_step += 1
+        await self._emit_stage("windows", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         self.object_selector.used_assets = used_assets
         object_selection_plan, selected_objects = self.object_selector.select(
@@ -255,7 +288,8 @@ class ObLLoMov:
         scene_plan.object_selection_plan = object_selection_plan
         scene_plan.selected_objects = selected_objects
         raw_scene_plan.raw_object_selection = object_selection_plan
-        _save_stage("object_selection")
+        current_step += 1
+        await self._emit_stage("object_selection", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         floor_objects, raw_scene_plan.raw_floor_object_constraints = self.floor_object_planner.plan(
             scene_plan,
@@ -263,7 +297,8 @@ class ObLLoMov:
             use_constraint=use_constraint,
         )
         scene_plan.floor_objects = floor_objects
-        _save_stage("floor_objects")
+        current_step += 1
+        await self._emit_stage("floor_objects", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         wall_object_plan, raw_scene_plan.raw_wall_object_constraints = self.wall_object_planner.plan(
             scene_plan,
@@ -271,13 +306,15 @@ class ObLLoMov:
             use_constraint=use_constraint,
         )
         scene_plan.wall_objects = wall_object_plan.wall_objects
-        _save_stage("wall_objects")
+        current_step += 1
+        await self._emit_stage("wall_objects", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         receptacle_ids = self.object_controller.start(scene_plan)
         small_object_plan = self.small_object_planner.plan(scene_plan, receptacle_ids)
         scene_plan.small_objects = small_object_plan.small_objects
         scene_plan.receptacle2small_objects = small_object_plan.receptacle2small_objects
-        _save_stage("small_objects")
+        current_step += 1
+        await self._emit_stage("small_objects", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         if add_ceiling:
             ceiling_plan, raw_scene_plan.raw_ceiling_plan = self.ceiling_planner.plan(
@@ -285,9 +322,17 @@ class ObLLoMov:
                 raw=raw_scene_plan.raw_ceiling_plan,
             )
             scene_plan.ceiling_objects = ceiling_plan.ceiling_objects
-            _save_stage("ceiling")
+            current_step += 1
+            await self._emit_stage("ceiling", current_step, total_steps, scene_plan, raw_scene_plan, callback, async_callback)
 
         final_scene = scene_plan.to_scene()
-        # self.save_scene(final_scene, query, save_dir, add_time)
+
+        
+        if callback or async_callback:
+            event = self._make_event("completed", current_step, total_steps, scene_plan, raw_scene_plan)
+            if callback:
+                callback.on_complete(event)
+            if async_callback:
+                await async_callback.on_complete(event)
 
         return final_scene, save_dir
