@@ -3,8 +3,8 @@ save_dir ?= ./scenes
 session_id ?=
 mock ?= 0
 
-run: 
-	uvicorn obllomov.main:app --reload
+run:
+	export PYTHONPATH="./agents-service" && uvicorn main:app --reload --app-dir agents-service
 	
 req:
 	pipreqs --mode gt --force . 
