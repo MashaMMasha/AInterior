@@ -43,7 +43,7 @@ class DoorPlanner(BasePlanner):
                 schema=RawDoorPlan,
                 prompt_template=prompts.doorway_prompt,
                 input_variables={
-                    "input": scene_plan.query,
+                    "query": scene_plan.query,
                     "rooms": room_types_str,
                     "room_sizes": room_sizes_str,
                     "room_pairs": room_pairs_str,

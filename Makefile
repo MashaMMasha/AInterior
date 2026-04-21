@@ -16,7 +16,10 @@ generate:
 	$(if $(session_id),--session-id "$(session_id)")
 
 rendering:
-	export PYTHONPATH="." && python -u scripts/render/render.py "$(session_id)"
+	export PYTHONPATH="./agents-service" && python -u scripts/render/render.py "$(session_id)"
+
+render-stream:
+	export PYTHONPATH="./agents-service" && python -u scripts/render/render_stream.py "$(generation_id)"
 
 minio:
 	docker run -d \

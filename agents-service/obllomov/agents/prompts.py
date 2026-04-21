@@ -8,14 +8,14 @@ Here are some guidelines for you:
 2. It is okay to have one room in the floor plan if you think it is reasonable.
 3. The room name should be unique.
 
-Now, I need a design for {input}.
+Now, I need a design for: "{query}".
 Additional requirements: {additional_requirements}.
 Your response should be direct and without additional text at the beginning or end."""
 # For example:
 # living room | maple hardwood, matte | light grey drywall, smooth | [(0, 0), (0, 8), (5, 8), (5, 0)]
 # kitchen | white hex tile, glossy | light grey drywall, smooth | [(5, 0), (5, 5), (8, 5), (8, 0)]
 
-wall_height_prompt = """I am now designing {input}. Please help me decide the wall height in meters.
+wall_height_prompt = """I am now designing: "{query}". Please help me decide the wall height in meters.
 
 Additional requirements: {additional_requirements}.
 Answer with a number, for example, 3.0. Do not add additional text at the beginning or in the end."""
@@ -25,7 +25,7 @@ doorway_prompt = """I need assistance in designing the connections between rooms
 
 Ensure that the door style complements the design of the room.
 
-The design under consideration is {input}, which includes these rooms: {rooms}. The length, width and height of each room in meters are:
+The design under consideration is: "{query}", which includes these rooms: {rooms}. The length, width and height of each room in meters are:
 {room_sizes}
 Certain pairs of rooms share a wall: {room_pairs}. There must be an openable door to the exterior.
 Adhere to these additional requirements: {additional_requirements}.
@@ -40,7 +40,7 @@ slider: (91, 92), (120, 61), (120, 91), (120, 120), (150, 92), (150, 120)
 
 Your task is to determine the appropriate type, size, and quantity of windows for each room, bearing in mind the room's design, dimensions, and function.
 
-I am now designing {input}. The wall height is {wall_height} cm. The walls available for window installation (direction, width in cm) in each room are:
+I am now designing: "{query}". The wall height is {wall_height} cm. The walls available for window installation (direction, width in cm) in each room are:
 {walls}
 Please note: It is not mandatory to install windows on every available wall. Within the same room, all windows must be the same type and size.
 Also, adhere to these additional requirements: {additional_requirements}.
@@ -50,7 +50,7 @@ Provide a concise response, omitting any additional text at the beginning or end
 
 object_selection_prompt = """Assist me in selecting large, floor-based objects to furnish each room, excluding mats, carpets, and rugs. Provide a comprehensive description since I will use it to retrieve object. If multiple identical items are to be placed in the room, please indicate the quantity.
 
-Currently, the design in progress is "{input}", featuring these rooms: {rooms}. Please also consider the following additional requirements: {additional_requirements}.
+Currently, the design in progress is: "{query}", featuring these rooms: {rooms}. Please also consider the following additional requirements: {additional_requirements}.
 
 Your response should be precise, without additional text at the beginning or end."""
 
@@ -97,7 +97,7 @@ Please first use natural language to explain your high-level design strategy, an
 wall_object_selection_prompt = """Assist me in selecting wall-based objects to furnish each room.
 Provide the following infrotmation: room type, object category, object description, quantity
 
-Now I want you to design {input} which has these rooms: {rooms}.
+Now I want you to design: "{query}", which has these rooms: {rooms}.
 Please also consider the following additional requirements: {additional_requirements}.
 Your response should be precise, without additional text at the beginning or end."""
 
@@ -113,7 +113,7 @@ Please do not add additional text at the beginning or in the end."""
 
 ceiling_selection_prompt = """Assist me in selecting ceiling objects (light/fan) to furnish each room.
 
-Currently, the design in progress is "{input}", featuring these rooms: {rooms}. You need to provide one ceiling object for each room.
+Currently, the design in progress is "{query}", featuring these rooms: {rooms}. You need to provide one ceiling object for each room.
 Please also consider the following additional requirements: {additional_requirements}.
 
 Your response should be precise, without additional text at the beginning or end. """
@@ -121,7 +121,7 @@ Your response should be precise, without additional text at the beginning or end
 
 small_object_selection_prompt = """As an experienced room designer, you are tasked to bring life into the room by strategically placing more *small* objects. Those objects should only be arranged *on top of* large objects which serve as receptacles. 
 
-Now, we are designing {input} and the available receptacles in the room include: {receptacles}. Additional requirements for this design project are as follows: {additional_requirements}.
+Now, we are designing: "{query}" and the available receptacles in the room include: {receptacles}. Additional requirements for this design project are as follows: {additional_requirements}.
 Your response should solely contain the information about the placement of objects and should not include any additional text before or after the main content."""
 
 # Task: determine whether the 3D object can be used for design indoor scenes.
@@ -146,7 +146,7 @@ object_selection_prompt_1 = """You are an experienced room designer, please assi
 You must provide a comprehensive description for each object since I will use it to retrieve object. If multiple identical items are to be placed in the room, please indicate the quantity and variance type (same or varied).
 
 Note: the variance type specifies whether the objects of this category are same or varied.
-Currently, the design in progress is "{input}", featuring these rooms: {rooms}.
+Currently, the design in progress is: "{query}", featuring these rooms: {rooms}.
 The length, width, and height of the rooms are:
 {room_sizes}
 Please also consider the following additional requirements: {additional_requirements}. You need to provide reasonable type/style/quantity of objects for each room based on the room size to make the room not too crowded or empty.
@@ -157,7 +157,7 @@ object_selection_prompt_2 = """User: {object_selection_prompt_1}
 
 Agent: {object_selection_1}
 
-User: Thanks! To enrich the scene of "{input}", could you provide another 10 large objects (excluding mats, carpets, rugs, windows and doors) for each of the {rooms}?
+User: Thanks! To enrich the scene of: "{query}", could you provide another 10 large objects (excluding mats, carpets, rugs, windows and doors) for each of the {rooms}?
 You need to provide reasonable type/style/quantity of objects for each room based on the room size to make the room not too crowded or empty.
 Please make sure they can be directly placed on the floor or wall, not on other objects. Follow the same format as before and answer without additional text at the beginning or end.
 
@@ -167,7 +167,7 @@ Agent: """
 object_selection_prompt_new_1 = """You are an experienced room designer, please assist me in selecting large *floor*/*wall* objects and small objects on top of them to furnish the room. You need to select appropriate objects to satisfy the customer's requirements.
 You must provide a description and desired size for each object since I will use it to retrieve object. If multiple items are to be placed in the room with the same description, please indicate the quantity and variance_type ("same" if they should be identical, otherwise "varied").
 
-Currently, the design in progress is *{input}*, and we are working on the *{room_type}* with the size of {room_size}.
+Currently, the design in progress is: "{query}", and we are working on the *{room_type}* with the size of {room_size}.
 Please also consider the following additional requirements: {additional_requirements}.
 
 Here are some guidelines for you:

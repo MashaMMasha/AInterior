@@ -4,6 +4,7 @@ from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import BaseModel
 
@@ -38,7 +39,16 @@ class BaseAgent:
         prompt_template: str,
         input_variables: Optional[Dict[str, Any]] = None,
     ) -> T:
+        # if "query" in input_variables:
+        #     prompt = ChatPromptTemplate.from_messages([
+        #         SystemMessage(content=prompt_template),
+        #         "{query}"
+        #     ])
+        # else:
+        #     prompt = PromptTemplate.from_template(prompt_template)
+
         prompt = PromptTemplate.from_template(prompt_template)
+
         chain = prompt | self.llm.with_structured_output(schema)
 
         response = chain.invoke(input_variables)

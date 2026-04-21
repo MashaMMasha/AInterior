@@ -168,7 +168,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
             schema=RawRoomObjects,
             prompt_template=self.object_selection_template_1,
             input_variables={
-                "input": scene_plan.query,
+                "query": scene_plan.query,
                 "room_type": room_type,
                 "room_size": room_size_str,
                 "additional_requirements": additional_requirements,

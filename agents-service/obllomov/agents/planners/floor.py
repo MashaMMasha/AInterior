@@ -39,7 +39,7 @@ class FloorPlanner(BasePlanner):
                 schema=RawFloorPlan,
                 prompt_template=prompts.floor_plan_prompt,
                 input_variables={
-                    "input": scene_plan.query,
+                    "query": scene_plan.query,
                     "additional_requirements": additional_requirements,
                 },
             )

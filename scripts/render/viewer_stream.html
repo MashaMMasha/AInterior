@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AInterior Scene Viewer</title>
+<title>AInterior Stream Viewer</title>
 <style>
   body { margin: 0; overflow: hidden; background: #1a1a2e; }
   #info {
@@ -10,10 +10,21 @@
     font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.6);
     padding: 8px 12px; border-radius: 4px; z-index: 10;
   }
+  #stages {
+    position: absolute; top: 10px; right: 10px; color: #fff;
+    font-family: monospace; font-size: 13px; background: rgba(0,0,0,0.6);
+    padding: 8px 12px; border-radius: 4px; z-index: 10;
+    max-width: 220px;
+  }
+  .stage-item { padding: 2px 0; }
+  .stage-done { color: #4caf50; }
+  .stage-pending { color: #888; }
+  .stage-active { color: #ffeb3b; }
 </style>
 </head>
 <body>
-<div id="info">Loading scene...</div>
+<div id="info">Waiting for generation events...</div>
+<div id="stages"></div>
 
 <script type="importmap">
 {
@@ -29,6 +40,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const info = document.getElementById('info');
+const stagesEl = document.getElementById('stages');
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -104,6 +117,29 @@ function buildFloor(room) {
   scene.add(mesh);
 }
 
+function computeWallUVs(poly) {
+  const uvs = [];
+  let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+
+  for (const p of poly) {
+    const u = Math.abs(poly[0].x - poly[2].x) > Math.abs(poly[0].z - poly[2].z) ? p.x : p.z;
+    const v = p.y;
+    uvs.push(u, v);
+    minU = Math.min(minU, u);
+    maxU = Math.max(maxU, u);
+    minV = Math.min(minV, v);
+    maxV = Math.max(maxV, v);
+  }
+
+  const rangeU = maxU - minU || 1;
+  const rangeV = maxV - minV || 1;
+  for (let i = 0; i < uvs.length; i += 2) {
+    uvs[i] = (uvs[i] - minU) / rangeU;
+    uvs[i + 1] = (uvs[i + 1] - minV) / rangeV;
+  }
+  return uvs;
+}
+
 function buildWall(wall) {
   const poly = wall.polygon;
   if (!poly || poly.length < 3) return;
@@ -137,32 +173,6 @@ function buildWall(wall) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   scene.add(mesh);
-}
-
-function computeWallUVs(poly) {
-  const uvs = [];
-  let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
-
-  const horizontal = Math.abs(poly[0].x - poly[2].x) > 0.01 ||
-                     Math.abs(poly[0].z - poly[2].z) > 0.01;
-
-  for (const p of poly) {
-    const u = Math.abs(poly[0].x - poly[2].x) > Math.abs(poly[0].z - poly[2].z) ? p.x : p.z;
-    const v = p.y;
-    uvs.push(u, v);
-    minU = Math.min(minU, u);
-    maxU = Math.max(maxU, u);
-    minV = Math.min(minV, v);
-    maxV = Math.max(maxV, v);
-  }
-
-  const rangeU = maxU - minU || 1;
-  const rangeV = maxV - minV || 1;
-  for (let i = 0; i < uvs.length; i += 2) {
-    uvs[i] = (uvs[i] - minU) / rangeU;
-    uvs[i + 1] = (uvs[i + 1] - minV) / rangeV;
-  }
-  return uvs;
 }
 
 function loadCroppedDoorTexture(url, callback) {
@@ -416,69 +426,168 @@ async function buildObject(obj) {
 
 function wallDedupeKey(wall) {
   const poly = wall.polygon;
-  const coords = poly.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`).sort().join('|');
-  return coords;
+  return poly.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`).sort().join('|');
 }
 
-async function loadScene() {
-  const resp = await fetch('/scene.json');
-  const data = await resp.json();
+const ALL_STAGES = [
+  'floor', 'walls', 'doors', 'windows',
+  'object_selection', 'floor_objects', 'wall_objects', 'small_objects', 'ceiling'
+];
 
-  info.textContent = `Scene: ${data.query || 'unknown'} | Rooms: ${data.rooms.length} | Walls: ${data.walls.length}`;
+let lastCompleted = 0;
+let cameraPositioned = false;
+const seenWallKeys = new Set();
+const seenObjectKeys = new Set();
 
+function updateStagesUI(currentStep, total) {
+  stagesEl.innerHTML = ALL_STAGES
+    .slice(0, total)
+    .map((name, i) => {
+      const step = i + 1;
+      let cls = 'stage-pending';
+      let prefix = '  ';
+      if (step < currentStep) { cls = 'stage-done'; prefix = '+ '; }
+      else if (step === currentStep) { cls = 'stage-active'; prefix = '> '; }
+      return `<div class="stage-item ${cls}">${prefix}${name}</div>`;
+    })
+    .join('');
+}
+
+function positionCamera(rooms) {
+  if (cameraPositioned) return;
   let centerX = 0, centerZ = 0, count = 0;
-  for (const room of data.rooms) {
-    buildFloor(room);
+  for (const room of rooms) {
     for (const p of (room.floor_polygon || [])) {
       centerX += p.x;
       centerZ += p.z;
       count++;
     }
   }
-
-  const seenWallKeys = new Set();
-  for (const wall of data.walls) {
-    if (wall.id.includes('|exterior')) continue;
-    const key = wallDedupeKey(wall);
-    if (seenWallKeys.has(key)) continue;
-    seenWallKeys.add(key);
-    buildWall(wall);
-  }
-
-  for (const door of (data.doors || [])) {
-    buildDoor(door);
-  }
-
-  for (const win of (data.windows || [])) {
-    buildWindow(win);
-  }
-
-  const allObjects = [
-    ...(data.objects || []),
-    ...(data.floor_objects || []),
-    ...(data.wall_objects || []),
-    ...(data.small_objects || []),
-    ...(data.ceiling_objects || []),
-  ];
-  const seenAssets = new Set();
-  const objectPromises = [];
-  for (const obj of data.objects) {
-    if (!obj.asset_id) continue;
-    const key = `${obj.asset_id}_${obj.id}`;
-    if (seenAssets.has(key)) continue;
-    seenAssets.add(key);
-    objectPromises.push(buildObject(obj));
-  }
-  await Promise.all(objectPromises);
-
-  info.textContent = `Scene: ${data.query || 'unknown'} | Rooms: ${data.rooms.length} | Objects: ${allObjects.length}`;
-
   centerX /= count || 1;
   centerZ /= count || 1;
-
   controls.target.set(centerX, 1.0, centerZ);
   camera.position.set(centerX - 5, 8, centerZ - 5);
   controls.update();
+  cameraPositioned = true;
+}
+
+const stageHandlers = {
+  floor(data) {
+    for (const room of (data.rooms || [])) {
+      buildFloor(room);
+    }
+    positionCamera(data.rooms || []);
+  },
+
+  walls(data) {
+    for (const wall of (data.walls || [])) {
+      if (wall.id.includes('|exterior')) continue;
+      const key = wallDedupeKey(wall);
+      if (seenWallKeys.has(key)) continue;
+      seenWallKeys.add(key);
+      buildWall(wall);
+    }
+  },
+
+  doors(data) {
+    for (const wall of (data.walls || [])) {
+      if (wall.id.includes('|exterior')) continue;
+      const key = wallDedupeKey(wall);
+      if (seenWallKeys.has(key)) continue;
+      seenWallKeys.add(key);
+      buildWall(wall);
+    }
+    for (const door of (data.doors || [])) {
+      buildDoor(door);
+    }
+  },
+
+  windows(data) {
+    for (const win of (data.windows || [])) {
+      buildWindow(win);
+    }
+  },
+
+  object_selection() {},
+
+  async floor_objects(data) {
+    await buildNewObjects(data.floor_objects || []);
+  },
+
+  async wall_objects(data) {
+    await buildNewObjects(data.wall_objects || []);
+  },
+
+  async small_objects(data) {
+    await buildNewObjects(data.small_objects || []);
+  },
+
+  async ceiling(data) {
+    await buildNewObjects(data.ceiling_objects || []);
+  },
+};
+
+async function buildNewObjects(objects) {
+  const promises = [];
+  for (const obj of objects) {
+    if (!obj.asset_id) continue;
+    const key = `${obj.asset_id}_${obj.id}`;
+    if (seenObjectKeys.has(key)) continue;
+    seenObjectKeys.add(key);
+    promises.push(buildObject(obj));
+  }
+  await Promise.all(promises);
+}
+
+async function handleMessage(msg) {
+  const { step, progress } = msg;
+  const completed = progress.completed || 0;
+  const total = progress.total || 8;
+  const data = progress.scene_json;
+
+  if (completed <= lastCompleted && step !== 'completed') return;
+
+  if (step === 'completed') {
+    info.textContent = `Generation complete [${total}/${total}]`;
+    updateStagesUI(total + 1, total);
+    lastCompleted = total;
+    return;
+  }
+
+  for (let i = lastCompleted; i < completed; i++) {
+    const stageName = ALL_STAGES[i];
+    if (!stageName) continue;
+    info.textContent = `Stage: ${stageName} [${i + 1}/${total}]`;
+    updateStagesUI(i + 1, total);
+    const handler = stageHandlers[stageName];
+    if (handler) {
+      await handler(data);
+    }
+  }
+
+  lastCompleted = completed;
+}
+
+function connectWebSocket() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+
+  ws.onopen = () => {
+    info.textContent = 'Connected. Waiting for generation events...';
+  };
+
+  ws.onmessage = async (event) => {
+    const msg = JSON.parse(event.data);
+    await handleMessage(msg);
+  };
+
+  ws.onclose = () => {
+    info.textContent = 'Disconnected. Reconnecting...';
+    setTimeout(connectWebSocket, 2000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
 }
 
 function animate() {
@@ -493,7 +602,8 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-loadScene();
+updateStagesUI(0, ALL_STAGES.length);
+connectWebSocket();
 animate();
 </script>
 </body>

@@ -43,7 +43,7 @@ class CeilingPlanner(BasePlanner):
                 schema=RawCeilingPlan,
                 prompt_template=prompts.ceiling_selection_prompt,
                 input_variables={
-                    "input": scene_plan.query,
+                    "query": scene_plan.query,
                     "rooms": room_types_str,
                     "additional_requirements": additional_requirements,
                 },
