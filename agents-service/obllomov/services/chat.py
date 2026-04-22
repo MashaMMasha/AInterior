@@ -36,6 +36,19 @@ class ChatService:
             raw_scene_plan=raw_scene_plan.model_dump(),
         )
 
+    def save_stage_dict(
+        self,
+        interaction_id: int,
+        stage_name: str,
+        scene_plan: dict,
+    ) -> ChatStage:
+        return self._repo.add_stage(
+            interaction_id=interaction_id,
+            stage_name=stage_name,
+            scene_plan=scene_plan,
+            raw_scene_plan={},
+        )
+
     def get_last_scene_json(self, session_id: str) -> Optional[dict]:
         stage = self._repo.get_last_stage(session_id)
         if stage is None:

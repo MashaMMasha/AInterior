@@ -25,4 +25,4 @@ Now, I need a design for {input}.
 Additional requirements: {additional_requirements}.
 Your response should be direct and without additional text at the beginning or end."""
 
-Prompt
+

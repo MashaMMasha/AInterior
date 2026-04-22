@@ -2,7 +2,6 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from urllib.parse import urlparse, unquote
 
 import aio_pika
 from aiohttp import web
@@ -13,49 +12,23 @@ from obllomov.shared.path import (
     HOLODECK_MATERIALS_IMAGES_DIR,
     OBJATHOR_ASSETS_DIR,
 )
-from obllomov.storage.assets import BaseAssets, LocalAssets
+
+from utils import assets, guess_mime, load_mesh_json
 
 GENERATION_ID = sys.argv[1] if len(sys.argv) > 1 else None
 PORT = 8089
 VIEWER_HTML = Path(__file__).parent / "viewer_stream.html"
-
-assets: BaseAssets = LocalAssets()
+SCRIPTS_DIR = Path(__file__).parent
 
 ws_clients: list[web.WebSocketResponse] = []
 
 
-def _guess_mime(path: str) -> str:
-    if path.endswith(".jpg"):
-        return "image/jpeg"
-    if path.endswith(".png"):
-        return "image/png"
-    return "application/octet-stream"
-
-
-def _load_mesh_json(asset_id: str) -> bytes:
-    pkl_rel = OBJATHOR_ASSETS_DIR / asset_id / f"{asset_id}.pkl.gz"
-    data = assets.read_pickle(pkl_rel)
-
-    def to_list(v):
-        return [float(v["x"]), float(v["y"]), float(v["z"])]
-
-    def to_uv(v):
-        return [float(v["x"]), float(v["y"])]
-
-    mesh = {
-        "vertices": [to_list(v) for v in data["vertices"]],
-        "normals": [to_list(n) for n in data["normals"]],
-        "uvs": [to_uv(u) for u in data["uvs"]],
-        "triangles": [int(i) for i in data["triangles"]],
-        "albedoUrl": f"/assets/{asset_id}/albedo.jpg",
-        "normalUrl": f"/assets/{asset_id}/normal.jpg",
-        "emissionUrl": f"/assets/{asset_id}/emission.jpg",
-    }
-    return json.dumps(mesh).encode()
-
-
 async def handle_index(request):
     return web.FileResponse(VIEWER_HTML)
+
+
+async def handle_utils_js(request):
+    return web.FileResponse(SCRIPTS_DIR / "utils.js")
 
 
 async def handle_ws(request):
@@ -91,7 +64,7 @@ async def handle_mesh(request):
     pkl_rel = OBJATHOR_ASSETS_DIR / asset_id / f"{asset_id}.pkl.gz"
     if not assets.exists(pkl_rel):
         raise web.HTTPNotFound()
-    return web.Response(body=_load_mesh_json(asset_id), content_type="application/json")
+    return web.Response(body=load_mesh_json(asset_id), content_type="application/json")
 
 
 async def handle_assets(request):
@@ -99,7 +72,7 @@ async def handle_assets(request):
     data = assets.read_bytes_or_none(OBJATHOR_ASSETS_DIR / path)
     if data is None:
         raise web.HTTPNotFound()
-    return web.Response(body=data, content_type=_guess_mime(path))
+    return web.Response(body=data, content_type=guess_mime(path))
 
 
 async def rabbitmq_listener():
@@ -147,6 +120,7 @@ if __name__ == "__main__":
 
     app = web.Application()
     app.router.add_get("/", handle_index)
+    app.router.add_get("/utils.js", handle_utils_js)
     app.router.add_get("/ws", handle_ws)
     app.router.add_get("/materials/{name}", handle_materials)
     app.router.add_get("/doors/{name}", handle_doors)
