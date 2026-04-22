@@ -5,8 +5,8 @@ from langchain_core.language_models import BaseChatModel
 
 from obllomov.agents.retrievers import BaseRetriever
 from obllomov.agents.selectors import BaseSelector
-from obllomov.schemas.domain.entries import (ScenePlan, SmallObjectEntry,
-                                             SmallObjectPlan)
+from obllomov.schemas.domain.entries import (SmallObjectEntry, SmallObjectPlan)
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.annotations import AnnotationDict
 from obllomov.schemas.domain.raw import RawRoomObjects
 from obllomov.shared.geometry import Box3D, Vertex3D

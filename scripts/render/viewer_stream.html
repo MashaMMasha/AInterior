@@ -38,7 +38,8 @@
 <script type="module">
 import {
   initViewer, animate, positionCamera,
-  buildFloor, buildWall, buildDoor, buildWindow, buildObject, wallDedupeKey
+  buildFloor, buildWall, buildDoor, buildWindow, buildObject, wallDedupeKey,
+  removeWallMesh, trackWallMesh
 } from '/utils.js';
 
 const info = document.getElementById('info');
@@ -101,17 +102,27 @@ const stageHandlers = {
       const key = wallDedupeKey(wall);
       if (seenWallKeys.has(key)) continue;
       seenWallKeys.add(key);
-      buildWall(wall);
+      const mesh = buildWall(wall);
+      trackWallMesh(key, mesh);
     }
   },
 
   doors(data) {
+    const currentWallKeys = new Set();
     for (const wall of (data.walls || [])) {
       if (wall.id.includes('|exterior')) continue;
       const key = wallDedupeKey(wall);
+      currentWallKeys.add(key);
       if (seenWallKeys.has(key)) continue;
       seenWallKeys.add(key);
-      buildWall(wall);
+      const mesh = buildWall(wall);
+      trackWallMesh(key, mesh);
+    }
+    for (const key of seenWallKeys) {
+      if (!currentWallKeys.has(key)) {
+        removeWallMesh(key);
+        seenWallKeys.delete(key);
+      }
     }
     for (const door of (data.doors || [])) {
       buildDoor(door);

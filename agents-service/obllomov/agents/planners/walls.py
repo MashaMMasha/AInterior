@@ -5,8 +5,8 @@ from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel, Field
 
 import obllomov.agents.prompts as prompts
-from obllomov.schemas.domain.entries import (ScenePlan, WallConnection,
-                                             WallEntry, WallPlan, OpenWalls)
+from obllomov.schemas.domain.entries import (WallConnection, WallEntry, WallPlan, OpenWalls)
+from obllomov.schemas.domain.scene import ScenePlan
 
 from obllomov.schemas.domain.raw import RawWallPlan
 from obllomov.shared.geometry import (Polygon2D, Segment2D, Vertex2D, Vertex3D,

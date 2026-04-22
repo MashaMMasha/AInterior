@@ -9,7 +9,8 @@ from shapely.geometry import LineString
 
 import obllomov.agents.prompts as prompts
 from obllomov.agents.selectors import MaterialSelector
-from obllomov.schemas.domain.entries import FloorPlan, RoomPlan, ScenePlan
+from obllomov.schemas.domain.entries import FloorPlan, RoomPlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawFloorPlan, RawRoomPlan
 from obllomov.shared.geometry import (Polygon2D, Vertex2D, Vertex3D,
                                       check_interior_angles, get_full_vertices,

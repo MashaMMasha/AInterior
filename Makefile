@@ -15,8 +15,19 @@ generate:
 	$(if $(filter 1,$(mock)),--mock) \
 	$(if $(session_id),--session-id "$(session_id)")
 
+edit:
+	export PYTHONPATH="./agents-service" && python scripts/edit.py \
+	--query "$(query)" \
+	--session-id "$(session_id)"
+
+
+debug:
+	export PYTHONPATH="./agents-service" && python scripts/debug.py
+
 rendering:
-	export PYTHONPATH="./agents-service" && python -u scripts/render/render.py "$(session_id)"
+	export PYTHONPATH="./agents-service" && python -u scripts/render/render.py \
+	--session-id "$(session_id)"
+
 
 render-stream:
 	export PYTHONPATH="./agents-service" && python -u scripts/render/render_stream.py "$(generation_id)"

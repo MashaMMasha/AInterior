@@ -19,9 +19,10 @@ from obllomov.agents.planners.controllers import AI2thorObjectController
 from obllomov.agents.retrievers import (BaseRetriever, ItemRetriever,
                                         ObjathorRetriever, ObjectRetriever)
 from obllomov.agents.selectors import MaterialSelector, ObjectSelector
+from obllomov.agents.editors import SceneEditor
 
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
-from obllomov.schemas.domain.entries import ScenePlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawScenePlan
 from obllomov.services.events import AsyncEventCallback, EventCallback, StageEvent
 
@@ -55,6 +56,8 @@ class ObLLoMov:
         self._init_selectors()
 
         self._init_planners()
+
+        self._init_editors()
 
         self.additional_requirements_room = "N/A"
 
@@ -150,6 +153,14 @@ class ObLLoMov:
         self.object_controller = AI2thorObjectController(self.assets)
         self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations, self.object_controller)
 
+    def _init_editors(self):
+        self.editor = SceneEditor(self.llm, 
+                                  self.material_selector, 
+                                  self.objathor_retriever, 
+                                  self.annotations, 
+                                  max_steps=4
+                                  )
+
 
     def _default_procedural_parameters(self) -> dict:
         base = compress_json.load(
@@ -210,6 +221,7 @@ class ObLLoMov:
         door_plan, raw_scene_plan.raw_door_plan = self.door_planner.plan(
             scene_plan,
             raw=raw_scene_plan.raw_door_plan,
+            additional_requirements="Bedrooms and bathrooms should not have open walls"
         )
         scene_plan.doors = door_plan.doors
         scene_plan.room_pairs = door_plan.room_pairs
@@ -225,7 +237,7 @@ class ObLLoMov:
         window_plan, raw_scene_plan.raw_window_plan = self.window_planner.plan(
             scene_plan,
             raw=raw_scene_plan.raw_window_plan,
-            additional_requirements="Only one wall of each room should have windows",
+            additional_requirements="Only one wall of each room should have windows. If room has open wall with another bigger room, it can have no windows. Bathrooms shouldn'thave windows",
         )
         scene_plan.windows = window_plan.windows
         scene_plan.walls = window_plan.walls
@@ -311,7 +323,7 @@ class ObLLoMov:
                 if async_callback:
                     await async_callback.on_stage(event)
 
-        final_scene = scene_plan.to_scene()
+        final_scene = scene_plan.to_json()
 
         if callback or async_callback:
             event = StageEvent(
@@ -327,3 +339,28 @@ class ObLLoMov:
                 await async_callback.on_complete(event)
 
         return final_scene, save_dir
+
+    def edit_scene(self, 
+                   query: str, 
+                   session_id: str, 
+                   scene_plan: ScenePlan,
+                   callback: Optional[EventCallback] = None,
+                #    async_callback: Optional[AsyncEventCallback] = None,
+                   ):
+        updated_scene_plan = self.editor.edit(scene_plan, query)
+
+        if callback:
+            event = StageEvent(
+                stage="edit_completed",
+                completed=1,
+                total=1,
+                scene_plan=updated_scene_plan,
+                raw_scene_plan=None,
+            )
+            if callback:
+                callback.on_complete(event)
+            # if async_callback:
+            #     await async_callback.on_complete(event)
+
+        
+

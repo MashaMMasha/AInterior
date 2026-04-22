@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from obllomov.schemas.domain.entries import ScenePlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawScenePlan
 from obllomov.shared.log import logger
 from obllomov.services.chat import ChatService
@@ -14,7 +14,7 @@ class StageEvent(BaseModel):
     completed: int
     total: int
     scene_plan: ScenePlan
-    raw_scene_plan: RawScenePlan
+    raw_scene_plan: Optional[RawScenePlan] = None
 
 
 class EventCallback(ABC):
@@ -60,7 +60,7 @@ class ChatEventCallback(EventCallback):
             self._interaction_id,
             event.stage,
             event.scene_plan,
-            event.raw_scene_plan,
+            raw_scene_plan=event.raw_scene_plan,
         )
 
     def on_complete(self, event: StageEvent) -> None:
@@ -68,7 +68,7 @@ class ChatEventCallback(EventCallback):
             self._interaction_id,
             "completed",
             event.scene_plan,
-            event.raw_scene_plan,
+            raw_scene_plan=event.raw_scene_plan,
         )
 
     def on_error(self, error: Exception) -> None:
@@ -117,13 +117,13 @@ class RabbitMQEventCallback(AsyncEventCallback):
         await self._publish(event.stage, {
             "completed": event.completed,
             "total": event.total,
-            "scene_json": event.scene_plan.to_scene(),
+            "scene_json": event.scene_plan.to_json(),
         })
         logger.debug(f"Published {event.stage}")
 
     async def on_complete(self, event: StageEvent) -> None:
         await self._publish("completed", {
-            "scene_json": event.scene_plan.to_scene(),
+            "scene_json": event.scene_plan.to_json(),
         })
 
     async def on_error(self, error: Exception) -> None:

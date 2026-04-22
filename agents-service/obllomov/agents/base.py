@@ -22,15 +22,25 @@ class BaseAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
-    def _raw_plan(
+    def _str_plan(
         self,
         prompt_template: str,
         input_variables: Optional[Dict[str, Any]] = None,
     ) -> str:
+        # if "query" in input_variables:
+        #     prompt = ChatPromptTemplate.from_messages([
+        #         ("system", prompt_template),
+        #         ("human", "{query}")
+        #     ])
+        # else:
+        #     prompt = PromptTemplate.from_template(prompt_template)
+
         prompt = PromptTemplate.from_template(prompt_template)
+
         chain = prompt | self.llm | StrOutputParser()
         response = chain.invoke(input_variables)
-        self._log(response)
+
+        self._log(response, request=prompt.format(**input_variables))
         return response
 
     def _structured_plan(
@@ -41,8 +51,8 @@ class BaseAgent:
     ) -> T:
         # if "query" in input_variables:
         #     prompt = ChatPromptTemplate.from_messages([
-        #         SystemMessage(content=prompt_template),
-        #         "{query}"
+        #         ("system", prompt_template),
+        #         ("human", "{query}")
         #     ])
         # else:
         #     prompt = PromptTemplate.from_template(prompt_template)
@@ -64,12 +74,3 @@ class BaseAgent:
             logger.info(f"{Fore.GREEN}USER:\n{request}{Fore.RESET}")
         logger.info(f"{Fore.GREEN}{prefix}\n{response}{Fore.RESET}")
 
-
-if __name__ == "__main__":
-    from obllomov.agents.llms import ChatMock, get_chat_yandex_model
-    from obllomov.schemas.domain.raw import RawWindowEntry 
-    llm = ChatMock()
-
-    agent = BaseAgent(llm)
-
-    # print(agent._structured_plan(RawWindowEntry, ))

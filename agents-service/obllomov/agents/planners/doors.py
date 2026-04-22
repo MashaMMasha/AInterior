@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field
 
 import obllomov.agents.prompts as prompts
 from obllomov.agents.retrievers import BaseRetriever
-from obllomov.schemas.domain.entries import DoorEntry, DoorPlan, ScenePlan
+from obllomov.schemas.domain.entries import DoorEntry, DoorPlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawDoorEntry, RawDoorPlan
 from obllomov.shared.geometry import (Polygon2D, Segment2D, Vertex2D, Vertex3D,
                                       create_offset_rectangles)

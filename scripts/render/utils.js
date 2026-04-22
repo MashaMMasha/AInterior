@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 let scene, camera, controls, renderer, textureLoader;
 const textureCache = {};
+const wallMeshes = {};
 
 export function initViewer() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -166,6 +167,21 @@ export function buildWall(wall) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   scene.add(mesh);
+  return mesh;
+}
+
+export function removeWallMesh(key) {
+  const mesh = wallMeshes[key];
+  if (!mesh) return;
+  scene.remove(mesh);
+  mesh.geometry.dispose();
+  if (mesh.material.map) mesh.material.map.dispose();
+  mesh.material.dispose();
+  delete wallMeshes[key];
+}
+
+export function trackWallMesh(key, mesh) {
+  wallMeshes[key] = mesh;
 }
 
 function loadCroppedDoorTexture(url, callback) {
@@ -407,7 +423,6 @@ export async function buildObject(obj) {
   geometry.translate(-center.x, -center.y, -center.z);
 
   const object3d = new THREE.Mesh(geometry, mat);
-  object3d.userData.objectId = obj.id;
   object3d.position.set(obj.position.x, obj.position.y, obj.position.z);
   object3d.rotation.order = 'YXZ';
   object3d.rotation.set(
@@ -415,6 +430,7 @@ export async function buildObject(obj) {
     THREE.MathUtils.degToRad(obj.rotation.y),
     THREE.MathUtils.degToRad(obj.rotation.z)
   );
+  object3d.userData.objectId = obj.id;
   object3d.castShadow = true;
   object3d.receiveShadow = true;
   scene.add(object3d);

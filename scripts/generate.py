@@ -69,8 +69,9 @@ callback = CompositeEventCallback([
 ])
 
 generation_id = f"{session_id}-{interaction.id}"
-logger.info(f"generation_id: {generation_id}")
 
+
+# logger.info(f"generation_id: {generation_id}")
 # sleep(5)
 # async_callback = RabbitMQEventCallback(env.RABBITMQ_URL, generation_id)
 
@@ -79,3 +80,6 @@ asyncio.run(model.generate_scene(args.query, args.save_dir,
                                 #  async_callback=async_callback,
                                  add_time=False
                                  ))
+
+
+logger.info(f"generation_id: {generation_id}")

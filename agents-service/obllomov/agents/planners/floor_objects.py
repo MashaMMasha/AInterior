@@ -4,7 +4,7 @@ from langchain_core.language_models import BaseChatModel
 
 import obllomov.agents.prompts as prompts
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
-from obllomov.schemas.domain.entries import ScenePlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawFloorObjectConstraints
 from obllomov.agents.selectors.placement import DFS_Solver_Floor
 from obllomov.shared.geometry import Polygon2D, Vertex2D

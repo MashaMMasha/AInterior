@@ -45,14 +45,18 @@ class ObjectSizeConstraint(Constraint):
         self._tolerance = tolerance
 
     def apply(self, candidates: list[Candidate]) -> list[Candidate]:
+        logger.debug(f"{self._room_size=}")
         max_x = self._room_size[0] * self._tolerance
-        max_z = self._room_size[2] * self._tolerance
+        max_z = self._room_size[1] * self._tolerance
+        max_y = self._room_size[2] * self._tolerance
         result = []
         # logger.debug(f"Bbox: {[self._annotations[c[0]].bbox for c in candidates]}")
         for c in candidates:
             dim = self._annotations[c[0]].bbox
+            # logger.debug(f"{dim=}")
             obj_x, obj_z = max(dim.x, dim.z), min(dim.x, dim.z)
-            if obj_x <= max_x and obj_z <= max_z:
+            obj_y = dim.y
+            if obj_x <= max_x and obj_z <= max_z and obj_y <= max_y:
                 result.append(c)
         return result
 
@@ -65,8 +69,8 @@ class ThinConstraint(Constraint):
     def apply(self, candidates: list[Candidate]) -> list[Candidate]:
         result = []
         for c in candidates:
-            dim = self._annotations[c[0]].bbox
-            min_dim = min(dim.x, dim.z) * 100
+            dim = self._annotations[c[0]].bbox.convert_m_to_cm()
+            min_dim = min(dim.x, dim.z)
             if min_dim <= self._thin_threshold:
                 result.append(c)
         return result
@@ -105,10 +109,10 @@ class FloorPlacementConstraint(Constraint):
 
         valid = []
         for c in candidates:
-            dim = self._annotations[c[0]].bbox
+            dim = self._annotations[c[0]].bbox.convert_m_to_cm()
             object_dim = (
-                dim.x * 100 + self._size_buffer,
-                dim.z * 100 + self._size_buffer,
+                dim.x + self._size_buffer,
+                dim.z + self._size_buffer,
             )
             solutions = solver.get_all_solutions(room_poly, grid_points, object_dim)
             solutions = solver.filter_collision(initial_state, solutions)
@@ -150,8 +154,8 @@ class WallPlacementConstraint(Constraint):
 
         valid = []
         for c in candidates:
-            dim = self._annotations[c[0]].bbox
-            object_dim = (dim.x * 100, dim.y * 100, dim.z * 100)
+            dim = self._annotations[c[0]].bbox.convert_m_to_cm()
+            object_dim = (dim.x, dim.y, dim.z)
             solutions = solver.get_all_solutions(room_poly, grid_points, object_dim, height=0)
             solutions = solver.filter_collision(initial_state, solutions)
             if solutions:

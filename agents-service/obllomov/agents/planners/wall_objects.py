@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 
 import obllomov.agents.prompts as prompts
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
-from obllomov.schemas.domain.entries import (ScenePlan, WallObjectEntry,
-                                             WallObjectPlan)
+from obllomov.schemas.domain.entries import (WallObjectEntry, WallObjectPlan)
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import (RawWallObjectConstraintEntry,
                                          RawWallObjectConstraints)
 from obllomov.agents.selectors.placement import DFS_Solver_Wall

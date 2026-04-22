@@ -1,4 +1,6 @@
+import argparse
 import http.server
+from itertools import chain
 import json
 import sys
 from pathlib import Path
@@ -15,7 +17,11 @@ from obllomov.storage.db.engine import create_db_engine
 
 from utils import assets, guess_mime, load_mesh_json
 
-SESSION_ID = sys.argv[1] if len(sys.argv) > 1 else None
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--session-id", type=str, default=None, dest="session_id")
+args = parser.parse_args()
+
 PORT = 8088
 VIEWER_HTML = Path(__file__).parent / "viewer.html"
 SCRIPTS_DIR = Path(__file__).parent
@@ -33,7 +39,7 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
         elif path == "/utils.js":
             self._serve_local_file(SCRIPTS_DIR / "utils.js", "application/javascript")
         elif path == "/scene.json":
-            scene = chat.get_last_scene_json(SESSION_ID)
+            scene = chat.get_last_scene_json(args.session_id)
             self._respond(json.dumps(scene).encode(), "application/json")
         elif path.startswith("/materials/"):
             name = path.split("/materials/")[-1]
@@ -71,8 +77,8 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
         return json.loads(raw)
 
     def _handle_editing_start(self):
-        interaction = chat.start_interaction(SESSION_ID, "user_editing")
-        scene = chat.get_last_scene_json(SESSION_ID)
+        interaction = chat.start_interaction(args.session_id, "user_editing")
+        scene = chat.get_last_scene_json(args.session_id)
         if scene:
             chat.save_stage_dict(interaction.id, "editing_start", scene)
         self._respond(
@@ -86,16 +92,20 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
         position = body.get("position")
 
         if not all([interaction_id, object_id, position]):
-            self.send_error(400, "Missing interaction_id, object_id, or position")
+            self.send_error(400, f"Missing interaction_id, object_id, or position: {(interaction_id, object_id, position)}")
             return
 
-        scene = chat.get_last_scene_json(SESSION_ID)
+        scene = chat.get_last_scene_json(args.session_id)
         if not scene:
             self.send_error(404, "No scene found")
             return
 
         found = False
-        for obj in scene.get("objects", []):
+        object_keys = ["objects", "floor_objects", "wall_objects", "small_objects", "ceiling_objects"]
+        
+        objects = chain(*map(lambda key: scene.get(key, []), object_keys))
+        for obj in objects:
+            # print(obj)
             if obj.get("id") == object_id:
                 obj["position"] = position
                 found = True
@@ -138,10 +148,10 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    if not SESSION_ID:
-        print("Usage: python render/render.py <session_id>")
+    if not args.session_id:
+        print("Usage: python render/render.py <args.session_id>")
         sys.exit(1)
-    print(f"Rendering session: {SESSION_ID}")
+    print(f"Rendering session: {args.session_id}")
     print(f"Open http://localhost:{PORT}")
     server = http.server.HTTPServer(("", PORT), SceneHandler)
     server.serve_forever()

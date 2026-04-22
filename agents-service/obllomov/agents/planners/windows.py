@@ -7,7 +7,8 @@ from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 
 import obllomov.agents.prompts as prompts
-from obllomov.schemas.domain.entries import ScenePlan, WindowEntry, WindowPlan, WallEntry
+from obllomov.schemas.domain.entries import WindowEntry, WindowPlan, WallEntry
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawWindowEntry, RawWindowPlan
 from obllomov.shared.geometry import (Segment2D, Vertex2D, Vertex3D,
                                       create_offset_rectangles,
@@ -34,8 +35,8 @@ class WindowPlanner(BasePlanner):
     ) -> Tuple[WindowPlan, RawWindowPlan]:
         organized_walls, available_wall_str = self._get_wall_for_windows(scene_plan)
 
-        logger.debug(f"organized_walls: {organized_walls}")
-        logger.debug(f"available_wall_str: {available_wall_str}")
+        # logger.debug(f"organized_walls: {organized_walls}")
+        # logger.debug(f"available_wall_str: {available_wall_str}")
 
         if raw is None:
             raw = self._structured_plan(
@@ -245,14 +246,14 @@ class WindowPlanner(BasePlanner):
             walls_with_door.add(door.wall0)
             walls_with_door.add(door.wall1)
 
-        logger.debug(f"walls_with_door: {walls_with_door}")
+        # logger.debug(f"walls_with_door: {walls_with_door}")
 
         available_wall: List[WallEntry] = []
         for wall in scene_plan.walls:
             if (wall.id not in walls_with_door) and ("exterior" in wall.id):
                 available_wall.append(wall)
 
-        logger.debug(f"available_wall: {[wall.id for wall in available_wall]}")
+        # logger.debug(f"available_wall: {[wall.id for wall in available_wall]}")
 
         organized_walls = {}
         for wall in available_wall:

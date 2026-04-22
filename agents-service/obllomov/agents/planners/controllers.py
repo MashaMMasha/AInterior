@@ -9,7 +9,7 @@ from ai2thor.hooks.procedural_asset_hook import ProceduralAssetHookRunner
 from procthor.constants import FLOOR_Y
 from procthor.utils.types import Vector3
 
-from obllomov.schemas.domain.entries import ScenePlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.shared.log import logger
 from obllomov.shared.path import OBJATHOR_ASSETS_DIR
 from obllomov.shared.utils import THOR_COMMIT_ID

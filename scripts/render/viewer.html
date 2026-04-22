@@ -112,7 +112,7 @@ async function loadScene() {
   ];
   const seenAssets = new Set();
   const objectPromises = [];
-  for (const obj of data.objects) {
+  for (const obj of allObjects) {
     if (!obj.asset_id) continue;
     const key = `${obj.asset_id}_${obj.id}`;
     if (seenAssets.has(key)) continue;
