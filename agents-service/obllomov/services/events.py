@@ -94,6 +94,7 @@ class RabbitMQEventCallback(AsyncEventCallback):
             aio_pika.ExchangeType.TOPIC,
             durable=True,
         )
+        
 
     async def _publish(self, step: str, progress: Dict[str, Any]):
         import aio_pika
@@ -118,6 +119,7 @@ class RabbitMQEventCallback(AsyncEventCallback):
             "total": event.total,
             "scene_json": event.scene_plan.to_scene(),
         })
+        logger.debug(f"Published {event.stage}")
 
     async def on_complete(self, event: StageEvent) -> None:
         await self._publish("completed", {

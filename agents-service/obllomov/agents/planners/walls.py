@@ -34,7 +34,7 @@ class WallPlanner(BasePlanner):
                 schema=RawWallPlan,
                 prompt_template=prompts.wall_height_prompt,
                 input_variables={
-                    "input": scene_plan.query,
+                    "query": scene_plan.query,
                     "additional_requirements": additional_requirements,
                 },
             )

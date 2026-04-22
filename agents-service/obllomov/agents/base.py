@@ -4,6 +4,7 @@ from colorama import Fore
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import BaseModel
 
@@ -38,7 +39,16 @@ class BaseAgent:
         prompt_template: str,
         input_variables: Optional[Dict[str, Any]] = None,
     ) -> T:
-        prompt = PromptTemplate.from_template(prompt_template)
+        if "query" in input_variables:
+            prompt = ChatPromptTemplate.from_messages([
+                SystemMessage(content=prompt_template),
+                "{query}"
+            ])
+        else:
+            prompt = PromptTemplate.from_template(prompt_template)
+
+        # prompt = PromptTemplate.from_template(prompt_template)
+
         chain = prompt | self.llm.with_structured_output(schema)
 
         response = chain.invoke(input_variables)
@@ -53,3 +63,13 @@ class BaseAgent:
         if request is not None:
             logger.info(f"{Fore.GREEN}USER:\n{request}{Fore.RESET}")
         logger.info(f"{Fore.GREEN}{prefix}\n{response}{Fore.RESET}")
+
+
+if __name__ == "__main__":
+    from obllomov.agents.llms import ChatMock, get_chat_yandex_model
+    from obllomov.schemas.domain.raw import RawWindowEntry 
+    llm = ChatMock()
+
+    agent = BaseAgent(llm)
+
+    # print(agent._structured_plan(RawWindowEntry, ))

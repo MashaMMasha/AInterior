@@ -68,8 +68,8 @@ class ObjectSelector(BaseAgent, BaseSelector):
         self.random_selection = random_selection
         self.use_multiprocessing = use_multiprocessing
 
-        self.object_selection_template_1 = prompts.object_selection_prompt_new_1
-        self.object_selection_template_2 = prompts.object_selection_prompt_new_2
+        self.object_selection_template_1 = prompts.object_selection_prompt_1
+        self.object_selection_template_2 = prompts.object_selection_prompt_2
 
     def select(
         self,
@@ -168,7 +168,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
             schema=RawRoomObjects,
             prompt_template=self.object_selection_template_1,
             input_variables={
-                "input": scene_plan.query,
+                "query": scene_plan.query,
                 "room_type": room_type,
                 "room_size": room_size_str,
                 "additional_requirements": additional_requirements,

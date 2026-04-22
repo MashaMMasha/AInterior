@@ -42,7 +42,7 @@ class WindowPlanner(BasePlanner):
                 schema=RawWindowPlan,
                 prompt_template=prompts.window_prompt,
                 input_variables={
-                    "input": scene_plan.query,
+                    "query": scene_plan.query,
                     "walls": available_wall_str,
                     "wall_height": int(scene_plan.wall_height * 100),
                     "additional_requirements": additional_requirements,
