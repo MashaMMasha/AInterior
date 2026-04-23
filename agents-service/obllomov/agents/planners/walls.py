@@ -78,12 +78,10 @@ class WallPlanner(BasePlanner):
             open_wall_rectangles.append(top)
             open_wall_rectangles.append(bottom)
 
-        # OpenWalls(segments=open_wall_segments, boxes=open_wall_rectangles)
-        
-        open_walls = {
-            "segments": [s.model_dump() for s in open_wall_segments],
-            "openWallBoxes": open_wall_rectangles,
-        }
+        open_walls = OpenWalls(
+            segments=open_wall_segments,
+            open_wall_boxes=open_wall_rectangles,
+        )
 
         return WallPlan(wall_height=wall_plan.wall_height, walls=updated_walls), open_walls
 

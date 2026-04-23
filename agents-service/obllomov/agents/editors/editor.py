@@ -84,17 +84,15 @@ class SceneEditor:
                 f"Floor: material={room.floor_material.get('name', '?')}, design='{room.floor_design}'",
                 f"Walls: material={room.wall_material.get('name', '?')}, design='{room.wall_design}'",
             ]
-
+            
             room_objects = [
                 obj for obj in scene_plan.floor_objects
-                if obj.get("roomId") == room_id or obj.get("room_id") == room_id
+                if obj.room_id == room_id
             ]
             if room_objects:
                 desr.append("Floor objects:")
                 for obj in room_objects:
-                    name = obj.get("object_name", obj.get("id", "?"))
-                    pos = obj.get("position", {})
-                    desr.append(f"  - {name} at ({pos.get('x', 0):.1f}, {pos.get('z', 0):.1f})")
+                    desr.append(f"  - {obj.object_name} at ({obj.position.x:.1f}, {obj.position.z:.1f})")
 
             wall_objs = [
                 obj for obj in scene_plan.wall_objects

@@ -31,28 +31,17 @@ class BaseObjectController(ABC):
 
 
 def _collect_asset_ids(scene_plan: ScenePlan) -> Set[str]:
-    ids: Set[str] = set()
-    for obj in scene_plan.floor_objects:
-        aid = obj.get("asset_id") or obj.get("assetId") if isinstance(obj, dict) else getattr(obj, "asset_id", None)
-        if aid:
-            ids.add(aid)
-    for entry in scene_plan.wall_objects:
-        ids.add(entry.asset_id)
-    for entry in scene_plan.small_objects:
-        ids.add(entry.asset_id)
-    for entry in scene_plan.ceiling_objects:
-        ids.add(entry.asset_id)
+    asset_ids: Set[str] = set()
+
+    for obj in scene_plan.objects:
+        asset_ids.add(obj.asset_id)
     for entry in scene_plan.doors:
-        ids.add(entry.asset_id)
+        asset_ids.add(entry.asset_id)
     for entry in scene_plan.windows:
-        ids.add(entry.asset_id)
-    for room_data in scene_plan.selected_objects.values():
-        if isinstance(room_data, dict):
-            for assets_list in room_data.values():
-                if isinstance(assets_list, list):
-                    ids.update(a for a in assets_list if isinstance(a, str))
-    ids.discard("")
-    return ids
+        asset_ids.add(entry.asset_id)
+    
+    asset_ids.discard("")
+    return asset_ids
 
 
 class AI2thorObjectController(BaseObjectController):
@@ -78,7 +67,7 @@ class AI2thorObjectController(BaseObjectController):
     def start(self, scene_plan: ScenePlan) -> List[str]:
         thor_scene = scene_plan.to_thor_scene()
         logger.debug(f"thor_scene objects count: {len(thor_scene.get('objects', []))}")
-        logger.debug(f"thor_scene object ids: {[o.get('id') for o in thor_scene.get('objects', [])]}")
+        # logger.debug(f"thor_scene object ids: {[o.get('id') for o in thor_scene.get('objects', [])]}")
 
         asset_ids = _collect_asset_ids(scene_plan)
         logger.debug(f"Preparing {len(asset_ids)} scene assets")
@@ -102,7 +91,7 @@ class AI2thorObjectController(BaseObjectController):
         event = self.controller.reset()
         assert event.metadata.get('lastActionSuccess'), logger.debug(f"thor reset error: {event.metadata.get('errorMessage')}")
 
-        scene_object_ids = {obj["id"] for obj in scene_plan.floor_objects}
+        scene_object_ids = {obj.id for obj in scene_plan.floor_objects}
         logger.debug(f"scene_object_ids: {scene_object_ids}")
         return [
             obj["objectId"]

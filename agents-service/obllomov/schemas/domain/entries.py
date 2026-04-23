@@ -4,10 +4,6 @@ from pydantic import BaseModel, Field
 
 from obllomov.shared.geometry import Polygon2D, Segment2D, Vertex2D, Vertex3D
 
-
-
-
-
 class RoomPlan(BaseModel):
     room_type: str
     floor_design: str
@@ -44,8 +40,8 @@ class WallEntry(BaseModel):
     segment: Segment2D
 
 class OpenWalls(BaseModel):
-    segments: list[Segment2D]
-    boxes: list
+    segments: List[Segment2D] = []
+    open_wall_boxes: list = []
 
 class WallPlan(BaseModel):
     wall_height: float
@@ -91,6 +87,18 @@ class WindowPlan(BaseModel):
     walls: list[WallEntry]
 
 
+class FloorObjectEntry(BaseModel):
+    asset_id: str
+    id: str
+    kinematic: bool = True
+    position: Vertex3D
+    rotation: Vertex3D
+    material: Optional[str] = None
+    room_id: str
+    vertices: list = []
+    object_name: str
+
+
 class WallObjectEntry(BaseModel):
     asset_id: str
     id: str
@@ -99,7 +107,7 @@ class WallObjectEntry(BaseModel):
     rotation: Vertex3D
     material: Optional[str] = None
     room_id: str
-    vertices: list
+    vertices: list = []
     object_name: str
 
 

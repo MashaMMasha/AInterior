@@ -60,9 +60,9 @@ class WallObjectPlanner(BasePlanner):
         wall_object_name2id = {name: asset_id for name, asset_id in selected_wall_objects}
 
         floor_object_names = [
-            obj["object_name"]
+            obj.object_name
             for obj in scene_plan.floor_objects
-            if obj.get("roomId") == room_id or obj.get("room_id") == room_id
+            if obj.room_id == room_id
         ]
         wall_object_names = list(wall_object_name2id.keys())
 
@@ -204,7 +204,7 @@ class WallObjectPlanner(BasePlanner):
 
         open_walls = scene_plan.open_walls
         if open_walls:
-            for open_box in open_walls.get("openWallBoxes", []):
+            for open_box in open_walls.open_wall_boxes:
                 open_verts = [(x * 100, z * 100) for x, z in open_box]
                 open_poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in open_verts])
                 if shapely_poly.contains(open_poly.to_shapely().centroid):
@@ -217,15 +217,15 @@ class WallObjectPlanner(BasePlanner):
                     i += 1
 
         for obj in scene_plan.floor_objects:
-            if "vertices" not in obj:
+            if not obj.vertices:
                 continue
-            obj_poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in obj["vertices"]])
+            obj_poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in obj.vertices])
             if shapely_poly.contains(obj_poly.to_shapely().centroid):
-                obj_height = obj["position"]["y"] * 100 * 2
+                obj_height = obj.position.y * 100 * 2
                 x_min, z_min, x_max, z_max = obj_poly.bounds
-                initial_state[obj["object_name"]] = (
+                initial_state[obj.object_name] = (
                     (x_min, 0, z_min), (x_max, obj_height, z_max),
-                    obj["rotation"]["y"], obj["vertices"], 1,
+                    obj.rotation.y, obj.vertices, 1,
                 )
 
         return initial_state

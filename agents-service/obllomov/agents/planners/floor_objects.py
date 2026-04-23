@@ -4,6 +4,7 @@ from langchain_core.language_models import BaseChatModel
 
 import obllomov.agents.prompts as prompts
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
+from obllomov.schemas.domain.entries import FloorObjectEntry
 from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawFloorObjectConstraints
 from obllomov.agents.selectors.placement import DFS_Solver_Floor
@@ -103,7 +104,7 @@ class FloorObjectPlanner(BasePlanner):
             ]
         return constraints
 
-    def _solution_to_placements(self, solutions: dict, object_name2id: dict, room_id: str) -> list:
+    def _solution_to_placements(self, solutions: dict, object_name2id: dict, room_id: str) -> List[FloorObjectEntry]:
         placements = []
         for name, solution in solutions.items():
             if any(p in name for p in ("door", "window", "open")):
@@ -111,21 +112,15 @@ class FloorObjectPlanner(BasePlanner):
             if name not in object_name2id:
                 continue
             dims = self.annotations[object_name2id[name]].bbox
-            placements.append({
-                "asset_id": object_name2id[name],
-                "id": f"{name} ({room_id})",
-                "kinematic": True,
-                "position": {
-                    "x": solution[0][0] / 100,
-                    "y": dims.y / 2,
-                    "z": solution[0][1] / 100,
-                },
-                "rotation": {"x": 0, "y": solution[1], "z": 0},
-                "material": None,
-                "roomId": room_id,
-                "vertices": list(solution[2]),
-                "object_name": name,
-            })
+            placements.append(FloorObjectEntry(
+                asset_id=object_name2id[name],
+                id=f"{name} ({room_id})",
+                position={"x": solution[0][0] / 100, "y": dims.y / 2, "z": solution[0][1] / 100},
+                rotation={"x": 0, "y": solution[1], "z": 0},
+                room_id=room_id,
+                vertices=list(solution[2]),
+                object_name=name,
+            ))
         return placements
 
     def _get_initial_state(self, scene_plan: ScenePlan, room_poly: Polygon2D) -> dict:
@@ -145,7 +140,7 @@ class FloorObjectPlanner(BasePlanner):
 
         open_walls = scene_plan.open_walls
         if open_walls:
-            for open_box in open_walls.get("openWallBoxes", []):
+            for open_box in open_walls.open_wall_boxes:
                 verts = [(x * 100, z * 100) for x, z in open_box]
                 poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in verts])
                 if room_poly.contains(poly.centroid):

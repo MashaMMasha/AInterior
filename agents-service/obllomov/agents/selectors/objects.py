@@ -474,7 +474,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
 
         open_walls = scene_plan.open_walls
         if open_walls:
-            for box in open_walls.get("openWallBoxes", []):
+            for box in open_walls.open_wall_boxes:
                 verts = [(x * 100, z * 100) for x, z in box]
                 poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in verts])
                 if room_poly.contains(poly.centroid):
@@ -549,7 +549,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
                     if room_poly.contains(door_poly.centroid):
                         room2floor_capacity[room.id][1] += door_poly.area * 0.6
             if scene_plan.open_walls:
-                for box in scene_plan.open_walls.get("openWallBoxes", []):
+                for box in scene_plan.open_walls.open_wall_boxes:
                     poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in box])
                     if room_poly.contains(poly.centroid):
                         room2floor_capacity[room.id][1] += poly.area * 0.6

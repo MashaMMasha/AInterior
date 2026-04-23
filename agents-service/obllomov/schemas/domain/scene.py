@@ -1,10 +1,10 @@
-from typing import ClassVar, Dict, List, Optional, Tuple
+from typing import ClassVar, Dict, List, Optional, Tuple, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 from .entries import (
-    RoomPlan, WallEntry, DoorEntry,
-    WindowEntry, WallObjectEntry,
+    RoomPlan, WallEntry, DoorEntry, OpenWalls,
+    WindowEntry, FloorObjectEntry, WallObjectEntry,
     SmallObjectEntry, CeilingObjectEntry
     )
 
@@ -26,6 +26,8 @@ THOR_METADATA = {
     "warnings": {},
 }
 
+ObjectEntry = Union[FloorObjectEntry, WallObjectEntry, SmallObjectEntry, CeilingObjectEntry]
+
 class ScenePlan(BaseModel):
     query: str = ""
     procedural_parameters: dict = {}
@@ -35,15 +37,19 @@ class ScenePlan(BaseModel):
     doors: List[DoorEntry] = []
     room_pairs: list = []
     open_room_pairs: List[Tuple[str, str]] = []
-    open_walls: dict = {}
+    open_walls: Optional[OpenWalls] = None
     windows: List[WindowEntry] = []
     object_selection_plan: dict = {}
     selected_objects: dict = {}
-    floor_objects: list = []
+    floor_objects: List[FloorObjectEntry] = []
     wall_objects: List[WallObjectEntry] = []
     small_objects: List[SmallObjectEntry] = []
     ceiling_objects: List[CeilingObjectEntry] = []
     receptacle2small_objects: dict = {}
+
+    @property
+    def objects(self) -> List[ObjectEntry]:
+        return self.floor_objects + self.wall_objects + self.small_objects + self.ceiling_objects
 
     @staticmethod
     def _camel_keys(obj):

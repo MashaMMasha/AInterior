@@ -45,7 +45,6 @@ class ObjectSizeConstraint(Constraint):
         self._tolerance = tolerance
 
     def apply(self, candidates: list[Candidate]) -> list[Candidate]:
-        logger.debug(f"{self._room_size=}")
         max_x = self._room_size[0] * self._tolerance
         max_z = self._room_size[1] * self._tolerance
         max_y = self._room_size[2] * self._tolerance

@@ -36,7 +36,7 @@ class SmallObjectPlanner(BasePlanner):
     def plan(self, scene_plan: ScenePlan, receptacle_ids: list) -> SmallObjectPlan:
         object_selection_plan = scene_plan.object_selection_plan
         receptacle2asset_id = {
-            obj["id"]: obj["asset_id"] for obj in scene_plan.floor_objects
+            obj.id: obj.asset_id for obj in scene_plan.floor_objects
         }
 
         if scene_plan.receptacle2small_objects and self.reuse_assets:

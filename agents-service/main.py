@@ -107,6 +107,65 @@ async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
         status="generating",
     )
 
+class EditRequest(BaseModel):
+    query: str
+    session_id: str
+
+
+class EditResponse(BaseModel):
+    session_id: str
+    interaction_id: int
+    status: str
+
+
+@app.post("/edit", response_model=EditResponse)
+async def edit(req: EditRequest, background_tasks: BackgroundTasks):
+    session = chat.get_session(req.session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    last_scene_json = chat.get_last_scene_json(req.session_id)
+    if last_scene_json is None:
+        raise HTTPException(status_code=400, detail="No scene to edit in this session")
+
+    from obllomov.schemas.domain.scene import ScenePlan
+    scene_plan = ScenePlan.from_json(last_scene_json)
+
+    interaction = chat.start_interaction(req.session_id, req.query)
+
+    background_tasks.add_task(
+        _run_edit, req.query, req.session_id, interaction.id, scene_plan
+    )
+
+    return EditResponse(
+        session_id=req.session_id,
+        interaction_id=interaction.id,
+        status="editing",
+    )
+
+
+async def _run_edit(
+    query: str,
+    session_id: str,
+    interaction_id: int,
+    scene_plan,
+):
+    callback = CompositeEventCallback([
+        LogEventCallback(),
+        ChatEventCallback(chat, interaction_id),
+    ])
+
+    try:
+        obllomov.edit_scene(
+            query=query,
+            session_id=session_id,
+            scene_plan=scene_plan,
+            callback=callback,
+        )
+    except Exception as e:
+        logger.error(f"Edit failed: {e}")
+        callback.on_error(e)
+
 
 @app.get("/health")
 async def health():

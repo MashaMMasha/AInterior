@@ -40,15 +40,15 @@ else:
 
 # llm = ChatMock()
 
-
-assets = S3Assets(
-    bucket_name=env.S3_BUCKET_NAME,
-    key_prefix=env.S3_KEY_PREFIX,
-    aws_access_key_id=env.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=env.AWS_SECRET_ACCESS_KEY,
-    endpoint_url=env.S3_ENDPOINT_URL,
-    region_name=env.AWS_DEFAULT_REGION,
-)
+assets = LocalAssets()
+# assets = S3Assets(
+#     bucket_name=env.S3_BUCKET_NAME,
+#     key_prefix=env.S3_KEY_PREFIX,
+#     aws_access_key_id=env.AWS_ACCESS_KEY_ID,
+#     aws_secret_access_key=env.AWS_SECRET_ACCESS_KEY,
+#     endpoint_url=env.S3_ENDPOINT_URL,
+#     region_name=env.AWS_DEFAULT_REGION,
+# )
 
 model = ObLLoMov(llm, assets)
 engine = create_db_engine()

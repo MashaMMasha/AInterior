@@ -28,9 +28,8 @@ from obllomov.services.events import AsyncEventCallback, EventCallback, StageEve
 
 from obllomov.shared.log import logger
 from obllomov.shared.path import (ABS_ROOT_PATH, HOLODECK_BASE_DATA_DIR,
-                                  HOLODECK_MATERIALS_DIR, HOLODECK_THOR_ANNOTATIONS_PATH,
-                                  HOLODECK_THOR_FEATURES_DIR, OBJATHOR_ANNOTATIONS_PATH,
-                                  OBJATHOR_FEATURES_DIR)
+                                  HOLODECK_THOR_ANNOTATIONS_PATH, HOLODECK_THOR_FEATURES_DIR, 
+                                  OBJATHOR_ANNOTATIONS_PATH, OBJATHOR_FEATURES_DIR)
 
 from obllomov.shared.time import NOW
 
@@ -221,7 +220,7 @@ class ObLLoMov:
         door_plan, raw_scene_plan.raw_door_plan = self.door_planner.plan(
             scene_plan,
             raw=raw_scene_plan.raw_door_plan,
-            additional_requirements="Bedrooms and bathrooms should not have open walls"
+            additional_requirements="Bedrooms and bathrooms should not have open walls, all doors should be doorways"
         )
         scene_plan.doors = door_plan.doors
         scene_plan.room_pairs = door_plan.room_pairs
