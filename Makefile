@@ -31,6 +31,9 @@ minio:
 	-v ~/minio-data:/data \
 	quay.io/minio/minio server /data --console-address ":9001"
 
+migrate-to-minio:
+	export PYTHONPATH="./agents-service" && python -u scripts/migrate_to_minio.py
+
 
 
 

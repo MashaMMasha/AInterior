@@ -115,8 +115,8 @@ class FloorPlacementConstraint(Constraint):
             solutions = solver.place_edge(room_poly, solutions, object_dim)
             if solutions:
                 valid.append(c)
-            else:
-                logger.debug(f"Floor Object {c[0]} (size: {object_dim}) cannot be placed in room")
+            # else:
+                # logger.debug(f"Floor Object {c[0]} (size: {object_dim}) cannot be placed in room")
         return valid
 
 
@@ -156,8 +156,8 @@ class WallPlacementConstraint(Constraint):
             solutions = solver.filter_collision(initial_state, solutions)
             if solutions:
                 valid.append(c)
-            else:
-                logger.debug(f"Wall Object {c[0]} (size: {object_dim}) cannot be placed in room")
+            # else:
+            #     logger.debug(f"Wall Object {c[0]} (size: {object_dim}) cannot be placed in room")
         return valid
 
 

@@ -2,7 +2,7 @@ import os
 import tempfile
 import threading
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterable, Iterator, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -185,6 +185,17 @@ class S3Assets(BaseAssets):
             if skip_existing and local_path.is_file():
                 continue
             self.download_to_local(relative_path, local_path)
+
+    def prepare_local_dir(
+        self,
+        base_prefix: Path | str,
+        subfolders: Iterable[str],
+    ) -> Path:
+        tmp = Path(tempfile.mkdtemp(prefix="obllomov_assets_"))
+        base = self._to_path(base_prefix)
+        for name in subfolders:
+            self.download_directory(base / name, tmp, skip_existing=True)
+        return tmp / base
 
     def invalidate_cache(self, relative_path: Optional[Path | str] = None) -> None:
         with self._cache_lock:

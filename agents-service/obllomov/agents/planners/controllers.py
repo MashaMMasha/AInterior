@@ -1,6 +1,8 @@
 import random
+import shutil
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from pathlib import Path
+from typing import List, Optional, Set
 
 from ai2thor.controller import Controller
 from ai2thor.hooks.procedural_asset_hook import ProceduralAssetHookRunner
@@ -28,17 +30,60 @@ class BaseObjectController(ABC):
         pass
 
 
+def _collect_asset_ids(scene_plan: ScenePlan) -> Set[str]:
+    ids: Set[str] = set()
+    for obj in scene_plan.floor_objects:
+        aid = obj.get("asset_id") or obj.get("assetId") if isinstance(obj, dict) else getattr(obj, "asset_id", None)
+        if aid:
+            ids.add(aid)
+    for entry in scene_plan.wall_objects:
+        ids.add(entry.asset_id)
+    for entry in scene_plan.small_objects:
+        ids.add(entry.asset_id)
+    for entry in scene_plan.ceiling_objects:
+        ids.add(entry.asset_id)
+    for entry in scene_plan.doors:
+        ids.add(entry.asset_id)
+    for entry in scene_plan.windows:
+        ids.add(entry.asset_id)
+    for room_data in scene_plan.selected_objects.values():
+        if isinstance(room_data, dict):
+            for assets_list in room_data.values():
+                if isinstance(assets_list, list):
+                    ids.update(a for a in assets_list if isinstance(a, str))
+    ids.discard("")
+    return ids
+
+
 class AI2thorObjectController(BaseObjectController):
     def __init__(self, assets: BaseAssets):
         self.assets = assets
         self.controller: Optional[Controller] = None
+        self._tmp_dir: Optional[Path] = None
+
+    def _ensure_asset(self, asset_id: str) -> bool:
+        if self._tmp_dir is None:
+            return False
+        target = self._tmp_dir / asset_id
+        if target.exists():
+            return True
+        try:
+            local = self.assets.get_local_dir(OBJATHOR_ASSETS_DIR / asset_id)
+        except (FileNotFoundError, Exception):
+            logger.debug(f"Asset not found: {asset_id}")
+            return False
+        target.symlink_to(local)
+        return True
 
     def start(self, scene_plan: ScenePlan) -> List[str]:
         thor_scene = scene_plan.to_thor_scene()
         logger.debug(f"thor_scene objects count: {len(thor_scene.get('objects', []))}")
         logger.debug(f"thor_scene object ids: {[o.get('id') for o in thor_scene.get('objects', [])]}")
 
-        objathor_assets_dir = self.assets.get_local_dir(OBJATHOR_ASSETS_DIR)
+        asset_ids = _collect_asset_ids(scene_plan)
+        logger.debug(f"Preparing {len(asset_ids)} scene assets")
+        self._tmp_dir = self.assets.prepare_local_dir(OBJATHOR_ASSETS_DIR, asset_ids)
+
         self.controller = Controller(
             commit_id=THOR_COMMIT_ID,
             agentMode="default",
@@ -49,13 +94,13 @@ class AI2thorObjectController(BaseObjectController):
             height=224,
             fieldOfView=40,
             action_hook_runner=ProceduralAssetHookRunner(
-                asset_directory=str(objathor_assets_dir),
+                asset_directory=str(self._tmp_dir),
                 asset_symlink=True,
                 verbose=True,
             ),
         )
         event = self.controller.reset()
-        logger.debug(f"thor reset success: {event.metadata.get('lastActionSuccess')}, error: {event.metadata.get('errorMessage')}")
+        assert event.metadata.get('lastActionSuccess'), logger.debug(f"thor reset error: {event.metadata.get('errorMessage')}")
 
         scene_object_ids = {obj["id"] for obj in scene_plan.floor_objects}
         logger.debug(f"scene_object_ids: {scene_object_ids}")
@@ -66,6 +111,8 @@ class AI2thorObjectController(BaseObjectController):
         ]
 
     def place_object(self, asset_id: str, receptacle_id: str, rotation: list) -> Optional[dict]:
+        if not self._ensure_asset(asset_id):
+            return None
         generated_id = f"small|{asset_id}"
         spawn_event = self.controller.step(
             action="SpawnAsset",
@@ -106,3 +153,6 @@ class AI2thorObjectController(BaseObjectController):
         if self.controller:
             self.controller.stop()
             self.controller = None
+        if self._tmp_dir and self._tmp_dir.exists():
+            shutil.rmtree(self._tmp_dir, ignore_errors=True)
+            self._tmp_dir = None
