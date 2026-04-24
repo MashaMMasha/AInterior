@@ -12,6 +12,25 @@
   padding: 16px;
   border-bottom: 2px solid var(--color-border);
   background: var(--color-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.new-chat-btn {
+  padding: 0.5rem 1rem;
+  background: white;
+  color: var(--color-primary);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.new-chat-btn:hover {
+  opacity: 0.8;
 }
 
 .chat-title {

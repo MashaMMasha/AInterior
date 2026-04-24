@@ -10,13 +10,13 @@ class ChatService:
     def __init__(self, repository: SessionRepository):
         self._repo = repository
 
-    def start_session(self, user_id: str) -> ChatSession:
+    def start_session(self, user_id: int) -> ChatSession:
         return self._repo.create_session(user_id)
 
     def get_session(self, session_id: str) -> Optional[ChatSession]:
         return self._repo.get_session(session_id)
 
-    def list_sessions(self, user_id: str) -> list[ChatSession]:
+    def list_sessions(self, user_id: int) -> list[ChatSession]:
         return self._repo.list_sessions(user_id)
 
     def start_interaction(self, session_id: str, query: str) -> ChatInteraction:

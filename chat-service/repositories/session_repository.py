@@ -36,7 +36,7 @@ def _session_to_dto(row: SessionRow) -> ChatSession:
     interactions = [_interaction_to_dto(i) for i in row.interactions]
     return ChatSession(
         id=row.session_id,
-        user_id=str(row.user_id),
+        user_id=row.user_id,
         interactions=interactions,
         created_at=row.created_at,
     )

@@ -15,7 +15,7 @@
 <body>
 <div id="info">Loading scene...</div>
 
-<script>window.__OBLLOMOV_API_BASE__ = '/__obllomov_render__';</script>
+<script>window.__OBLLOMOV_API_BASE__ = '/render';</script>
 <script type="importmap">
 {
   "imports": {
@@ -27,15 +27,13 @@
 
 <script type="module">
 (async function initViewerApp() {
-  const API = String(window.__OBLLOMOV_API_BASE__ || '').replace(/\/$/, '');
-  const p = (path) => API + (path.startsWith('/') ? path : `/${path}`);
-
   const { DragControls } = await import('three/addons/controls/DragControls.js');
-  const utilsUrl = new URL(p('/utils.js'), window.location.origin).href;
+  
+  // Используем относительный путь к utils.js
   const {
     initViewer, animate, positionCamera,
     buildFloor, buildWall, buildDoor, buildWindow, buildObject, wallDedupeKey
-  } = await import(utilsUrl);
+  } = await import('./utils.js');
 
   const info = document.getElementById('info');
   const { camera, controls, renderer } = initViewer();
@@ -82,19 +80,21 @@
   });
 
   async function loadScene() {
-    const resp = await fetch(p('/scene.json'));
-    const data = await resp.json();
+    // Эта функция больше не используется - сцена приходит через postMessage
+    info.textContent = 'Waiting for scene data...';
+  }
 
-    info.textContent = `Scene: ${data.query || 'unknown'} | Rooms: ${data.rooms.length} | Walls: ${data.walls.length}`;
+  function renderScene(data) {
+    info.textContent = `Rendering scene... Rooms: ${data.rooms?.length || 0}`;
 
-    for (const room of data.rooms) {
+    for (const room of (data.rooms || [])) {
       buildFloor(room);
     }
-    positionCamera(data.rooms);
+    if (data.rooms) positionCamera(data.rooms);
 
     const seenWallKeys = new Set();
-    for (const wall of data.walls) {
-      if (wall.id.includes('|exterior')) continue;
+    for (const wall of (data.walls || [])) {
+      if (wall.id?.includes('|exterior')) continue;
       const key = wallDedupeKey(wall);
       if (seenWallKeys.has(key)) continue;
       seenWallKeys.add(key);
@@ -116,23 +116,20 @@
       ...(data.small_objects || []),
       ...(data.ceiling_objects || []),
     ];
-    const seenAssets = new Set();
-    const objectPromises = [];
-    for (const obj of data.objects) {
-      if (!obj.asset_id) continue;
-      const key = `${obj.asset_id}_${obj.id}`;
-      if (seenAssets.has(key)) continue;
-      seenAssets.add(key);
-      objectPromises.push(buildObject(obj));
-    }
-    const meshes = await Promise.all(objectPromises);
-    for (const m of meshes) {
-      if (m) draggableObjects.push(m);
-    }
-
-    info.textContent = `Scene: ${data.query || 'unknown'} | Rooms: ${data.rooms.length} | Objects: ${allObjects.length}`;
+    
+    info.textContent = `Scene loaded | Rooms: ${data.rooms?.length || 0} | Objects: ${allObjects.length}`;
   }
 
+  // Listen for postMessage from parent
+  window.addEventListener('message', (event) => {
+    console.log('Received message:', event.data);
+    if (event.data.type === 'LOAD_SCENE' && event.data.scene) {
+      console.log('Loading scene from postMessage:', event.data.scene);
+      renderScene(event.data.scene);
+    }
+  });
+
+  // Не пытаемся загружать scene.json - ждём postMessage
   loadScene();
   animate();
 })();

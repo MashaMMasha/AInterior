@@ -19,7 +19,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 class ChatRequest(BaseModel):
     message: str
-    conversation_id: Optional[str] = None
+    conversation_id: Optional[str] = None  # id сессии чата; если нет — создаётся новая сессия
 
 
 class ChatResponse(BaseModel):
@@ -46,15 +46,24 @@ async def send_message(
     try:
         chat_service = ChatService()
         
+        if request.conversation_id:
+            session = await chat_service.get_session(db, request.conversation_id)
+            if not session or session.user_id != user["id"]:
+                raise HTTPException(status_code=404, detail="Conversation not found")
+            session_id = session.id
+        else:
+            # Нет привязки — новая сессия (другой проект / кнопка «новый чат»)
+            new_session = await chat_service.start_session(db, user["id"])
+            session_id = new_session.id
+        
         # Вызываем agents-service для запуска процесса генерации
         async with httpx.AsyncClient() as client:
             try:
                 payload = {
                     "query": request.message,
-                    "user_id": str(user["id"])
+                    "user_id": user["id"],
+                    "session_id": session_id  # Всегда передаём session_id
                 }
-                if request.conversation_id:
-                    payload["session_id"] = request.conversation_id
                 
                 agents_base = settings.AGENTS_SERVICE_URL.rstrip("/")
                 response = await client.post(
@@ -73,7 +82,7 @@ async def send_message(
 
         return ChatResponse(
             interaction_id=data["interaction_id"],
-            conversation_id=data["session_id"],
+            conversation_id=session_id,  # Используем session_id который мы определили
             status=data["status"],
             timestamp=datetime.utcnow().isoformat()
         )
@@ -123,7 +132,7 @@ async def get_conversation_messages(
         chat_service = ChatService()
         session = await chat_service.get_session(db, conversation_id)
         
-        if not session or session.user_id != str(user["id"]):
+        if not session or session.user_id != user["id"]:
             raise HTTPException(status_code=404, detail="Conversation not found")
         
         messages = []

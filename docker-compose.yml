@@ -298,6 +298,7 @@ services:
       - POSTGRES_DB=ainterior
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
+      - DB_URL=postgresql://user:password@postgres:5432/ainterior
     depends_on:
       minio:
         condition: service_healthy

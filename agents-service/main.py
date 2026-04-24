@@ -59,7 +59,7 @@ app.add_middleware(
 
 class GenerateRequest(BaseModel):
     query: str
-    user_id: str
+    user_id: int
     session_id: Optional[str] = None
 
 

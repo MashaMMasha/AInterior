@@ -26,7 +26,7 @@ class ChatInteraction(BaseModel):
 
 class ChatSession(BaseModel):
     id: str
-    user_id: str
+    user_id: int
     interactions: list[ChatInteraction] = []
     created_at: datetime
 

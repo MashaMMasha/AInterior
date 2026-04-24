@@ -59,11 +59,9 @@ async def update_project(project_id: str, req: ProjectUpdate, user: dict = Depen
         raise HTTPException(status_code=404, detail="Проект не найден")
     
     project = projects_db[project_id]
-    
-    if req.name is not None:
-        project["name"] = req.name
-    if req.objects is not None:
-        project["objects"] = req.objects
+    updates = req.model_dump(exclude_unset=True)
+    for key, value in updates.items():
+        project[key] = value
     
     project["updated_at"] = datetime.now().isoformat()
     

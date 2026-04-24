@@ -148,6 +148,12 @@ export const api = {
     if (!response.ok) throw new Error('Ошибка отправки сообщения');
     return response.json();
   },
+
+  getConversations: async () => {
+    const response = await authFetch(`${CHAT_SERVICE_URL}/chat/conversations`);
+    if (!response.ok) throw new Error('Ошибка получения списка чатов');
+    return response.json();
+  },
   
   getConversationMessages: async (conversationId) => {
     const response = await authFetch(`${CHAT_SERVICE_URL}/chat/conversation/${conversationId}/messages`);

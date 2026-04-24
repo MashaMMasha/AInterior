@@ -16,24 +16,44 @@ export const AppProvider = ({ children }) => {
   const [currentProject, setCurrentProject] = useState(null);
   const [sceneObjects, setSceneObjects] = useState([]);
   const [selectedObject, setSelectedObject] = useState(null);
-  const [chatMessages, setChatMessages] = useState([
-    {
-      type: 'assistant',
-      text: 'Привет! Я помогу вам создать интерьер мечты. Опишите какую мебель или элементы вы хотите добавить в вашу сцену.'
-    }
-  ]);
+  // Убираем дефолтное сообщение - чат будет загружаться через ChatPanel
+  const [chatMessages, setChatMessages] = useState([]);
 
   useEffect(() => {
+    // Всегда загружаем проекты пользователя при открытии
     loadProjects();
   }, []);
+
+  const updateCurrentProject = (partial) => {
+    setCurrentProject((p) => {
+      if (!p) return p;
+      const next = { ...p, ...partial };
+      setProjects((list) => list.map((proj) => (proj.id === p.id ? next : proj)));
+      return next;
+    });
+  };
 
   const loadProjects = async () => {
     try {
       const data = await api.getProjects();
       
       if (data.status === 'success' && data.projects.length > 0) {
-        setProjects(data.projects);
-        setCurrentProject(data.projects[0]);
+        let projs = data.projects;
+        // Один существующий чат без привязки: привязываем к единственному проекту
+        if (projs.length === 1 && projs[0].id !== 'default' && !projs[0].conversation_id) {
+          try {
+            const convs = await api.getConversations();
+            if (convs && convs.length === 1) {
+              const cid = convs[0].conversation_id;
+              await api.updateProject(projs[0].id, { conversation_id: cid });
+              projs = [{ ...projs[0], conversation_id: cid }];
+            }
+          } catch (e) {
+            console.error('Chat migration (link single session) failed:', e);
+          }
+        }
+        setProjects(projs);
+        setCurrentProject(projs[0]);
       } else {
       const defaultProject = {
           id: 'default',
@@ -93,18 +113,24 @@ export const AppProvider = ({ children }) => {
 
   const saveCurrentProject = async () => {
     if (!currentProject) return;
+    if (currentProject.id === 'default') {
+      return;
+    }
 
     const updatedProject = {
-      ...currentProject,
-      objects: sceneObjects.map(obj => ({
+      name: currentProject.name,
+      objects: sceneObjects.map((obj) => ({
         id: obj.id,
         name: obj.name,
         visible: obj.visible,
         position: obj.position,
         rotation: obj.rotation,
         scale: obj.scale
-      }))
+      })),
     };
+    if (currentProject.conversation_id) {
+      updatedProject.conversation_id = currentProject.conversation_id;
+    }
 
     try {
       const data = await api.updateProject(currentProject.id, updatedProject);
@@ -128,16 +154,11 @@ export const AppProvider = ({ children }) => {
     setCurrentProject(project);
     setSceneObjects([]);
     setSelectedObject(null);
-    setChatMessages([
-      {
-        type: 'assistant',
-        text: 'Привет! Я помогу вам создать интерьер мечты. Опишите какую мебель или элементы вы хотите добавить в вашу сцену.'
-      }
-    ]);
+    setChatMessages([]);
   };
 
   const addChatMessage = (type, text) => {
-    setChatMessages(prev => [...prev, { type, text }]);
+    setChatMessages((prev) => [...prev, { type, text }]);
   };
 
   const addSceneObject = (obj) => {
@@ -173,6 +194,8 @@ export const AppProvider = ({ children }) => {
     sceneObjects,
     selectedObject,
     chatMessages,
+    setChatMessages,
+    updateCurrentProject,
     setSelectedObject,
     createProject,
     deleteProject,

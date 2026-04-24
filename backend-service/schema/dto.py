@@ -9,6 +9,7 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     objects: Optional[List[Dict[str, Any]]] = None
+    conversation_id: Optional[str] = None
 
 
 class Project(BaseModel):

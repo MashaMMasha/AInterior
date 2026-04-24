@@ -14,8 +14,9 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
   const cameraRef = useRef(null);
   const rendererRef = useRef(null);
   const controlsRef = useRef(null);
+  const iframeRef = useRef(null);
   const [hasModels, setHasModels] = useState(false);
-  const [viewMode, setViewMode] = useState('local');
+  const [viewMode, setViewMode] = useState('obllomov');
   const { addSceneObject, sceneObjects, addChatMessage } = useApp();
 
   const obllomovSrc = useMemo(
@@ -112,6 +113,26 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
 
   useEffect(() => {
     if (viewMode !== 'local' || !modelToLoad || !sceneRef.current) return;
+    
+    // Если это scene_plan, переключаемся на obllomov режим и отправляем данные
+    if (modelToLoad.type === 'scene_plan') {
+      console.log('Switching to obllomov mode and loading scene:', modelToLoad.data);
+      setViewMode('obllomov');
+      // Подождём пока iframe загрузится, затем отправим данные
+      setTimeout(() => {
+        if (iframeRef.current && iframeRef.current.contentWindow) {
+          console.log('Sending scene to iframe via postMessage');
+          iframeRef.current.contentWindow.postMessage({
+            type: 'LOAD_SCENE',
+            scene: modelToLoad.data
+          }, '*');
+        } else {
+          console.error('iframe not ready');
+        }
+      }, 1000);
+      return;
+    }
+    
     loadModel(modelToLoad.url, modelToLoad.filename);
   }, [modelToLoad, viewMode]);
 
@@ -257,7 +278,7 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
         </button>
       </div>
       {viewMode === 'obllomov' && (
-        <iframe className="viewer-iframe" title="AInterior render scene" src={obllomovSrc} />
+        <iframe ref={iframeRef} className="viewer-iframe" title="AInterior render scene" src={obllomovSrc} />
       )}
       {viewMode === 'local' && !hasModels && (
         <div className="empty-state">

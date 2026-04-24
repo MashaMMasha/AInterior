@@ -12,7 +12,7 @@ class SessionRepository:
     def __init__(self, engine: Engine):
         self._engine = engine
 
-    def create_session(self, user_id: str) -> ChatSession:
+    def create_session(self, user_id: int) -> ChatSession:
         session_id = uuid4().hex
         with Session(self._engine) as s:
             row = SessionRow(session_id=session_id, user_id=user_id)
@@ -32,7 +32,7 @@ class SessionRepository:
                 return None
             return self._to_chat_session(row)
 
-    def list_sessions(self, user_id: str) -> list[ChatSession]:
+    def list_sessions(self, user_id: int) -> list[ChatSession]:
         with Session(self._engine) as s:
             rows = s.execute(
                 select(SessionRow).where(SessionRow.user_id == user_id)
