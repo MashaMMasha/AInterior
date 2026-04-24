@@ -110,7 +110,7 @@ class WallObjectPlanner(BasePlanner):
         grid_size = max(room_x // 20, room_z // 20)
 
         solver = DFS_Solver_Wall(grid_size=grid_size, max_duration=5, constraint_bouns=100)
-        solutions = solver.get_solution(room_poly.to_shapely(), wall_objects_list, constraints, initial_state)
+        solutions = solver.get_solution(room_poly, wall_objects_list, constraints, initial_state)
 
         return self._solutions_to_entries(solutions, wall_object_name2id, room_id)
 
@@ -173,15 +173,14 @@ class WallObjectPlanner(BasePlanner):
         return entries
 
     def _get_initial_state(self, scene_plan: ScenePlan, room_poly: Polygon2D) -> dict:
-        shapely_poly = room_poly.to_shapely()
         initial_state = {}
         i = 0
 
         for door in scene_plan.doors:
             for door_box in door.door_boxes:
                 door_verts = [(x * 100, z * 100) for x, z in door_box]
-                door_poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in door_verts])
-                if shapely_poly.contains(door_poly.to_shapely().centroid):
+                door_poly = Polygon2D.from_tuples(door_verts)
+                if room_poly.contains(door_poly.centroid):
                     door_height = door.asset_position.y * 100 * 2
                     x_min, z_min, x_max, z_max = door_poly.bounds
                     initial_state[f"door-{i}"] = (
@@ -192,8 +191,8 @@ class WallObjectPlanner(BasePlanner):
         for window in scene_plan.windows:
             for window_box in window.window_boxes:
                 window_verts = [(x * 100, z * 100) for x, z in window_box]
-                window_poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in window_verts])
-                if shapely_poly.contains(window_poly.to_shapely().centroid):
+                window_poly = Polygon2D.from_tuples(window_verts)
+                if room_poly.contains(window_poly.centroid):
                     y_min = window.hole_polygon[0].y * 100
                     y_max = window.hole_polygon[1].y * 100
                     x_min, z_min, x_max, z_max = window_poly.bounds
@@ -206,8 +205,8 @@ class WallObjectPlanner(BasePlanner):
         if open_walls:
             for open_box in open_walls.open_wall_boxes:
                 open_verts = [(x * 100, z * 100) for x, z in open_box]
-                open_poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in open_verts])
-                if shapely_poly.contains(open_poly.to_shapely().centroid):
+                open_poly = Polygon2D.from_tuples(open_verts)
+                if room_poly.contains(open_poly.centroid):
                     x_min, z_min, x_max, z_max = open_poly.bounds
                     initial_state[f"open-{i}"] = (
                         (x_min, 0, z_min),
@@ -219,8 +218,8 @@ class WallObjectPlanner(BasePlanner):
         for obj in scene_plan.floor_objects:
             if not obj.vertices:
                 continue
-            obj_poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in obj.vertices])
-            if shapely_poly.contains(obj_poly.to_shapely().centroid):
+            obj_poly = Polygon2D.from_tuples(obj.vertices)
+            if room_poly.contains(obj_poly.centroid):
                 obj_height = obj.position.y * 100 * 2
                 x_min, z_min, x_max, z_max = obj_poly.bounds
                 initial_state[obj.object_name] = (

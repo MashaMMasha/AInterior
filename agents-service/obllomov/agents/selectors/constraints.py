@@ -101,7 +101,7 @@ class FloorPlacementConstraint(Constraint):
         initial_state = solver._convert_initial_state(self._initial_state)
         room_poly = Polygon2D(
             vertices=[Vertex2D(x=v[0], z=v[1]) for v in self._room_vertices]
-        ).to_shapely()
+        )
 
         grid_points = solver.create_grids(room_poly)
         grid_points = solver.remove_points(grid_points, initial_state)
@@ -147,7 +147,7 @@ class WallPlacementConstraint(Constraint):
         initial_state = solver._convert_initial_state(self._initial_state)
         room_poly = Polygon2D(
             vertices=[Vertex2D(x=v[0], z=v[1]) for v in self._room_vertices]
-        ).to_shapely()
+        )
 
         grid_points = solver.create_grids(room_poly)
 

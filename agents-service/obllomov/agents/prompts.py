@@ -90,7 +90,7 @@ Here are some guidelines for you:
 Now I want you to design {room_type} and the room size is {room_size}.
 Here are the objects that I want to place in the {room_type}:
 {objects}
-Please first use natural language to explain your high-level design strategy, and then follow the desired format *strictly* (do not add any additional text at the beginning or end) to provide the constraints for each object."""
+"""
 
 
 wall_object_selection_prompt = """Assist me in selecting wall-based objects to furnish each room.
@@ -107,15 +107,14 @@ Please help me arrange wall objects in the room by providing their relative posi
 Note the distance is the distance from the *bottom* of the wall object to the floor. The second column is optional and can be N/A. The object of the same type should be placed at the same height.
 Now I am designing {room_type} of which the wall height is {wall_height} cm, and the floor objects in the room are: {floor_objects}.
 The wall objects I want to place in the {room_type} are: {wall_objects}.
-Please do not add additional text at the beginning or in the end."""
+"""
 
 
 ceiling_selection_prompt = """Assist me in selecting ceiling objects (light/fan) to furnish each room.
 
 Currently, the design in progress is "{query}", featuring these rooms: {rooms}. You need to provide one ceiling object for each room.
 Please also consider the following additional requirements: {additional_requirements}.
-
-Your response should be precise, without additional text at the beginning or end. """
+"""
 
 
 small_object_selection_prompt = """As an experienced room designer, you are tasked to bring life into the room by strategically placing more *small* objects. Those objects should only be arranged *on top of* large objects which serve as receptacles. 

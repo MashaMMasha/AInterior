@@ -89,7 +89,7 @@ class FloorObjectPlanner(BasePlanner):
         initial_state = self._get_initial_state(scene_plan, room_poly)
 
         solver = DFS_Solver_Floor(grid_size=grid_size, max_duration=30, constraint_bouns=1)
-        solution = solver.get_solution(room_poly.to_shapely(), objects_list, constraints, initial_state)
+        solution = solver.get_solution(room_poly, objects_list, constraints, initial_state)
 
         return self._solution_to_placements(solution, object_name2id, room_id)
 

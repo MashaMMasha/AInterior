@@ -155,6 +155,16 @@ class Segment2D(BaseModel):
             Vertex3D(x=self.v2.x, y=0, z=self.v2.z),
         ]
 
+    def sample_points(self, step: float) -> list[Vertex2D]:
+        d = self.direction_vector
+        seg_len = self.length
+        points = []
+        t = 0.0
+        while t < seg_len:
+            points.append(Vertex2D(x=self.v1.x + d[0] * t, z=self.v1.z + d[1] * t))
+            t += step
+        return points
+
 
 class Polygon2D(BaseModel):
     vertices: list[Vertex2D]
@@ -214,6 +224,43 @@ class Polygon2D(BaseModel):
         return Polygon2D(
             vertices=[v.scaled(factor) for v in self.vertices]
         )
+
+    @classmethod
+    def from_box(cls, min_x: float, min_z: float, max_x: float, max_z: float) -> "Polygon2D":
+        return cls(vertices=[
+            Vertex2D(x=min_x, z=min_z),
+            Vertex2D(x=max_x, z=min_z),
+            Vertex2D(x=max_x, z=max_z),
+            Vertex2D(x=min_x, z=max_z),
+        ])
+
+    @classmethod
+    def from_tuples(cls, coords: list[tuple]) -> "Polygon2D":
+        if coords and len(coords) > 1 and coords[0] == coords[-1]:
+            coords = coords[:-1]
+        return cls(vertices=[Vertex2D(x=c[0], z=c[1]) for c in coords])
+
+    def to_tuples(self) -> list[tuple[float, float]]:
+        return [v.to_tuple() for v in self.vertices]
+
+    def exterior_coords(self) -> list[tuple[float, float]]:
+        coords = self.to_tuples()
+        coords.append(coords[0])
+        return coords
+
+    def intersects_polygon(self, other: "Polygon2D") -> bool:
+        return self.to_shapely().intersects(other.to_shapely())
+
+    def boundary_distance(self, point: Vertex2D) -> float:
+        return self.to_shapely().boundary.distance(Point(point.x, point.z))
+
+    def boundary_contains(self, point: Vertex2D) -> bool:
+        return self.to_shapely().boundary.contains(Point(point.x, point.z))
+
+    def intersects_ray(self, origin: Vertex2D, direction: Vertex2D) -> bool:
+        far = Vertex2D(x=origin.x + direction.x * 1e6, z=origin.z + direction.z * 1e6)
+        ray = LineString([origin.to_tuple(), far.to_tuple()])
+        return ray.intersects(self.to_shapely())
 
 
 def sort_vertices_clockwise(vertices: list[Vertex2D]) -> list[Vertex2D]:

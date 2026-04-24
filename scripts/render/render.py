@@ -66,6 +66,8 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
             self._handle_editing_start()
         elif path == "/editing/move":
             self._handle_editing_move(body)
+        elif path == "/editing/stop":
+            self._handle_editing_stop()
         else:
             self.send_error(404)
 
@@ -77,7 +79,9 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
         return json.loads(raw)
 
     def _handle_editing_start(self):
+        chat.complete_editing_interactions(args.session_id)
         interaction = chat.start_interaction(args.session_id, "user_editing")
+        chat.set_interaction_status(interaction.id, "user_editing")
         scene = chat.get_last_scene_json(args.session_id)
         if scene:
             chat.save_stage_dict(interaction.id, "editing_start", scene)
@@ -116,6 +120,10 @@ class SceneHandler(http.server.BaseHTTPRequestHandler):
             return
 
         chat.save_stage_dict(interaction_id, f"move_{object_id}", scene)
+        self._respond(json.dumps({"ok": True}).encode(), "application/json")
+
+    def _handle_editing_stop(self):
+        chat.complete_editing_interactions(args.session_id)
         self._respond(json.dumps({"ok": True}).encode(), "application/json")
 
     def _serve_local_file(self, filepath, content_type):

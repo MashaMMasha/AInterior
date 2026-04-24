@@ -19,7 +19,7 @@ from obllomov.agents.planners.controllers import AI2thorObjectController
 from obllomov.agents.retrievers import (BaseRetriever, ItemRetriever,
                                         ObjathorRetriever, ObjectRetriever)
 from obllomov.agents.selectors import MaterialSelector, ObjectSelector
-from obllomov.agents.editors import SceneEditor
+from obllomov.agents.editors import EditorToolkit, SceneEditor
 
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
 from obllomov.schemas.domain.scene import ScenePlan
@@ -153,12 +153,8 @@ class ObLLoMov:
         self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations, self.object_controller)
 
     def _init_editors(self):
-        self.editor = SceneEditor(self.llm, 
-                                  self.material_selector, 
-                                  self.objathor_retriever, 
-                                  self.annotations, 
-                                  max_steps=4
-                                  )
+        toolkit = EditorToolkit(self.material_selector, self.objathor_retriever, self.annotations)
+        self.editor = SceneEditor(self.llm, toolkit, max_steps=4)
 
 
     def _default_procedural_parameters(self) -> dict:

@@ -12,8 +12,14 @@ from procthor.utils.types import Vector3
 from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.shared.log import logger
 from obllomov.shared.path import OBJATHOR_ASSETS_DIR
-from obllomov.shared.utils import THOR_COMMIT_ID
 from obllomov.storage.assets import BaseAssets
+
+from obllomov.shared.path import ASSETS_VERSION, HOLODECK_BASE_DATA_DIR
+
+if ASSETS_VERSION > "2023_09_23":
+    THOR_COMMIT_ID = "8524eadda94df0ab2dbb2ef5a577e4d37c712897"
+else:
+    THOR_COMMIT_ID = "3213d486cd09bcbafce33561997355983bdf8d1a"
 
 
 class BaseObjectController(ABC):

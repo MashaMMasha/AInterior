@@ -107,15 +107,15 @@ class SmallObjectPlanner(BasePlanner):
                 [f"a 3D model of {object_name}"], topk=80
             )
             candidates = list(zip(items[0], scores[0]))
-            logger.debug(f"  {object_name}: {len(candidates)} raw candidates")
+            # logger.debug(f"  {object_name}: {len(candidates)} raw candidates")
             on_object = [c for c in candidates if self.annotations[c[0]].onObject]
-            logger.debug(f"  {object_name}: {len(on_object)} onObject candidates")
+            # logger.debug(f"  {object_name}: {len(on_object)} onObject candidates")
             candidates = [
                 c for c in on_object
                 if self.annotations[c[0]].bbox.x < receptacle_dims.x * 0.9
                 and self.annotations[c[0]].bbox.z < receptacle_dims.z * 0.9
             ]
-            logger.debug(f"  {object_name}: {len(candidates)} size-filtered (recept: {receptacle_dims.x:.3f}x{receptacle_dims.z:.3f})")
+            # logger.debug(f"  {object_name}: {len(candidates)} size-filtered (recept: {receptacle_dims.x:.3f}x{receptacle_dims.z:.3f})")
 
             if not candidates:
                 continue

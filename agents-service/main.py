@@ -22,17 +22,32 @@ from obllomov.storage.db.engine import create_db_engine
 from obllomov.storage.db.repository import SessionRepository
 
 
-engine = create_db_engine(env.DB_URL)
-repo = SessionRepository(engine)
-chat = ChatService(repo)
-
-# llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
-llm = ChatMock()
-assets = LocalAssets()
-obllomov = ObLLoMov(llm, assets)
+engine = None
+chat = None
+obllomov = None
 
 
-app = FastAPI(title="AInterior Agents Service", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app):
+    global engine, chat, obllomov
+
+    engine = create_db_engine(env.DB_URL)
+    repo = SessionRepository(engine)
+    chat = ChatService(repo)
+
+    llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
+    # llm = ChatMock()
+    assets = LocalAssets()
+    obllomov = ObLLoMov(llm, assets)
+
+    logger.info("Service started")
+    yield
+
+    engine.dispose()
+    logger.info("Service stopped")
+
+
+app = FastAPI(title="AInterior Agents Service", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,8 +91,10 @@ async def _run_generation(
             callback=callback,
             async_callback=async_callback,
         )
+        chat.complete_interaction(interaction_id)
     except Exception as e:
         logger.error(f"Generation failed: {e}")
+        chat.fail_interaction(interaction_id)
         callback.on_error(e)
         if async_callback:
             await async_callback.on_error(e)
@@ -96,6 +113,10 @@ async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
     else:
         session = chat.start_session(req.user_id)
         session_id = session.id
+
+    chat.complete_editing_interactions(session_id)
+    if chat.has_active_interaction(session_id):
+        raise HTTPException(status_code=409, detail="Session already has an active request")
 
     interaction = chat.start_interaction(session_id, req.query)
 
@@ -131,6 +152,10 @@ async def edit(req: EditRequest, background_tasks: BackgroundTasks):
     from obllomov.schemas.domain.scene import ScenePlan
     scene_plan = ScenePlan.from_json(last_scene_json)
 
+    chat.complete_editing_interactions(req.session_id)
+    if chat.has_active_interaction(req.session_id):
+        raise HTTPException(status_code=409, detail="Session already has an active request")
+
     interaction = chat.start_interaction(req.session_id, req.query)
 
     background_tasks.add_task(
@@ -162,8 +187,10 @@ async def _run_edit(
             scene_plan=scene_plan,
             callback=callback,
         )
+        chat.complete_interaction(interaction_id)
     except Exception as e:
         logger.error(f"Edit failed: {e}")
+        chat.fail_interaction(interaction_id)
         callback.on_error(e)
 
 

@@ -6,10 +6,8 @@ from dataclasses import dataclass, fields
 import numpy as np
 from rtree import index
 from scipy.interpolate import interp1d
-from shapely.geometry import LineString, Point, Polygon, box
-from shapely.ops import substring
 
-from obllomov.shared.geometry import Box3D, Polygon2D, Vertex3D
+from obllomov.shared.geometry import Box3D, Polygon2D, Segment2D, Vertex2D, Vertex3D
 from obllomov.shared.log import logger
 
 MIN_FRONT_WALL_DISTANCE = 30
@@ -17,6 +15,13 @@ WALL_OFFSET = 4.5
 NEAR_DISTANCE_THRESHOLD = 80
 ALIGNMENT_EPSILON = 5
 DEFAULT_BRANCH_FACTOR = 30
+
+UNIT_VECTORS = {
+    0: np.array([0.0, 1.0]),
+    90: np.array([1.0, 0.0]),
+    180: np.array([0.0, -1.0]),
+    270: np.array([-1.0, 0.0]),
+}
 
 
 class SolutionFound(Exception):
@@ -41,6 +46,10 @@ class FloorPlacement:
     def __iter__(self):
         return iter((self.center, self.rotation, self.coords, self.score))
 
+    @property
+    def polygon(self) -> Polygon2D:
+        return Polygon2D.from_tuples(list(self.coords))
+
 
 @dataclass
 class WallPlacement:
@@ -59,6 +68,10 @@ class WallPlacement:
 
     def __iter__(self):
         return iter((self.vertex_min, self.vertex_max, self.rotation, self.coords, self.score))
+
+    @property
+    def polygon(self) -> Polygon2D:
+        return Polygon2D.from_tuples(list(self.coords))
 
 
 class BaseDFSSolver:
@@ -109,13 +122,13 @@ class DFS_Solver_Floor(BaseDFSSolver):
             for k, v in initial_state.items()
         }
 
-    def get_solution(self, bounds, objects_list, constraints, initial_state, use_milp=False):
+    def get_solution(self, room_poly: Polygon2D, objects_list, constraints, initial_state, use_milp=False):
         initial_state = self._convert_initial_state(initial_state)
         self.start_time = time.time()
-        grid_points = self.create_grids(bounds)
+        grid_points = self.create_grids(room_poly)
         grid_points = self.remove_points(grid_points, initial_state)
         try:
-            self.dfs(bounds, objects_list, constraints, grid_points, initial_state, DEFAULT_BRANCH_FACTOR)
+            self.dfs(room_poly, objects_list, constraints, grid_points, initial_state, DEFAULT_BRANCH_FACTOR)
         except SolutionFound:
             logger.info(f"Time taken: {time.time() - self.start_time:.2f}s")
 
@@ -223,28 +236,28 @@ class DFS_Solver_Floor(BaseDFSSolver):
         min_x, min_z, max_x, max_z = room_poly.bounds
         grid_points = []
         for x in range(int(min_x), int(max_x), self.grid_size):
-            for y in range(int(min_z), int(max_z), self.grid_size):
-                if room_poly.contains(Point(x, y)):
-                    grid_points.append((x, y))
+            for z in range(int(min_z), int(max_z), self.grid_size):
+                if room_poly.contains(Vertex2D(x=x, z=z)):
+                    grid_points.append((x, z))
         return grid_points
 
     def remove_points(self, grid_points, objects_dict):
         idx = index.Index()
         polygons = []
         for i, obj in enumerate(objects_dict.values()):
-            poly = Polygon(obj.coords)
+            poly = obj.polygon
             idx.insert(i, poly.bounds)
             polygons.append(poly)
 
         valid_points = []
         for point in grid_points:
-            p = Point(point)
-            candidates = [polygons[i] for i in idx.intersection(p.bounds)]
-            if not any(c.contains(p) for c in candidates):
+            pt = Vertex2D(x=point[0], z=point[1])
+            candidates = [polygons[i] for i in idx.intersection((point[0], point[1], point[0], point[1]))]
+            if not any(c.contains(pt) for c in candidates):
                 valid_points.append(point)
         return valid_points
 
-    def get_all_solutions(self, room_poly, grid_points, object_dim):
+    def get_all_solutions(self, room_poly: Polygon2D, grid_points, object_dim):
         obj_length, obj_width = object_dim
         obj_half_length, obj_half_width = obj_length / 2, obj_width / 2
 
@@ -258,32 +271,37 @@ class DFS_Solver_Floor(BaseDFSSolver):
         solutions = []
         for rotation in [0, 90, 180, 270]:
             for point in grid_points:
-                cx, cy = point
+                cx, cz = point
                 ll, ur = rotation_adjustments[rotation]
-                lower_left = (cx + ll[0], cy + ll[1])
-                upper_right = (cx + ur[0], cy + ur[1])
-                obj_box = box(*lower_left, *upper_right)
+                lower_left = (cx + ll[0], cz + ll[1])
+                upper_right = (cx + ur[0], cz + ur[1])
+                obj_box = Polygon2D.from_box(
+                    min(lower_left[0], upper_right[0]),
+                    min(lower_left[1], upper_right[1]),
+                    max(lower_left[0], upper_right[0]),
+                    max(lower_left[1], upper_right[1]),
+                )
 
-                if room_poly.contains(obj_box):
+                if room_poly.contains_polygon(obj_box):
                     solutions.append(FloorPlacement(
                         center=point,
                         rotation=rotation,
-                        coords=tuple(obj_box.exterior.coords[:]),
+                        coords=tuple(obj_box.exterior_coords()),
                         score=1,
                     ))
         return solutions
 
     def filter_collision(self, objects_dict, solutions):
-        object_polygons = [Polygon(obj.coords) for obj in objects_dict.values()]
+        object_polygons = [obj.polygon for obj in objects_dict.values()]
 
         valid = []
         for sol in solutions:
-            sol_poly = Polygon(sol.coords)
-            if not any(sol_poly.intersects(op) for op in object_polygons):
+            sol_poly = sol.polygon
+            if not any(sol_poly.intersects_polygon(op) for op in object_polygons):
                 valid.append(sol)
         return valid
 
-    def filter_facing_wall(self, room_poly, solutions, obj_dim):
+    def filter_facing_wall(self, room_poly: Polygon2D, solutions, obj_dim):
         obj_half_width = obj_dim[1] / 2
         front_center_adjustments = {
             0: (0, obj_half_width),
@@ -294,14 +312,14 @@ class DFS_Solver_Floor(BaseDFSSolver):
 
         valid = []
         for sol in solutions:
-            cx, cy = sol.center
-            dx, dy = front_center_adjustments[sol.rotation]
-            front_dist = room_poly.boundary.distance(Point(cx + dx, cy + dy))
+            cx, cz = sol.center
+            dx, dz = front_center_adjustments[sol.rotation]
+            front_dist = room_poly.boundary_distance(Vertex2D(x=cx + dx, z=cz + dz))
             if front_dist >= MIN_FRONT_WALL_DISTANCE:
                 valid.append(sol)
         return valid
 
-    def place_edge(self, room_poly, solutions, obj_dim):
+    def place_edge(self, room_poly: Polygon2D, solutions, obj_dim):
         obj_half_width = obj_dim[1] / 2
         back_center_adjustments = {
             0: (0, -obj_half_width),
@@ -312,19 +330,19 @@ class DFS_Solver_Floor(BaseDFSSolver):
 
         valid = []
         for sol in solutions:
-            cx, cy = sol.center
-            dx, dy = back_center_adjustments[sol.rotation]
-            back_x, back_y = cx + dx, cy + dy
+            cx, cz = sol.center
+            dx, dz = back_center_adjustments[sol.rotation]
+            back_x, back_z = cx + dx, cz + dz
 
-            back_dist = room_poly.boundary.distance(Point(back_x, back_y))
-            center_dist = room_poly.boundary.distance(Point(cx, cy))
+            back_dist = room_poly.boundary_distance(Vertex2D(x=back_x, z=back_z))
+            center_dist = room_poly.boundary_distance(Vertex2D(x=cx, z=cz))
 
             if back_dist <= self.grid_size and back_dist < center_dist:
-                center2back = np.array([back_x - cx, back_y - cy])
+                center2back = np.array([back_x - cx, back_z - cz])
                 center2back /= np.linalg.norm(center2back)
                 offset = center2back * (back_dist + WALL_OFFSET)
 
-                new_center = (cx + offset[0], cy + offset[1])
+                new_center = (cx + offset[0], cz + offset[1])
                 new_coords = tuple(
                     (c[0] + offset[0], c[1] + offset[1]) for c in sol.coords
                 )
@@ -337,41 +355,41 @@ class DFS_Solver_Floor(BaseDFSSolver):
         return valid
 
     def place_relative(self, place_type, target_object, solutions):
-        target_polygon = Polygon(target_object.coords)
-        min_x, min_y, max_x, max_y = target_polygon.bounds
+        target_polygon = target_object.polygon
+        min_x, min_z, max_x, max_z = target_polygon.bounds
         mean_x = (min_x + max_x) / 2
-        mean_y = (min_y + max_y) / 2
+        mean_z = (min_z + max_z) / 2
         target_rotation = target_object.rotation
 
         comparison_dict = {
             "left of": {
-                0: lambda s: s[0] < min_x and min_y <= s[1] <= max_y,
-                90: lambda s: s[1] > max_y and min_x <= s[0] <= max_x,
-                180: lambda s: s[0] > max_x and min_y <= s[1] <= max_y,
-                270: lambda s: s[1] < min_y and min_x <= s[0] <= max_x,
+                0: lambda s: s[0] < min_x and min_z <= s[1] <= max_z,
+                90: lambda s: s[1] > max_z and min_x <= s[0] <= max_x,
+                180: lambda s: s[0] > max_x and min_z <= s[1] <= max_z,
+                270: lambda s: s[1] < min_z and min_x <= s[0] <= max_x,
             },
             "right of": {
-                0: lambda s: s[0] > max_x and min_y <= s[1] <= max_y,
-                90: lambda s: s[1] < min_y and min_x <= s[0] <= max_x,
-                180: lambda s: s[0] < min_x and min_y <= s[1] <= max_y,
-                270: lambda s: s[1] > max_y and min_x <= s[0] <= max_x,
+                0: lambda s: s[0] > max_x and min_z <= s[1] <= max_z,
+                90: lambda s: s[1] < min_z and min_x <= s[0] <= max_x,
+                180: lambda s: s[0] < min_x and min_z <= s[1] <= max_z,
+                270: lambda s: s[1] > max_z and min_x <= s[0] <= max_x,
             },
             "in front of": {
-                0: lambda s: s[1] > max_y and mean_x - self.grid_size < s[0] < mean_x + self.grid_size,
-                90: lambda s: s[0] > max_x and mean_y - self.grid_size < s[1] < mean_y + self.grid_size,
-                180: lambda s: s[1] < min_y and mean_x - self.grid_size < s[0] < mean_x + self.grid_size,
-                270: lambda s: s[0] < min_x and mean_y - self.grid_size < s[1] < mean_y + self.grid_size,
+                0: lambda s: s[1] > max_z and mean_x - self.grid_size < s[0] < mean_x + self.grid_size,
+                90: lambda s: s[0] > max_x and mean_z - self.grid_size < s[1] < mean_z + self.grid_size,
+                180: lambda s: s[1] < min_z and mean_x - self.grid_size < s[0] < mean_x + self.grid_size,
+                270: lambda s: s[0] < min_x and mean_z - self.grid_size < s[1] < mean_z + self.grid_size,
             },
             "behind": {
-                0: lambda s: s[1] < min_y and min_x <= s[0] <= max_x,
-                90: lambda s: s[0] < min_x and min_y <= s[1] <= max_y,
-                180: lambda s: s[1] > max_y and min_x <= s[0] <= max_x,
-                270: lambda s: s[0] > max_x and min_y <= s[1] <= max_y,
+                0: lambda s: s[1] < min_z and min_x <= s[0] <= max_x,
+                90: lambda s: s[0] < min_x and min_z <= s[1] <= max_z,
+                180: lambda s: s[1] > max_z and min_x <= s[0] <= max_x,
+                270: lambda s: s[0] > max_x and min_z <= s[1] <= max_z,
             },
             "side of": {
-                0: lambda s: min_y <= s[1] <= max_y,
+                0: lambda s: min_z <= s[1] <= max_z,
                 90: lambda s: min_x <= s[0] <= max_x,
-                180: lambda s: min_y <= s[1] <= max_y,
+                180: lambda s: min_z <= s[1] <= max_z,
                 270: lambda s: min_x <= s[0] <= max_x,
             },
         }
@@ -388,13 +406,13 @@ class DFS_Solver_Floor(BaseDFSSolver):
         return valid
 
     def place_distance(self, distance_type, target_object, solutions):
-        target_poly = Polygon(target_object.coords)
+        target_poly = target_object.polygon
         valid = []
         distances = []
 
         for sol in solutions:
-            sol_poly = Polygon(sol.coords)
-            dist = target_poly.distance(sol_poly)
+            sol_poly = sol.polygon
+            dist = target_poly.to_shapely().distance(sol_poly.to_shapely())
             distances.append(dist)
             sol.score = dist
             valid.append(sol)
@@ -436,18 +454,13 @@ class DFS_Solver_Floor(BaseDFSSolver):
         return []
 
     def _place_face_to(self, target_object, solutions):
-        unit_vectors = {
-            0: np.array([0.0, 1.0]),
-            90: np.array([1.0, 0.0]),
-            180: np.array([0.0, -1.0]),
-            270: np.array([-1.0, 0.0]),
-        }
-        target_poly = Polygon(target_object.coords)
+        target_poly = target_object.polygon
         valid = []
         for sol in solutions:
-            far_point = np.array(sol.center) + 1e6 * unit_vectors[sol.rotation]
-            half_line = LineString([sol.center, far_point])
-            if half_line.intersects(target_poly):
+            direction = UNIT_VECTORS[sol.rotation]
+            origin = Vertex2D(x=sol.center[0], z=sol.center[1])
+            ray_dir = Vertex2D(x=direction[0], z=direction[1])
+            if target_poly.intersects_ray(origin, ray_dir):
                 sol.score += self.constraint_bouns
                 valid.append(sol)
         return valid
@@ -470,11 +483,11 @@ class DFS_Solver_Floor(BaseDFSSolver):
         return valid
 
     def place_alignment_center(self, alignment_type, target_object, solutions):
-        tx, ty = target_object.center
+        tx, tz = target_object.center
         valid = []
         for sol in solutions:
-            sx, sy = sol.center
-            if abs(sx - tx) < ALIGNMENT_EPSILON or abs(sy - ty) < ALIGNMENT_EPSILON:
+            sx, sz = sol.center
+            if abs(sx - tx) < ALIGNMENT_EPSILON or abs(sz - tz) < ALIGNMENT_EPSILON:
                 sol.score += self.constraint_bouns
                 valid.append(sol)
         return valid
@@ -498,7 +511,7 @@ class DFS_Solver_Wall(BaseDFSSolver):
             for k, v in initial_state.items()
         }
 
-    def get_solution(self, room_poly, wall_objects_list, constraints, initial_state):
+    def get_solution(self, room_poly: Polygon2D, wall_objects_list, constraints, initial_state):
         initial_state = self._convert_initial_state(initial_state)
         grid_points = self.create_grids(room_poly)
         self.start_time = time.time()
@@ -549,18 +562,14 @@ class DFS_Solver_Wall(BaseDFSSolver):
             all_solutions.sort(key=lambda p: p.score, reverse=True)
         return all_solutions
 
-    def create_grids(self, room_poly):
-        poly_coords = list(room_poly.exterior.coords)
+    def create_grids(self, room_poly: Polygon2D):
         grid_points = []
-        for i in range(len(poly_coords) - 1):
-            line = LineString([poly_coords[i], poly_coords[i + 1]])
-            for j in range(0, int(line.length), self.grid_size):
-                point_on_line = substring(line, j, j)
-                if point_on_line:
-                    grid_points.append((point_on_line.x, point_on_line.y))
+        for seg in room_poly.segments():
+            for pt in seg.sample_points(self.grid_size):
+                grid_points.append(pt.to_tuple())
         return grid_points
 
-    def get_all_solutions(self, room_poly, grid_points, object_dim, height):
+    def get_all_solutions(self, room_poly: Polygon2D, grid_points, object_dim, height):
         obj_length, obj_height, obj_width = object_dim
         obj_half_length = obj_length / 2
 
@@ -574,17 +583,22 @@ class DFS_Solver_Wall(BaseDFSSolver):
         solutions = []
         for rotation in [0, 90, 180, 270]:
             for point in grid_points:
-                cx, cy = point
+                cx, cz = point
                 ll, ur = rotation_adjustments[rotation]
-                lower_left = (cx + ll[0], cy + ll[1])
-                upper_right = (cx + ur[0], cy + ur[1])
-                obj_box = box(*lower_left, *upper_right)
+                lower_left = (cx + ll[0], cz + ll[1])
+                upper_right = (cx + ur[0], cz + ur[1])
+                obj_box = Polygon2D.from_box(
+                    min(lower_left[0], upper_right[0]),
+                    min(lower_left[1], upper_right[1]),
+                    max(lower_left[0], upper_right[0]),
+                    max(lower_left[1], upper_right[1]),
+                )
 
-                if room_poly.contains(obj_box):
-                    obj_coords = obj_box.exterior.coords[:]
+                if room_poly.contains_polygon(obj_box):
+                    obj_coords = obj_box.exterior_coords()
                     on_edge = [
                         c for c in obj_coords
-                        if room_poly.boundary.contains(Point(c))
+                        if room_poly.boundary_contains(Vertex2D(x=c[0], z=c[1]))
                     ]
                     if len(set(on_edge)) >= 2:
                         solutions.append(WallPlacement(

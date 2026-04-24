@@ -401,7 +401,7 @@ class ChatMock(BaseChatModel):
 
     def invoke(self, input_data: Any, config=None, **kwargs) -> BaseModel:
         if self._current_schema is None:
-            raise ValueError("No schema set. Call with_structured_output first.")
+            return AIMessage(content="No changes needed. Edit complete.")
 
         schema_name = self._current_schema.__name__
 

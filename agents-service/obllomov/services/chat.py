@@ -22,6 +22,21 @@ class ChatService:
     def start_interaction(self, session_id: str, query: str) -> ChatInteraction:
         return self._repo.add_interaction(session_id, query)
 
+    def has_active_interaction(self, session_id: str) -> bool:
+        return self._repo.has_active_interaction(session_id)
+
+    def complete_interaction(self, interaction_id: int):
+        self._repo.update_interaction_status(interaction_id, "done")
+
+    def fail_interaction(self, interaction_id: int):
+        self._repo.update_interaction_status(interaction_id, "error")
+
+    def set_interaction_status(self, interaction_id: int, status: str):
+        self._repo.update_interaction_status(interaction_id, status)
+
+    def complete_editing_interactions(self, session_id: str):
+        self._repo.complete_editing_interactions(session_id)
+
     def save_stage(
         self,
         interaction_id: int,
