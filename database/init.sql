@@ -112,26 +112,33 @@ CREATE INDEX IF NOT EXISTS idx_generation_progress_user_id ON interior.generatio
 CREATE INDEX IF NOT EXISTS idx_generation_progress_status ON interior.generation_progress(status);
 
 -- Chat schema tables
-CREATE TABLE IF NOT EXISTS chat.conversations (
-    id SERIAL PRIMARY KEY,
-    conversation_id UUID UNIQUE NOT NULL,
+CREATE TABLE IF NOT EXISTS chat.sessions (
+    session_id VARCHAR(36) PRIMARY KEY,
     user_id INTEGER REFERENCES users.users(id) ON DELETE CASCADE,
-    title VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS chat.messages (
-    id SERIAL PRIMARY KEY,
-    message_id UUID UNIQUE NOT NULL,
-    conversation_id UUID REFERENCES chat.conversations(conversation_id) ON DELETE CASCADE,
-    role VARCHAR(20) NOT NULL,
-    content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON chat.conversations(user_id);
-CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON chat.messages(conversation_id);
+CREATE TABLE IF NOT EXISTS chat.interactions (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(36) REFERENCES chat.sessions(session_id) ON DELETE CASCADE,
+    sequence INTEGER NOT NULL,
+    query TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_chat_interactions_session_sequence UNIQUE (session_id, sequence)
+);
+
+CREATE TABLE IF NOT EXISTS chat.stages (
+    id SERIAL PRIMARY KEY,
+    interaction_id INTEGER REFERENCES chat.interactions(id) ON DELETE CASCADE,
+    stage_name VARCHAR(255) NOT NULL,
+    scene_plan JSONB NOT NULL DEFAULT '{}'::jsonb,
+    raw_scene_plan JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat.sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_interactions_session_id ON chat.interactions(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_stages_interaction_id ON chat.stages(interaction_id);
 
 -- Projects table
 CREATE TABLE IF NOT EXISTS interior.projects (

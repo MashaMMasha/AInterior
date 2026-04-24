@@ -17,7 +17,7 @@ from obllomov.services.events import (
 from obllomov.services.obllomov import ObLLoMov
 from obllomov.shared.env import env
 from obllomov.shared.log import logger
-from obllomov.storage.assets import LocalAssets
+from obllomov.storage.assets import LocalAssets, S3Assets
 from obllomov.storage.db.engine import create_db_engine
 from obllomov.storage.db.repository import SessionRepository
 
@@ -28,7 +28,21 @@ chat = ChatService(repo)
 
 # llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
 llm = ChatMock()
-assets = LocalAssets()
+
+if (
+    not env.AGENTS_USE_LOCAL_ASSETS
+    and env.S3_BUCKET_NAME
+    and env.S3_ENDPOINT_URL
+):
+    logger.info("Using S3Assets")
+    assets = S3Assets()
+else:
+    if env.AGENTS_USE_LOCAL_ASSETS:
+        logger.info("Using LocalAssets (AGENTS_USE_LOCAL_ASSETS=1)")
+    else:
+        logger.info("Using LocalAssets (S3 not configured)")
+    assets = LocalAssets()
+
 obllomov = ObLLoMov(llm, assets)
 
 

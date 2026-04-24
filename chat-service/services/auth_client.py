@@ -11,10 +11,13 @@ class AuthClient:
         try:
             response = await self.client.post(
                 f"{self.base_url}/auth/verify-token",
-                json={"token": token}
+                headers={"Authorization": f"Bearer {token}"}
             )
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                if "user" in data:
+                    return data["user"]
+                return data
             return None
         except Exception as e:
             print(f"Auth verification failed: {e}")

@@ -9,6 +9,9 @@ const ChatPanel = ({ onModelLoad }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const [conversationId, setConversationId] = useState(null);
+  const [currentStage, setCurrentStage] = useState('');
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -24,27 +27,50 @@ const ChatPanel = ({ onModelLoad }) => {
     addChatMessage('user', message);
     setInputValue('');
     setIsLoading(true);
+    setCurrentStage('Запуск генерации...');
 
     try {
-      const result = await api.generateModel(message);
+      const result = await api.sendMessage(message, conversationId);
+      setConversationId(result.conversation_id);
       
-      if (result.status === 'success') {
-        if (result.model_url) {
-          addChatMessage('assistant', result.message || 'Модель сгенерирована! Загружаю на сцену...');
-          if (onModelLoad) {
-            onModelLoad(result.model_url, result.filename || 'generated_model.glb');
+      // Поллинг статуса генерации
+      const pollInterval = setInterval(async () => {
+        try {
+          const msgs = await api.getConversationMessages(result.conversation_id);
+          const currentInteraction = msgs.find(m => m.interaction_id === result.interaction_id);
+          
+          if (currentInteraction && currentInteraction.stages && currentInteraction.stages.length > 0) {
+            const lastStage = currentInteraction.stages[currentInteraction.stages.length - 1];
+            
+            if (lastStage.stage_name === 'completed') {
+              clearInterval(pollInterval);
+              setIsLoading(false);
+              setCurrentStage('');
+              addChatMessage('assistant', 'Сцена успешно сгенерирована!');
+              
+              // В obllomov результат — это JSON сцены (scene_plan).
+              // Если требуется дальнейшая загрузка 3D модели, здесь можно вызвать onModelLoad, 
+              // если бэкенд умеет собирать GLB, либо просто обработать JSON.
+              console.log('Сгенерированная сцена:', lastStage.scene_plan);
+            } else if (lastStage.stage_name === 'error' || lastStage.stage_name === 'failed') {
+              clearInterval(pollInterval);
+              setIsLoading(false);
+              setCurrentStage('');
+              addChatMessage('assistant', 'Произошла ошибка при генерации сцены.');
+            } else {
+              setCurrentStage(`Текущий этап: ${lastStage.stage_name}`);
+            }
           }
-        } else {
-          addChatMessage('assistant', result.message);
+        } catch (e) {
+          console.error('Ошибка поллинга статуса:', e);
         }
-      } else {
-        addChatMessage('assistant', result.message || 'Произошла ошибка при генерации модели');
-      }
+      }, 2000);
+      
     } catch (error) {
       console.error('Chat error:', error);
-      addChatMessage('assistant', 'К сожалению, произошла ошибка. Попробуйте загрузить модель вручную или переформулируйте запрос.');
-    } finally {
+      addChatMessage('assistant', 'К сожалению, произошла ошибка. Попробуйте переформулировать запрос.');
       setIsLoading(false);
+      setCurrentStage('');
     }
   };
 
@@ -70,6 +96,7 @@ const ChatPanel = ({ onModelLoad }) => {
               <span></span>
               <span></span>
             </div>
+            {currentStage && <div style={{marginTop: '8px', fontSize: '0.85em', opacity: 0.8}}>{currentStage}</div>}
           </div>
         )}
         <div ref={messagesEndRef} />

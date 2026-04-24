@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AInterior Scene Viewer</title>
+<title>AInterior Scene Viewer (embed)</title>
 <style>
   body { margin: 0; overflow: hidden; background: #1a1a2e; }
   #info {
@@ -15,11 +15,7 @@
 <body>
 <div id="info">Loading scene...</div>
 
-<script>
-  if (typeof window.__OBLLOMOV_API_BASE__ === 'undefined') {
-    window.__OBLLOMOV_API_BASE__ = '';
-  }
-</script>
+<script>window.__OBLLOMOV_API_BASE__ = '/__obllomov_render__';</script>
 <script type="importmap">
 {
   "imports": {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authFetch } from '../services/api';
+import { api } from '../services/api';
 
 const AppContext = createContext();
 
@@ -29,8 +29,7 @@ export const AppProvider = ({ children }) => {
 
   const loadProjects = async () => {
     try {
-      const response = await authFetch('/projects');
-      const data = await response.json();
+      const data = await api.getProjects();
       
       if (data.status === 'success' && data.projects.length > 0) {
         setProjects(data.projects);
@@ -58,10 +57,7 @@ export const AppProvider = ({ children }) => {
 
   const createProject = async (name) => {
     try {
-      const response = await authFetch(`/projects?name=${encodeURIComponent(name)}`, {
-        method: 'POST'
-      });
-      const data = await response.json();
+      const data = await api.createProject(name);
       
       if (data.status === 'success') {
         setProjects([...projects, data.project]);
@@ -80,11 +76,7 @@ export const AppProvider = ({ children }) => {
     }
 
     try {
-      const response = await authFetch(`/projects/${projectId}`, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
+      const data = await api.deleteProject(projectId);
       
       if (data.status === 'success') {
         const newProjects = projects.filter(p => p.id !== projectId);
@@ -115,15 +107,8 @@ export const AppProvider = ({ children }) => {
     };
 
     try {
-      const response = await authFetch(`/projects/${currentProject.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedProject)
-      });
+      const data = await api.updateProject(currentProject.id, updatedProject);
       
-      const data = await response.json();
       if (data.status === 'success') {
         console.log('Project saved successfully');
       }

@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
-import uuid
+import httpx
+import logging
 
-from chat_service.database import get_db_session, Conversation, Message
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from chat_service.database import get_db_session
 from chat_service.dependencies import get_current_user
-from chat_service.mock.responses import get_mock_response, parse_intent
+from chat_service.services.chat_service import ChatService
+from chat_service.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -19,10 +23,9 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    message_id: str
+    interaction_id: int
     conversation_id: str
-    response: str
-    intent: dict
+    status: str
     timestamp: str
 
 
@@ -39,76 +42,46 @@ async def send_message(
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Отправить сообщение в чат (mock ответы)"""
+    """Отправить сообщение в чат и запустить генерацию"""
     try:
-        # Если нет conversation_id, создаем новую беседу
-        if not request.conversation_id:
-            conversation = Conversation(
-                conversation_id=uuid.uuid4(),
-                user_id=user["id"],
-                title=request.message[:50]  # Первые 50 символов как заголовок
-            )
-            db.add(conversation)
-            await db.commit()
-            await db.refresh(conversation)
-            conversation_id = conversation.conversation_id
-        else:
-            conversation_id = uuid.UUID(request.conversation_id)
-            
-            # Проверяем что беседа существует и принадлежит пользователю
-            result = await db.execute(
-                select(Conversation).where(
-                    Conversation.conversation_id == conversation_id,
-                    Conversation.user_id == user["id"]
+        chat_service = ChatService()
+        
+        # Вызываем agents-service для запуска процесса генерации
+        async with httpx.AsyncClient() as client:
+            try:
+                payload = {
+                    "query": request.message,
+                    "user_id": str(user["id"])
+                }
+                if request.conversation_id:
+                    payload["session_id"] = request.conversation_id
+                
+                agents_base = settings.AGENTS_SERVICE_URL.rstrip("/")
+                response = await client.post(
+                    f"{agents_base}/generate",
+                    json=payload,
+                    timeout=30.0,
                 )
-            )
-            conversation = result.scalar_one_or_none()
-            if not conversation:
-                raise HTTPException(status_code=404, detail="Conversation not found")
-        
-        # Сохраняем сообщение пользователя
-        user_message = Message(
-            message_id=uuid.uuid4(),
-            conversation_id=conversation_id,
-            role="user",
-            content=request.message
-        )
-        db.add(user_message)
-        
-        # Генерируем mock ответ
-        mock_response = get_mock_response(request.message)
-        intent = parse_intent(request.message)
-        
-        # Сохраняем ответ ассистента
-        assistant_message = Message(
-            message_id=uuid.uuid4(),
-            conversation_id=conversation_id,
-            role="assistant",
-            content=mock_response
-        )
-        db.add(assistant_message)
-        
-        # Обновляем время последнего обновления беседы
-        await db.execute(
-            update(Conversation)
-            .where(Conversation.conversation_id == conversation_id)
-            .values(updated_at=datetime.utcnow())
-        )
-        
-        await db.commit()
-        await db.refresh(assistant_message)
-        
+                response.raise_for_status()
+                data = response.json()
+            except httpx.RequestError as e:
+                logger.error(f"Failed to call agents-service: {e}")
+                raise HTTPException(status_code=503, detail="Agents service unavailable")
+            except httpx.HTTPStatusError as e:
+                logger.error(f"Agents service returned error: {e.response.text}")
+                raise HTTPException(status_code=e.response.status_code, detail="Agents service error")
+
         return ChatResponse(
-            message_id=str(assistant_message.message_id),
-            conversation_id=str(conversation_id),
-            response=mock_response,
-            intent=intent,
-            timestamp=assistant_message.created_at.isoformat()
+            interaction_id=data["interaction_id"],
+            conversation_id=data["session_id"],
+            status=data["status"],
+            timestamp=datetime.utcnow().isoformat()
         )
     
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception("Error processing message")
         raise HTTPException(status_code=500, detail=f"Error processing message: {str(e)}")
 
 
@@ -119,31 +92,23 @@ async def get_conversations(
 ):
     """Получить список бесед пользователя"""
     try:
-        result = await db.execute(
-            select(Conversation)
-            .where(Conversation.user_id == user["id"])
-            .order_by(Conversation.updated_at.desc())
-        )
-        conversations = result.scalars().all()
+        chat_service = ChatService()
+        sessions = await chat_service.list_sessions(db, user["id"])
         
         response = []
-        for conv in conversations:
-            # Подсчитываем количество сообщений
-            message_count_result = await db.execute(
-                select(Message).where(Message.conversation_id == conv.conversation_id)
-            )
-            message_count = len(message_count_result.scalars().all())
-            
+        for session in sessions:
+            title = session.interactions[0].query[:50] if session.interactions else "Новая беседа"
             response.append(ConversationResponse(
-                conversation_id=str(conv.conversation_id),
-                title=conv.title or "Новая беседа",
-                created_at=conv.created_at.isoformat(),
-                message_count=message_count
+                conversation_id=session.id,
+                title=title,
+                created_at=session.created_at.isoformat(),
+                message_count=len(session.interactions)
             ))
         
         return response
     
     except Exception as e:
+        logger.exception("Error fetching conversations")
         raise HTTPException(status_code=500, detail=f"Error fetching conversations: {str(e)}")
 
 
@@ -153,40 +118,35 @@ async def get_conversation_messages(
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Получить все сообщения беседы"""
+    """Получить все сообщения беседы (включая стадии)"""
     try:
-        conv_uuid = uuid.UUID(conversation_id)
+        chat_service = ChatService()
+        session = await chat_service.get_session(db, conversation_id)
         
-        # Проверяем доступ
-        result = await db.execute(
-            select(Conversation).where(
-                Conversation.conversation_id == conv_uuid,
-                Conversation.user_id == user["id"]
-            )
-        )
-        conversation = result.scalar_one_or_none()
-        if not conversation:
+        if not session or session.user_id != str(user["id"]):
             raise HTTPException(status_code=404, detail="Conversation not found")
         
-        # Получаем сообщения
-        messages_result = await db.execute(
-            select(Message)
-            .where(Message.conversation_id == conv_uuid)
-            .order_by(Message.created_at.asc())
-        )
-        messages = messages_result.scalars().all()
-        
-        return [
-            {
-                "message_id": str(msg.message_id),
-                "role": msg.role,
-                "content": msg.content,
-                "created_at": msg.created_at.isoformat()
-            }
-            for msg in messages
-        ]
+        messages = []
+        for interaction in session.interactions:
+            messages.append({
+                "interaction_id": interaction.id,
+                "role": "user",
+                "content": interaction.query,
+                "created_at": interaction.created_at.isoformat(),
+                "stages": [
+                    {
+                        "stage_name": stage.stage_name,
+                        "scene_plan": stage.scene_plan,
+                        "created_at": stage.created_at.isoformat()
+                    }
+                    for stage in interaction.stages
+                ]
+            })
+            
+        return messages
     
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception("Error fetching messages")
         raise HTTPException(status_code=500, detail=f"Error fetching messages: {str(e)}")

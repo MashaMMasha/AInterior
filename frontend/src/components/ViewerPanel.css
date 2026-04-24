@@ -1,11 +1,50 @@
 .viewer-panel {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   background: var(--color-bg);
   overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
+}
+
+.viewer-mode-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--color-bg);
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+.viewer-mode-btn {
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  background: #fff;
+  color: #444;
+  cursor: pointer;
+}
+
+.viewer-mode-btn:hover {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.viewer-mode-btn.is-active {
+  border-color: var(--color-secondary, #6b5b4f);
+  background: rgba(107, 91, 79, 0.08);
+  color: #222;
+}
+
+.viewer-iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  display: block;
 }
 
 .viewer-container {

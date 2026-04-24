@@ -1,18 +1,17 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     AUTH_SERVICE_URL: str = "http://localhost:8001"
-    
+
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "ainterior"
     POSTGRES_USER: str = "user"
     POSTGRES_PASSWORD: str = "password"
-
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    AGENTS_SERVICE_URL: str = "http://agents-service:8006"
 
 
 settings = Settings()

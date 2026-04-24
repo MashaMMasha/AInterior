@@ -1,5 +1,4 @@
-version: '3.8'
-
+# Colima: для MinIO + assets + ML — `make colima-big` (16G RAM, диск до ~120GiB если позволяет Colima)
 services:
   minio:
     image: minio/minio:latest
@@ -33,8 +32,36 @@ services:
       /usr/bin/mc alias set minio http://minio:9000 minioadmin minioadmin;
       /usr/bin/mc mb minio/ainterior-models --ignore-existing;
       /usr/bin/mc anonymous set download minio/ainterior-models;
+      /usr/bin/mc mb minio/ainterior-assets --ignore-existing;
+      /usr/bin/mc anonymous set download minio/ainterior-assets;
       echo 'MinIO configured successfully';
       "
+    networks:
+      - ainterior-network
+
+  # Заливка objathor-ассетов в MinIO: сначала make setup-assets (скачивание) или готовый ~/.objathor-assets
+  # Команда: docker compose --profile upload run --rm upload-objathor-assets  (см. Makefile upload-assets-docker)
+  upload-objathor-assets:
+    profiles: ["upload"]
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    entrypoint: ["python", "/app/scripts/upload_assets_to_s3.py"]
+    environment:
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_BUCKET_NAME=ainterior-assets
+      - S3_KEY_PREFIX=objathor-assets
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_DEFAULT_REGION=us-east-1
+      - OBJATHOR_ASSETS_BASE_DIR=/data/objathor-assets
+    volumes:
+      - ${OBJATHOR_ASSETS_DIR:-$HOME/.objathor-assets}:/data/objathor-assets:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     networks:
       - ainterior-network
 
@@ -121,49 +148,6 @@ services:
       timeout: 10s
       retries: 3
 
-  render-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.render
-    container_name: ainterior-render-service
-    ports:
-      - "8002:8002"
-    env_file:
-      - .env
-    environment:
-      - S3_ENDPOINT=http://minio:9000
-      - S3_ACCESS_KEY=minioadmin
-      - S3_SECRET_KEY=minioadmin
-      - S3_BUCKET=ainterior-models
-      - S3_REGION=us-east-1
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=guest
-      - RABBITMQ_PASSWORD=guest
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=ainterior
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-    depends_on:
-      minio:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./render-service:/app/render_service
-      - ./obllomov:/app/obllomov
-    command: uvicorn render_service.main:app --host 0.0.0.0 --port 8002 --reload
-    networks:
-      - ainterior-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   backend-service:
     build:
       context: .
@@ -175,7 +159,6 @@ services:
       - .env
     environment:
       - AUTH_SERVICE_URL=http://auth-service:8001
-      - RENDER_SERVICE_URL=http://render-service:8002
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
@@ -187,7 +170,6 @@ services:
       - RABBITMQ_PASSWORD=guest
     depends_on:
       - auth-service
-      - render-service
       - minio
       - rabbitmq
     volumes:
@@ -212,6 +194,7 @@ services:
       - .env
     environment:
       - AUTH_SERVICE_URL=http://auth-service:8001
+      - AGENTS_SERVICE_URL=http://agents-service:8006
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=ainterior
@@ -287,6 +270,69 @@ services:
       - ainterior-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  agents-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    container_name: ainterior-agents-service
+    ports:
+      - "8006:8006"
+    env_file:
+      - .env
+    environment:
+      # S3/MinIO (см. minio-init: бакет ainterior-assets). Для реального S3 замените endpoint/keys в .env и пересоберите.
+      - AGENTS_USE_LOCAL_ASSETS=0
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_KEY_PREFIX=objathor-assets
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - S3_BUCKET_NAME=ainterior-assets
+      - AWS_DEFAULT_REGION=us-east-1
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=ainterior
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    depends_on:
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./agents-service:/app/agents-service
+    shm_size: "2gb"
+    networks:
+      - ainterior-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8006/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 1200s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ainterior-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - backend-service
+      - chat-service
+      - project-service
+    networks:
+      - ainterior-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,3 +1,4 @@
+const CHAT_SERVICE_URL = import.meta.env.VITE_CHAT_SERVICE_URL || 'http://localhost:8003';
 const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8001';
 const BACKEND_SERVICE_URL = import.meta.env.VITE_BACKEND_SERVICE_URL || 'http://localhost:8000';
 
@@ -131,6 +132,26 @@ export const api = {
       throw new Error('Ошибка генерации модели');
     }
 
+    return response.json();
+  },
+
+  sendMessage: async (message, conversationId = null) => {
+    const body = { message };
+    if (conversationId) body.conversation_id = conversationId;
+
+    const response = await authFetch(`${CHAT_SERVICE_URL}/chat/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) throw new Error('Ошибка отправки сообщения');
+    return response.json();
+  },
+  
+  getConversationMessages: async (conversationId) => {
+    const response = await authFetch(`${CHAT_SERVICE_URL}/chat/conversation/${conversationId}/messages`);
+    if (!response.ok) throw new Error('Ошибка получения сообщений');
     return response.json();
   },
 

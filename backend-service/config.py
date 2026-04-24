@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     AUTH_SERVICE_URL: str = "http://localhost:8001"
+    # Optional legacy HTTP API (e.g. ml_service on 8002). Not docker render-service, not scripts/render/ viewers.
     RENDER_SERVICE_URL: str = "http://localhost:8002"
     
     S3_ENDPOINT: str = "http://localhost:9000"

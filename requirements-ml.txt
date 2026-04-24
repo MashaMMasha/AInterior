@@ -1,0 +1,25 @@
+# ML & AI
+torch>=2.10.0
+transformers>=5.0.0
+sentence_transformers>=5.2.2
+openai>=2.29.0
+langchain_core>=1.2.22
+langchain_openai>=1.1.12
+open_clip_torch>=2.24.0
+
+# 3D & Geometry
+trimesh>=4.11.1
+ai2thor @ git+https://github.com/allenai/ai2thor.git@8524eadda94df0ab2dbb2ef5a577e4d37c712897
+procthor>=0.0.1.dev2
+Shapely>=2.1.2
+rtree>=1.4.1
+
+# Scientific computing
+numpy>=2.4.3
+scipy>=1.17.1
+matplotlib>=3.10.8
+Pillow>=9.2.0,<12.0
+attrs>=23.2.0
+
+# Video rendering
+moviepy>=2.2.1

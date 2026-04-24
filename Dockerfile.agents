@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    curl \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt requirements-ml.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-ml.txt
+
+COPY ./agents-service /app/agents-service
+
+# Одноразовая заливка в MinIO: docker compose --profile upload run --rm upload-objathor-assets
+RUN mkdir -p /app/scripts
+COPY scripts/upload_assets_to_s3.py /app/scripts/upload_assets_to_s3.py
+
+ENV PYTHONPATH=/app/agents-service
+
+# chmod в образе не помогает при bind-mount ./agents-service; entrypoint вызываем через sh
+ENTRYPOINT ["/bin/sh", "/app/agents-service/docker-entrypoint.sh"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8006", "--app-dir", "agents-service"]

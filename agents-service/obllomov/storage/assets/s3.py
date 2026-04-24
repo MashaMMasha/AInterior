@@ -52,6 +52,26 @@ class S3Assets(BaseAssets):
             return f"{self.key_prefix}/{rel}"
         return rel
 
+    @staticmethod
+    def _holodeck_path_aliases(relative_path: Path | str) -> list[Path]:
+        # holodeck/2023_09_23/… в коде vs 2023_09_23/… после upload без symlink
+        p = BaseAssets._to_path(relative_path)
+        parts = p.parts
+        al: list[Path] = [p]
+        if len(parts) >= 2 and parts[0] == "holodeck" and parts[1] == "2023_09_23":
+            rest = parts[2:]
+            al.append(Path("2023_09_23") / Path(*rest) if rest else Path("2023_09_23"))
+        elif len(parts) >= 1 and parts[0] == "2023_09_23":
+            al.append(Path("holodeck") / p)
+        seen: set[str] = set()
+        out: list[Path] = []
+        for x in al:
+            s = str(x)
+            if s not in seen:
+                seen.add(s)
+                out.append(x)
+        return out
+
     def _cache_path(self, relative_path: Path | str) -> Path:
         return self.cache_dir / self._to_path(relative_path)
 
@@ -67,11 +87,25 @@ class S3Assets(BaseAssets):
         local_path = self._cache_path(path)
         local_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._s3.download_file(
-            Bucket=self.bucket_name,
-            Key=self._s3_key(path),
-            Filename=str(local_path),
-        )
+        err: Optional[Exception] = None
+        for rel in self._holodeck_path_aliases(path):
+            s3_key = self._s3_key(rel)
+            try:
+                self._s3.download_file(
+                    Bucket=self.bucket_name,
+                    Key=s3_key,
+                    Filename=str(local_path),
+                )
+                break
+            except ClientError as e:
+                if e.response.get("Error", {}).get("Code") in ("404", "NoSuchKey", "NotFound"):
+                    err = e
+                    continue
+                raise
+        else:
+            if err:
+                raise err
+            raise FileNotFoundError(f"S3: could not download {path}")
 
         with self._cache_lock:
             self._cached_paths[key] = local_path
@@ -84,36 +118,54 @@ class S3Assets(BaseAssets):
             self._cached_paths.pop(key, None)
 
     def exists(self, relative_path: Path | str) -> bool:
-        try:
-            self._s3.head_object(
-                Bucket=self.bucket_name,
-                Key=self._s3_key(relative_path),
-            )
-            return True
-        except ClientError as e:
-            if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
-                return False
-            raise
+        for rel in self._holodeck_path_aliases(relative_path):
+            try:
+                self._s3.head_object(
+                    Bucket=self.bucket_name,
+                    Key=self._s3_key(rel),
+                )
+                return True
+            except ClientError as e:
+                code = e.response.get("Error", {}).get("Code")
+                if code in ("404", "NoSuchKey"):
+                    continue
+                raise
+        return False
 
     def read_bytes(self, relative_path: Path | str) -> bytes:
-        response = self._s3.get_object(
-            Bucket=self.bucket_name,
-            Key=self._s3_key(relative_path),
-        )
-        logger.debug("read bytes")
-        return response["Body"].read()
+        last: Optional[ClientError] = None
+        for rel in self._holodeck_path_aliases(relative_path):
+            try:
+                response = self._s3.get_object(
+                    Bucket=self.bucket_name,
+                    Key=self._s3_key(rel),
+                )
+                logger.debug("read bytes")
+                return response["Body"].read()
+            except ClientError as e:
+                code = e.response.get("Error", {}).get("Code")
+                if code in ("404", "NoSuchKey"):
+                    last = e
+                    continue
+                raise
+        if last:
+            raise last
+        raise FileNotFoundError(relative_path)
 
     def read_bytes_or_none(self, relative_path: Path | str) -> Optional[bytes]:
-        try:
-            response = self._s3.get_object(
-                Bucket=self.bucket_name,
-                Key=self._s3_key(relative_path),
-            )
-            return response["Body"].read()
-        except ClientError as e:
-            if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
-                return None
-            raise
+        for rel in self._holodeck_path_aliases(relative_path):
+            try:
+                response = self._s3.get_object(
+                    Bucket=self.bucket_name,
+                    Key=self._s3_key(rel),
+                )
+                return response["Body"].read()
+            except ClientError as e:
+                code = e.response.get("Error", {}).get("Code")
+                if code in ("404", "NoSuchKey"):
+                    continue
+                raise
+        return None
 
     def write_bytes(self, relative_path: Path | str, data: bytes) -> None:
         self._s3.put_object(
@@ -121,6 +173,16 @@ class S3Assets(BaseAssets):
             Key=self._s3_key(relative_path),
             Body=data,
         )
+        self._invalidate_cache(relative_path)
+
+    def upload_from_local(
+        self,
+        local_path: Path | str,
+        relative_path: Path | str,
+    ) -> None:
+        """Потоковая загрузка файла (multipart), без read_bytes() целиком в RAM."""
+        key = self._s3_key(relative_path)
+        self._s3.upload_file(str(Path(local_path).resolve()), self.bucket_name, key)
         self._invalidate_cache(relative_path)
 
     def list_files(self, relative_prefix: Path | str = Path()) -> Iterator[Path]:
@@ -164,14 +226,18 @@ class S3Assets(BaseAssets):
 
         files = [f for f in local_root.rglob("*") if f.is_file()]
         total = len(files)
+        if total == 0:
+            print("  Нет файлов в каталоге.", flush=True)
+            return
+        print(f"  Всего файлов: {total} (прогресс каждые 25)…", flush=True)
 
         for uploaded, local_path in enumerate(files, start=1):
             rel = local_path.relative_to(local_root)
             s3_relative = rel_prefix / rel if str(rel_prefix) != "." else rel
             self.upload_from_local(local_path, s3_relative)
 
-            if uploaded % 100 == 0 or uploaded == total:
-                print(f"  Загружено {uploaded}/{total}: {s3_relative}")
+            if uploaded == 1 or uploaded % 25 == 0 or uploaded == total:
+                print(f"  {uploaded}/{total}  {s3_relative}", flush=True)
 
     def download_directory(
         self,

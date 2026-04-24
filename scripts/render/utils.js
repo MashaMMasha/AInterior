@@ -4,6 +4,18 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 let scene, camera, controls, renderer, textureLoader;
 const textureCache = {};
 
+function apiBasePath() {
+  if (typeof window === 'undefined') return '';
+  return String(window.__OBLLOMOV_API_BASE__ || '').replace(/\/$/, '');
+}
+
+export function apiUrl(path) {
+  if (path == null) return path;
+  const s = String(path);
+  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  return apiBasePath() + (s.startsWith('/') ? s : `/${s}`);
+}
+
 export function initViewer() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -68,7 +80,7 @@ export function positionCamera(rooms) {
 
 function loadTexture(materialName) {
   if (textureCache[materialName]) return textureCache[materialName];
-  const tex = textureLoader.load(`/materials/${materialName}.png`);
+  const tex = textureLoader.load(apiUrl(`/materials/${materialName}.png`));
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(2, 2);
@@ -264,7 +276,7 @@ export function buildDoor(door) {
   back.castShadow = true;
   group.add(back);
 
-  loadCroppedDoorTexture(`/doors/${door.asset_id}.png`, (tex) => {
+  loadCroppedDoorTexture(apiUrl(`/doors/${door.asset_id}.png`), (tex) => {
     frontMat.map = tex;
     frontMat.needsUpdate = true;
     const backTex = tex.clone();
@@ -364,7 +376,7 @@ export function buildWindow(win) {
 }
 
 export async function buildObject(obj) {
-  const resp = await fetch(`/mesh/${obj.asset_id}`);
+  const resp = await fetch(apiUrl(`/mesh/${obj.asset_id}`));
   if (!resp.ok) {
     console.warn(`Failed to load mesh ${obj.asset_id}: ${resp.status}`);
     return;
@@ -382,14 +394,14 @@ export async function buildObject(obj) {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
 
-  const albedo = textureLoader.load(mesh.albedoUrl);
+  const albedo = textureLoader.load(apiUrl(mesh.albedoUrl));
   albedo.flipY = false;
   albedo.colorSpace = THREE.SRGBColorSpace;
 
-  const normal = textureLoader.load(mesh.normalUrl);
+  const normal = textureLoader.load(apiUrl(mesh.normalUrl));
   normal.flipY = false;
 
-  const emission = textureLoader.load(mesh.emissionUrl);
+  const emission = textureLoader.load(apiUrl(mesh.emissionUrl));
   emission.flipY = false;
   emission.colorSpace = THREE.SRGBColorSpace;
 

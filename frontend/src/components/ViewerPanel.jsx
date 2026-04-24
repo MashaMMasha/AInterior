@@ -1,10 +1,12 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { useApp } from '../context/AppContext';
 import './ViewerPanel.css';
+
+const DEFAULT_RENDER_EMBED_URL = '/render/viewer-embed.html';
 
 const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
   const containerRef = useRef(null);
@@ -13,10 +15,16 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
   const rendererRef = useRef(null);
   const controlsRef = useRef(null);
   const [hasModels, setHasModels] = useState(false);
+  const [viewMode, setViewMode] = useState('local');
   const { addSceneObject, sceneObjects, addChatMessage } = useApp();
 
+  const obllomovSrc = useMemo(
+    () => (import.meta.env.VITE_OBLOLOMV_RENDER_URL || '').trim() || DEFAULT_RENDER_EMBED_URL,
+    []
+  );
+
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (viewMode !== 'local' || !containerRef.current) return;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xF4F3EE);
@@ -83,52 +91,58 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
     return () => {
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
-      containerRef.current?.removeChild(renderer.domElement);
+      if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
+      sceneRef.current = null;
+      cameraRef.current = null;
+      rendererRef.current = null;
+      controlsRef.current = null;
     };
-  }, []);
+  }, [viewMode]);
 
   useEffect(() => {
-    sceneObjects.forEach(obj => {
+    if (viewMode !== 'local') return;
+    sceneObjects.forEach((obj) => {
       if (obj.model) {
         obj.model.visible = obj.visible;
       }
     });
-  }, [sceneObjects]);
+  }, [sceneObjects, viewMode]);
 
   useEffect(() => {
-    if (modelToLoad && sceneRef.current) {
-      loadModel(modelToLoad.url, modelToLoad.filename);
-    }
-  }, [modelToLoad]);
+    if (viewMode !== 'local' || !modelToLoad || !sceneRef.current) return;
+    loadModel(modelToLoad.url, modelToLoad.filename);
+  }, [modelToLoad, viewMode]);
 
   const loadModel = (url, filename) => {
     const scene = sceneRef.current;
     const camera = cameraRef.current;
     const controls = controlsRef.current;
-    
+
     const extension = filename.split('.').pop().toLowerCase();
-    
+
     if (extension === 'glb' || extension === 'gltf') {
       const loader = new GLTFLoader();
       loader.load(
         url,
         (gltf) => {
           const model = gltf.scene;
-          
+
           const box = new THREE.Box3().setFromObject(model);
           const center = box.getCenter(new THREE.Vector3());
           const size = box.getSize(new THREE.Vector3());
-          
+
           const maxDim = Math.max(size.x, size.y, size.z);
           const scale = 4 / maxDim;
           model.scale.multiplyScalar(scale);
-          
+
           model.position.x = -center.x * scale;
           model.position.y = -box.min.y * scale;
           model.position.z = -center.z * scale;
-          
+
           scene.add(model);
-          
+
           const sceneObj = {
             id: Date.now(),
             name: filename,
@@ -138,16 +152,16 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
             rotation: model.rotation.toArray(),
             scale: model.scale.toArray()
           };
-          
+
           addSceneObject(sceneObj);
           setHasModels(true);
-          
+
           camera.position.set(5, 5, 5);
-          controls.target.set(0, size.y * scale / 2, 0);
+          controls.target.set(0, (size.y * scale) / 2, 0);
           controls.update();
-          
+
           addChatMessage('assistant', `Модель "${filename}" успешно добавлена на сцену!`);
-          
+
           if (onModelLoaded) {
             onModelLoaded();
           }
@@ -167,27 +181,27 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
         (obj) => {
           obj.traverse((child) => {
             if (child.isMesh) {
-              child.material = new THREE.MeshPhongMaterial({ 
+              child.material = new THREE.MeshPhongMaterial({
                 color: 0x888888,
                 side: THREE.DoubleSide
               });
             }
           });
-          
+
           const box = new THREE.Box3().setFromObject(obj);
           const center = box.getCenter(new THREE.Vector3());
           const size = box.getSize(new THREE.Vector3());
-          
+
           const maxDim = Math.max(size.x, size.y, size.z);
           const scale = 4 / maxDim;
           obj.scale.multiplyScalar(scale);
-          
+
           obj.position.x = -center.x * scale;
           obj.position.y = -box.min.y * scale;
           obj.position.z = -center.z * scale;
-          
+
           scene.add(obj);
-          
+
           const sceneObj = {
             id: Date.now(),
             name: filename,
@@ -197,16 +211,16 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
             rotation: obj.rotation.toArray(),
             scale: obj.scale.toArray()
           };
-          
+
           addSceneObject(sceneObj);
           setHasModels(true);
-          
+
           camera.position.set(5, 5, 5);
-          controls.target.set(0, size.y * scale / 2, 0);
+          controls.target.set(0, (size.y * scale) / 2, 0);
           controls.update();
-          
+
           addChatMessage('assistant', `Модель "${filename}" успешно добавлена на сцену!`);
-          
+
           if (onModelLoaded) {
             onModelLoaded();
           }
@@ -226,18 +240,41 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
 
   return (
     <div className="viewer-panel">
-      {!hasModels && (
+      <div className="viewer-mode-bar" role="tablist" aria-label="Режим просмотра">
+        <button
+          type="button"
+          className={`viewer-mode-btn ${viewMode === 'obllomov' ? 'is-active' : ''}`}
+          onClick={() => setViewMode('obllomov')}
+        >
+          Сцена (render.py)
+        </button>
+        <button
+          type="button"
+          className={`viewer-mode-btn ${viewMode === 'local' ? 'is-active' : ''}`}
+          onClick={() => setViewMode('local')}
+        >
+          GLB / OBJ
+        </button>
+      </div>
+      {viewMode === 'obllomov' && (
+        <iframe className="viewer-iframe" title="AInterior render scene" src={obllomovSrc} />
+      )}
+      {viewMode === 'local' && !hasModels && (
         <div className="empty-state">
           <div className="empty-state-icon">🎨</div>
           <div>Начните диалог с AI или загрузите 3D модель</div>
         </div>
       )}
-      <div ref={containerRef} className="viewer-container" />
-      {hasModels && (
+      {viewMode === 'local' && (
+        <div ref={containerRef} className="viewer-container" />
+      )}
+      {viewMode === 'local' && hasModels && (
         <div className="controls-hint">
           <strong>Управление:</strong>
-          Вращение: ЛКМ<br/>
-          Перемещение: ПКМ<br/>
+          Вращение: ЛКМ
+          <br />
+          Перемещение: ПКМ
+          <br />
           Масштаб: Колесо мыши
         </div>
       )}
