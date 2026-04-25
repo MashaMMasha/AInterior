@@ -103,6 +103,21 @@ export const authApi = {
   },
 };
 
+async function throwIfNotOk(response, fallbackMessage) {
+  if (response.ok) return;
+  const err = await response.json().catch(() => ({}));
+  const d = err.detail;
+  let message = fallbackMessage;
+  if (typeof d === 'string') {
+    message = d;
+  } else if (Array.isArray(d) && d[0]?.msg) {
+    message = d[0].msg;
+  } else if (d && typeof d === 'object' && d.detail) {
+    message = String(d.detail);
+  }
+  throw new Error(message);
+}
+
 export const api = {
   uploadModel: async (file) => {
     const formData = new FormData();
@@ -163,6 +178,7 @@ export const api = {
 
   getProjects: async () => {
     const response = await authFetch(`${BACKEND_SERVICE_URL}/projects`);
+    await throwIfNotOk(response, 'Ошибка загрузки проектов');
     return response.json();
   },
 
@@ -172,6 +188,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
+    await throwIfNotOk(response, 'Ошибка создания проекта');
     return response.json();
   },
 
@@ -181,6 +198,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(project),
     });
+    await throwIfNotOk(response, 'Ошибка обновления проекта');
     return response.json();
   },
 
@@ -188,6 +206,7 @@ export const api = {
     const response = await authFetch(`${BACKEND_SERVICE_URL}/projects/${projectId}`, {
       method: 'DELETE',
     });
+    await throwIfNotOk(response, 'Ошибка удаления проекта');
     return response.json();
   },
 };

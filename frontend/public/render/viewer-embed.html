@@ -15,7 +15,25 @@
 <body>
 <div id="info">Loading scene...</div>
 
-<script>window.__OBLLOMOV_API_BASE__ = '/render';</script>
+<script>
+// API префикс для mesh/текстур (см. utils.js → apiUrl).
+window.__OBLLOMOV_API_BASE__ = window.__OBLLOMOV_API_BASE__ ?? '/render';
+
+function toAbsUrl(rawPath) {
+  const s = String(rawPath || '').trim();
+  if (!s) return null;
+  if (s.indexOf('http://') === 0 || s.indexOf('https://') === 0) return s;
+  return new URL(s.charAt(0) === '/' ? s : ('/' + s), window.location.origin).href;
+}
+
+function normalizeApiBase(rawBase) {
+  const s = String(rawBase || '').replace(/\/$/, '');
+  if (!s || s.indexOf('__obllomov_render__') !== -1) return '/render';
+  return s;
+}
+
+window.__OBLLOMOV_API_BASE__ = normalizeApiBase(window.__OBLLOMOV_API_BASE__);
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -28,12 +46,30 @@
 <script type="module">
 (async function initViewerApp() {
   const { DragControls } = await import('three/addons/controls/DragControls.js');
-  
-  // Используем относительный путь к utils.js
+
+  const candidateUtilsUrls = [];
+  const direct = toAbsUrl(window.__OBLLOMOV_UTILS_URL__);
+  if (direct) candidateUtilsUrls.push(direct);
+  candidateUtilsUrls.push(toAbsUrl(`${window.__OBLLOMOV_API_BASE__}/utils.js`));
+  candidateUtilsUrls.push(toAbsUrl('/render/utils.js'));
+  candidateUtilsUrls.push(toAbsUrl('/utils.js'));
+
+  let lastImportError = null;
+  let importedUtils = null;
+  for (const url of [...new Set(candidateUtilsUrls.filter(Boolean))]) {
+    try {
+      importedUtils = await import(url);
+      break;
+    } catch (err) {
+      lastImportError = err;
+    }
+  }
+  if (!importedUtils) throw lastImportError || new Error('Unable to import utils.js');
   const {
-    initViewer, animate, positionCamera,
+    initViewer, animate, positionCamera, apiUrl,
     buildFloor, buildWall, buildDoor, buildWindow, buildObject, wallDedupeKey
-  } = await import('./utils.js');
+  } = importedUtils;
+  const p = apiUrl;
 
   const info = document.getElementById('info');
   const { camera, controls, renderer } = initViewer();
@@ -84,7 +120,7 @@
     info.textContent = 'Waiting for scene data...';
   }
 
-  function renderScene(data) {
+  async function renderScene(data) {
     info.textContent = `Rendering scene... Rooms: ${data.rooms?.length || 0}`;
 
     for (const room of (data.rooms || [])) {
@@ -116,7 +152,16 @@
       ...(data.small_objects || []),
       ...(data.ceiling_objects || []),
     ];
-    
+
+    for (const obj of allObjects) {
+      try {
+        const mesh = await buildObject(obj);
+        if (mesh) draggableObjects.push(mesh);
+      } catch (e) {
+        console.warn('buildObject', obj?.id, e);
+      }
+    }
+
     info.textContent = `Scene loaded | Rooms: ${data.rooms?.length || 0} | Objects: ${allObjects.length}`;
   }
 
@@ -125,7 +170,10 @@
     console.log('Received message:', event.data);
     if (event.data.type === 'LOAD_SCENE' && event.data.scene) {
       console.log('Loading scene from postMessage:', event.data.scene);
-      renderScene(event.data.scene);
+      renderScene(event.data.scene).catch((err) => {
+        console.error('renderScene', err);
+        info.textContent = 'Scene render error: ' + (err && err.message);
+      });
     }
   });
 

@@ -1,9 +1,13 @@
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
 from datetime import datetime
+from sqlalchemy.exc import SQLAlchemyError
 
+from backend_service.config import cors_origins_list
 from backend_service.routers.projects import router as projects_router
 from backend_service.routers.models import router as models_router
 from backend_service.routers.ml import router as ml_router
@@ -17,11 +21,22 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=cors_origins_list(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+log = logging.getLogger(__name__)
+
+
+@app.exception_handler(SQLAlchemyError)
+async def sqlalchemy_exception_handler(_request: Request, exc: SQLAlchemyError) -> JSONResponse:
+    log.exception("Ошибка БД")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Database error: {str(exc)}"},
+    )
 
 app.include_router(projects_router)
 app.include_router(models_router)

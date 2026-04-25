@@ -102,27 +102,6 @@ const ChatPanel = ({ onModelLoad }) => {
     };
   }, [currentProject?.id, setChatMessages]);
 
-  const startNewChat = async () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    if (currentProject) {
-      if (currentProject.id === 'default') {
-        localStorage.removeItem(storageKeyForProject(currentProject.id));
-      } else {
-        try {
-          await api.updateProject(currentProject.id, { conversation_id: null });
-        } catch (e) {
-          console.error('Failed to clear project conversation_id:', e);
-        }
-      }
-      updateCurrentProject({ conversation_id: null });
-    }
-    setConversationId(null);
-    setChatMessages([{ type: 'assistant', text: WELCOME_TEXT }]);
-  };
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -151,8 +130,8 @@ const ChatPanel = ({ onModelLoad }) => {
 
     try {
       const result = await api.sendMessage(message, sendId);
-      setConversationId(result.conversation_id);
       await persistConversationId(project, result.conversation_id);
+      setConversationId(result.conversation_id);
 
       const pollInterval = setInterval(async () => {
         try {
@@ -215,11 +194,6 @@ const ChatPanel = ({ onModelLoad }) => {
 
   return (
     <div className="chat-panel">
-      <div className="chat-header">
-        <button className="new-chat-btn" onClick={startNewChat} title="Новый чат">
-          + Новый чат
-        </button>
-      </div>
       <div className="chat-messages">
         {chatMessages.map((msg, index) => (
           <div key={index} className={`chat-message ${msg.type}`}>

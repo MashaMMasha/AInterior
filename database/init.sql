@@ -155,3 +155,16 @@ CREATE TABLE IF NOT EXISTS interior.projects (
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON interior.projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_projects_project_id ON interior.projects(project_id);
 
+-- Проекты UI (backend-service): id строкой, сцена JSON, привязка к чату
+CREATE TABLE IF NOT EXISTS interior.app_projects (
+    id VARCHAR(64) PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users.users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    objects JSONB NOT NULL DEFAULT '[]'::jsonb,
+    conversation_id VARCHAR(64),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_projects_user_id ON interior.app_projects(user_id);
+

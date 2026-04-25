@@ -19,10 +19,14 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
   const [viewMode, setViewMode] = useState('obllomov');
   const { addSceneObject, sceneObjects, addChatMessage } = useApp();
 
-  const obllomovSrc = useMemo(
-    () => (import.meta.env.VITE_OBLOLOMV_RENDER_URL || '').trim() || DEFAULT_RENDER_EMBED_URL,
-    []
-  );
+  // В Docker/nginx embed только из /render/; VITE_ с __obllomov_render__ тянет HTML с :8088 без наших путей к utils
+  const obllomovSrc = useMemo(() => {
+    const raw = (import.meta.env.VITE_OBLOLOMV_RENDER_URL || '').trim();
+    if (raw.includes('__obllomov_render__')) {
+      return DEFAULT_RENDER_EMBED_URL;
+    }
+    return raw || DEFAULT_RENDER_EMBED_URL;
+  }, []);
 
   useEffect(() => {
     if (viewMode !== 'local' || !containerRef.current) return;
@@ -112,27 +116,28 @@ const ViewerPanel = ({ modelToLoad, onModelLoaded }) => {
   }, [sceneObjects, viewMode]);
 
   useEffect(() => {
-    if (viewMode !== 'local' || !modelToLoad || !sceneRef.current) return;
-    
-    // Если это scene_plan, переключаемся на obllomov режим и отправляем данные
+    if (!modelToLoad) return;
+
+    // scene_plan: старт в режиме obllomov, sceneRef (local three) пуст — не требуем local
     if (modelToLoad.type === 'scene_plan') {
-      console.log('Switching to obllomov mode and loading scene:', modelToLoad.data);
-      setViewMode('obllomov');
-      // Подождём пока iframe загрузится, затем отправим данные
-      setTimeout(() => {
-        if (iframeRef.current && iframeRef.current.contentWindow) {
+      if (viewMode !== 'obllomov') {
+        setViewMode('obllomov');
+      }
+      const t = setTimeout(() => {
+        if (iframeRef.current?.contentWindow) {
           console.log('Sending scene to iframe via postMessage');
-          iframeRef.current.contentWindow.postMessage({
-            type: 'LOAD_SCENE',
-            scene: modelToLoad.data
-          }, '*');
+          iframeRef.current.contentWindow.postMessage(
+            { type: 'LOAD_SCENE', scene: modelToLoad.data },
+            '*'
+          );
         } else {
-          console.error('iframe not ready');
+          console.error('iframe not ready (obllomov)');
         }
-      }, 1000);
-      return;
+      }, 600);
+      return () => clearTimeout(t);
     }
-    
+
+    if (viewMode !== 'local' || !sceneRef.current) return;
     loadModel(modelToLoad.url, modelToLoad.filename);
   }, [modelToLoad, viewMode]);
 
