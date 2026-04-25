@@ -13,7 +13,7 @@ class SessionRow(Base):
     __tablename__ = "sessions"
     __table_args__ = {"schema": "chat"}
 
-    session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     # user_id: без ForeignKey() в ORM — таблица users в другом сервисе/схеме, иначе SQLAlchemy
     # падает при вставке («could not find table users.users»). В PostgreSQL FK задаёт init.sql
     user_id: Mapped[int] = mapped_column(Integer, index=True)
@@ -36,11 +36,12 @@ class InteractionRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     session_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("chat.sessions.session_id", ondelete="CASCADE"),
+        ForeignKey("chat.sessions.id", ondelete="CASCADE"),
         index=True,
     )
     sequence: Mapped[int] = mapped_column(Integer)
     query: Mapped[str] = mapped_column(Text())
+    status: Mapped[str] = mapped_column(String(50), server_default=text("'pending'"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     session: Mapped["SessionRow"] = relationship(back_populates="interactions")

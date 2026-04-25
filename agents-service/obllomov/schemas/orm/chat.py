@@ -10,9 +10,9 @@ class Base(DeclarativeBase):
 
 class SessionRow(Base):
     __tablename__ = "sessions"
-    __table_args__ = {"schema": "chat"}
+    # __table_args__ = {"schema": "chat"}
 
-    session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -23,10 +23,10 @@ class SessionRow(Base):
 
 class InteractionRow(Base):
     __tablename__ = "interactions"
-    __table_args__ = {"schema": "chat"}
+    # __table_args__ = {"schema": "chat"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("chat.sessions.session_id"), index=True)
+    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("sessions.id"), index=True)
     sequence: Mapped[int] = mapped_column(Integer)
     query: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String, default="pending")
@@ -40,10 +40,10 @@ class InteractionRow(Base):
 
 class StageRow(Base):
     __tablename__ = "stages"
-    __table_args__ = {"schema": "chat"}
+    # __table_args__ = {"schema": "chat"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    interaction_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat.interactions.id"), index=True)
+    interaction_id: Mapped[int] = mapped_column(Integer, ForeignKey("interactions.id"), index=True)
     stage_name: Mapped[str] = mapped_column(String(255))
     scene_plan: Mapped[dict] = mapped_column(JSON, default=dict)
     raw_scene_plan: Mapped[dict] = mapped_column(JSON, default=dict)

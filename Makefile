@@ -61,14 +61,13 @@ minio:
 	-v ~/minio-data:/data \
 	quay.io/minio/minio server /data --console-address ":9001"
 
-<<<<<<< HEAD
+
 docker-up:
 	export DOCKER_HOST="unix:/$$HOME/.colima/default/docker.sock" && docker compose up -d
-=======
+
 migrate-to-minio:
 	export PYTHONPATH="./agents-service" && python -u scripts/migrate_to_minio.py
 
->>>>>>> better-agents
 
 docker-build:
 	export DOCKER_HOST="unix:/$$HOME/.colima/default/docker.sock" && docker compose up -d --build

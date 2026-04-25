@@ -87,7 +87,7 @@ class RabbitMQEventCallback(AsyncEventCallback):
         if self._channel:
             return
         import aio_pika
-        self._connection = await aio_pika.connect_robust(self._url)
+        self._connection = await aio_pika.connect(self._url)
         self._channel = await self._connection.channel()
         self._exchange = await self._channel.declare_exchange(
             "generation_events",

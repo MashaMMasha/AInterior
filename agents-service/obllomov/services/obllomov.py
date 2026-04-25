@@ -15,7 +15,7 @@ from obllomov.agents.planners import (CeilingPlanner, DoorPlanner,
                                       FloorObjectPlanner, FloorPlanner,
                                       SmallObjectPlanner, WallObjectPlanner,
                                       WallPlanner, WindowPlanner)
-from obllomov.agents.planners.controllers import AI2thorObjectController
+from obllomov.agents.planners.controllers import SimpleObjectController
 from obllomov.agents.retrievers import (BaseRetriever, ItemRetriever,
                                         ObjathorRetriever, ObjectRetriever)
 from obllomov.agents.selectors import MaterialSelector, ObjectSelector
@@ -149,7 +149,7 @@ class ObLLoMov:
 
         self.ceiling_planner = CeilingPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations)
 
-        self.object_controller = AI2thorObjectController(self.assets)
+        self.object_controller = SimpleObjectController(self.annotations)
         self.small_object_planner = SmallObjectPlanner(self.llm, self.assets, self.objathor_retriever, self.annotations, self.object_controller)
 
     def _init_editors(self):

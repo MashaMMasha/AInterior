@@ -51,14 +51,14 @@ assets = LocalAssets()
 # )
 
 model = ObLLoMov(llm, assets)
-engine = create_db_engine()
+engine = create_db_engine("sqlite:///chat.db")
 chat = ChatService(SessionRepository(engine))
 
 session_id = args.session_id
 if session_id:
     logger.info(f"Using existing session: {session_id}")
 else:
-    session = chat.start_session(user_id="terbium")
+    session = chat.start_session(user_id=1)
     session_id = session.id
     logger.info(f"Created new session: {session_id}")
 

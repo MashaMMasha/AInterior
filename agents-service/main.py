@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -116,20 +116,8 @@ async def _run_generation(
         if async_callback:
             await async_callback.close()
 
-def _run_generation_sync(
-    query: str,
-    session_id: str,
-    interaction_id: int,
-):
-    """
-    Run async generation in a background thread to keep the
-    main event loop responsive for /health and /generate.
-    """
-    asyncio.run(_run_generation(query, session_id, interaction_id))
-
-
 @app.post("/generate", response_model=GenerateResponse)
-async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
+async def generate(req: GenerateRequest):
     if req.session_id:
         session = chat.get_session(req.session_id)
         if session is None:
@@ -145,7 +133,7 @@ async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
 
     interaction = chat.start_interaction(session_id, req.query)
 
-    background_tasks.add_task(_run_generation_sync, req.query, session_id, interaction.id)
+    asyncio.create_task(_run_generation(req.query, session_id, interaction.id))
 
     return GenerateResponse(
         session_id=session_id,
@@ -165,7 +153,7 @@ class EditResponse(BaseModel):
 
 
 @app.post("/edit", response_model=EditResponse)
-async def edit(req: EditRequest, background_tasks: BackgroundTasks):
+async def edit(req: EditRequest):
     session = chat.get_session(req.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -183,9 +171,7 @@ async def edit(req: EditRequest, background_tasks: BackgroundTasks):
 
     interaction = chat.start_interaction(req.session_id, req.query)
 
-    background_tasks.add_task(
-        _run_edit, req.query, req.session_id, interaction.id, scene_plan
-    )
+    asyncio.create_task(_run_edit(req.query, req.session_id, interaction.id, scene_plan))
 
     return EditResponse(
         session_id=req.session_id,

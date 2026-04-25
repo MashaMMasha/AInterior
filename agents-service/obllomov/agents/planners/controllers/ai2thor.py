@@ -1,6 +1,5 @@
 import random
 import shutil
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -11,29 +10,15 @@ from procthor.utils.types import Vector3
 
 from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.shared.log import logger
-from obllomov.shared.path import OBJATHOR_ASSETS_DIR
+from obllomov.shared.path import ASSETS_VERSION, OBJATHOR_ASSETS_DIR
 from obllomov.storage.assets import BaseAssets
 
-from obllomov.shared.path import ASSETS_VERSION, HOLODECK_BASE_DATA_DIR
+from .base import BaseObjectController
 
 if ASSETS_VERSION > "2023_09_23":
     THOR_COMMIT_ID = "8524eadda94df0ab2dbb2ef5a577e4d37c712897"
 else:
     THOR_COMMIT_ID = "3213d486cd09bcbafce33561997355983bdf8d1a"
-
-
-class BaseObjectController(ABC):
-    @abstractmethod
-    def start(self, scene_plan: ScenePlan) -> List[str]:
-        pass
-
-    @abstractmethod
-    def place_object(self, asset_id: str, receptacle_id: str, rotation: list) -> Optional[dict]:
-        pass
-
-    @abstractmethod
-    def stop(self) -> None:
-        pass
 
 
 def _collect_asset_ids(scene_plan: ScenePlan) -> Set[str]:
@@ -45,7 +30,7 @@ def _collect_asset_ids(scene_plan: ScenePlan) -> Set[str]:
         asset_ids.add(entry.asset_id)
     for entry in scene_plan.windows:
         asset_ids.add(entry.asset_id)
-    
+
     asset_ids.discard("")
     return asset_ids
 
@@ -73,7 +58,6 @@ class AI2thorObjectController(BaseObjectController):
     def start(self, scene_plan: ScenePlan) -> List[str]:
         thor_scene = scene_plan.to_thor_scene()
         logger.debug(f"thor_scene objects count: {len(thor_scene.get('objects', []))}")
-        # logger.debug(f"thor_scene object ids: {[o.get('id') for o in thor_scene.get('objects', [])]}")
 
         asset_ids = _collect_asset_ids(scene_plan)
         logger.debug(f"Preparing {len(asset_ids)} scene assets")

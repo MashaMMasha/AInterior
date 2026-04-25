@@ -113,14 +113,14 @@ CREATE INDEX IF NOT EXISTS idx_generation_progress_status ON interior.generation
 
 -- Chat schema tables
 CREATE TABLE IF NOT EXISTS chat.sessions (
-    session_id VARCHAR(36) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     user_id INTEGER REFERENCES users.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS chat.interactions (
     id SERIAL PRIMARY KEY,
-    session_id VARCHAR(36) REFERENCES chat.sessions(session_id) ON DELETE CASCADE,
+    session_id VARCHAR(36) REFERENCES chat.sessions(id) ON DELETE CASCADE,
     sequence INTEGER NOT NULL,
     query TEXT NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'pending',

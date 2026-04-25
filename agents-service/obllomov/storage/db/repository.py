@@ -15,12 +15,12 @@ class SessionRepository:
     def create_session(self, user_id: int) -> ChatSession:
         session_id = uuid4().hex
         with Session(self._engine) as s:
-            row = SessionRow(session_id=session_id, user_id=user_id)
+            row = SessionRow(id=session_id, user_id=user_id)
             s.add(row)
             s.commit()
             s.refresh(row)
             return ChatSession(
-                id=row.session_id,
+                id=row.id,
                 user_id=row.user_id,
                 created_at=row.created_at,
             )
@@ -137,7 +137,7 @@ class SessionRepository:
     @staticmethod
     def _to_chat_session(row: SessionRow) -> ChatSession:
         return ChatSession(
-            id=row.session_id,
+            id=row.id,
             user_id=row.user_id,
             interactions=[
                 SessionRepository._to_chat_interaction(i)

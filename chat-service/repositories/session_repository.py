@@ -27,6 +27,7 @@ def _interaction_to_dto(row: InteractionRow) -> ChatInteraction:
         id=row.id,
         sequence=row.sequence,
         query=row.query,
+        status=row.status,
         stages=stages,
         created_at=row.created_at,
     )
@@ -35,7 +36,7 @@ def _interaction_to_dto(row: InteractionRow) -> ChatInteraction:
 def _session_to_dto(row: SessionRow) -> ChatSession:
     interactions = [_interaction_to_dto(i) for i in row.interactions]
     return ChatSession(
-        id=row.session_id,
+        id=row.id,
         user_id=row.user_id,
         interactions=interactions,
         created_at=row.created_at,
@@ -45,7 +46,7 @@ def _session_to_dto(row: SessionRow) -> ChatSession:
 class SessionRepository:
     async def create_session(self, db: AsyncSession, user_id: int) -> ChatSession:
         session_id = str(uuid.uuid4())
-        row = SessionRow(session_id=session_id, user_id=user_id)
+        row = SessionRow(id=session_id, user_id=user_id)
         db.add(row)
         await db.commit()
         loaded = await self.get_session(db, session_id)
@@ -55,7 +56,7 @@ class SessionRepository:
     async def get_session(self, db: AsyncSession, session_id: str) -> Optional[ChatSession]:
         stmt = (
             select(SessionRow)
-            .where(SessionRow.session_id == session_id)
+            .where(SessionRow.id == session_id)
             .options(
                 selectinload(SessionRow.interactions).selectinload(InteractionRow.stages),
             )
