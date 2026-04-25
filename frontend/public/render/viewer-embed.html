@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <title>AInterior Scene Viewer (embed)</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #1a1a2e; }
+  body { margin: 0; overflow: hidden; background: linear-gradient(180deg, #f8f4ef 0%, #efe6dd 100%); }
   #info {
-    position: absolute; top: 10px; left: 10px; color: #fff;
-    font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.6);
+    position: absolute; top: 12px; left: 12px; color: #3f342d;
+    font-family: monospace; font-size: 13px; background: rgba(255,255,255,0.72);
     padding: 8px 12px; border-radius: 4px; z-index: 10;
+    border: 1px solid rgba(140, 116, 97, 0.25);
   }
 </style>
 </head>
@@ -46,6 +47,8 @@ window.__OBLLOMOV_API_BASE__ = normalizeApiBase(window.__OBLLOMOV_API_BASE__);
 <script type="module">
 (async function initViewerApp() {
   const { DragControls } = await import('three/addons/controls/DragControls.js');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js');
 
   const candidateUtilsUrls = [];
   const direct = toAbsUrl(window.__OBLLOMOV_UTILS_URL__);
@@ -67,15 +70,91 @@ window.__OBLLOMOV_API_BASE__ = normalizeApiBase(window.__OBLLOMOV_API_BASE__);
   if (!importedUtils) throw lastImportError || new Error('Unable to import utils.js');
   const {
     initViewer, animate, positionCamera, apiUrl,
-    buildFloor, buildWall, buildDoor, buildWindow, buildObject, wallDedupeKey
+    buildFloor, buildWall, buildDoor, buildWindow, buildObject, wallDedupeKey, clearGeneratedScene
   } = importedUtils;
   const p = apiUrl;
 
   const info = document.getElementById('info');
-  const { camera, controls, renderer } = initViewer();
+  const { scene, camera, controls, renderer } = initViewer();
 
   const draggableObjects = [];
+  const uploadedModelIds = new Set();
+  const uploadedModelRoots = [];
+  const entityRegistry = new Map();
+  let selectedEntityId = null;
   let editingInteractionId = null;
+
+  function vec3ToPlain(v) {
+    return { x: Number(v.x || 0), y: Number(v.y || 0), z: Number(v.z || 0) };
+  }
+
+  function registerEntity({ id, name, type, node, source = 'render', movable = true }) {
+    if (!id || !node) return;
+    node.userData.entityId = id;
+    entityRegistry.set(id, {
+      id,
+      name: name || id,
+      type: type || 'entity',
+      node,
+      _source: source,
+      movable,
+    });
+  }
+
+  function emitEntities() {
+    const entities = [...entityRegistry.values()].map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      type: entry.type,
+      _source: entry._source,
+      movable: Boolean(entry.movable),
+      visible: entry.node.visible !== false,
+      position: vec3ToPlain(entry.node.position),
+    }));
+    window.parent?.postMessage({ type: 'SCENE_ENTITIES', entities }, '*');
+  }
+
+  function setEntityVisibility(entityId, visible) {
+    const entry = entityRegistry.get(entityId);
+    if (!entry) return;
+    entry.node.visible = Boolean(visible);
+    emitEntities();
+  }
+
+  function setEntityPosition(entityId, position) {
+    const entry = entityRegistry.get(entityId);
+    if (!entry || !entry.movable || !position) return;
+    entry.node.position.set(
+      Number(position.x || 0),
+      Number(position.y || 0),
+      Number(position.z || 0)
+    );
+    window.parent?.postMessage(
+      { type: 'ENTITY_MOVED', entityId, position: vec3ToPlain(entry.node.position) },
+      '*'
+    );
+    emitEntities();
+  }
+
+  function markEntitySelected(entityId) {
+    selectedEntityId = entityId || null;
+    entityRegistry.forEach((entry) => {
+      const isSelected = entry.id === selectedEntityId;
+      entry.node.traverse?.((child) => {
+        if (!child.isMesh || !child.material) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach((mat) => {
+          if (mat && mat.emissive) {
+            if (isSelected) {
+              mat.emissive.setRGB(0.2, 0.2, 0.1);
+            } else {
+              mat.emissive.setRGB(0, 0, 0);
+            }
+          }
+        });
+      });
+    });
+  }
 
   async function ensureEditingSession() {
     if (editingInteractionId) return editingInteractionId;
@@ -113,6 +192,14 @@ window.__OBLLOMOV_API_BASE__ = normalizeApiBase(window.__OBLLOMOV_API_BASE__);
   dragControls.addEventListener('dragend', (event) => {
     controls.enabled = true;
     saveObjectMove(event.object);
+    const entityId = event.object?.userData?.entityId;
+    if (entityId) {
+      window.parent?.postMessage(
+        { type: 'ENTITY_MOVED', entityId, position: vec3ToPlain(event.object.position) },
+        '*'
+      );
+      emitEntities();
+    }
   });
 
   async function loadScene() {
@@ -122,30 +209,90 @@ window.__OBLLOMOV_API_BASE__ = normalizeApiBase(window.__OBLLOMOV_API_BASE__);
 
   async function renderScene(data) {
     info.textContent = `Rendering scene... Rooms: ${data.rooms?.length || 0}`;
+    clearGeneratedScene();
+    draggableObjects.length = 0;
+    for (const [entityId, entry] of entityRegistry.entries()) {
+      if (entry._source === 'render') entityRegistry.delete(entityId);
+    }
 
     for (const room of (data.rooms || [])) {
-      buildFloor(room);
+      const floorNode = buildFloor(room);
+      registerEntity({
+        id: `floor:${room.id || Math.random().toString(36).slice(2)}`,
+        name: `Floor ${room.id || ''}`.trim(),
+        type: 'floor',
+        node: floorNode,
+        source: 'render',
+        movable: false,
+      });
     }
     if (data.rooms) positionCamera(data.rooms);
 
     const seenWallKeys = new Set();
+    const openingsByWall = new Map();
+    const pushOpening = (wallId, holePolygon) => {
+      if (!wallId || !Array.isArray(holePolygon) || holePolygon.length < 2) return;
+      const p0 = holePolygon[0];
+      const p1 = holePolygon[1];
+      const x1 = Number(p0?.x || 0);
+      const y1 = Number(p0?.y || 0);
+      const x2 = Number(p1?.x || 0);
+      const y2 = Number(p1?.y || 0);
+      const list = openingsByWall.get(wallId) || [];
+      list.push({ x1, y1, x2, y2 });
+      openingsByWall.set(wallId, list);
+    };
+
+    for (const door of (data.doors || [])) {
+      pushOpening(door.wall0, door.hole_polygon);
+      pushOpening(door.wall1, door.hole_polygon);
+    }
+    for (const win of (data.windows || [])) {
+      pushOpening(win.wall0, win.hole_polygon);
+      pushOpening(win.wall1, win.hole_polygon);
+    }
+
     for (const wall of (data.walls || [])) {
       if (wall.id?.includes('|exterior')) continue;
       const key = wallDedupeKey(wall);
       if (seenWallKeys.has(key)) continue;
       seenWallKeys.add(key);
-      buildWall(wall);
+      const wallNode = buildWall(wall, openingsByWall.get(wall.id) || []);
+      registerEntity({
+        id: wall.id || `wall:${key}`,
+        name: wall.id || `Wall ${wall.direction || ''}`.trim(),
+        type: 'wall',
+        node: wallNode,
+        source: 'render',
+        movable: false,
+      });
     }
 
     for (const door of (data.doors || [])) {
-      buildDoor(door);
+      const doorNode = buildDoor(door);
+      registerEntity({
+        id: door.id || `door:${door.asset_id || Math.random().toString(36).slice(2)}`,
+        name: door.id || `Door ${door.asset_id || ''}`.trim(),
+        type: 'door',
+        node: doorNode,
+        source: 'render',
+        movable: false,
+      });
     }
 
     for (const win of (data.windows || [])) {
-      buildWindow(win);
+      const windowNode = buildWindow(win);
+      registerEntity({
+        id: win.id || `window:${win.asset_id || Math.random().toString(36).slice(2)}`,
+        name: win.id || `Window ${win.asset_id || ''}`.trim(),
+        type: 'window',
+        node: windowNode,
+        source: 'render',
+        movable: false,
+      });
     }
 
-    const allObjects = [
+    const allObjectsRaw = [
       ...(data.objects || []),
       ...(data.floor_objects || []),
       ...(data.wall_objects || []),
@@ -153,16 +300,118 @@ window.__OBLLOMOV_API_BASE__ = normalizeApiBase(window.__OBLLOMOV_API_BASE__);
       ...(data.ceiling_objects || []),
     ];
 
+    const seenObjectKeys = new Set();
+    const allObjects = [];
+    for (const obj of allObjectsRaw) {
+      const key = obj?.id || `${obj?.asset_id || 'unknown'}:${JSON.stringify(obj?.position || {})}`;
+      if (seenObjectKeys.has(key)) continue;
+      seenObjectKeys.add(key);
+      allObjects.push(obj);
+    }
+
     for (const obj of allObjects) {
       try {
         const mesh = await buildObject(obj);
-        if (mesh) draggableObjects.push(mesh);
+        if (mesh) {
+          draggableObjects.push(mesh);
+          registerEntity({
+            id: obj.id || `object:${obj.asset_id || Math.random().toString(36).slice(2)}`,
+            name: obj.id || obj.asset_id || 'Object',
+            type: 'object',
+            node: mesh,
+            source: 'render',
+            movable: true,
+          });
+        }
       } catch (e) {
         console.warn('buildObject', obj?.id, e);
       }
     }
 
     info.textContent = `Scene loaded | Rooms: ${data.rooms?.length || 0} | Objects: ${allObjects.length}`;
+    emitEntities();
+  }
+
+  function fitUploadedModel(model) {
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const scale = 1.8 / maxDim;
+    model.scale.multiplyScalar(scale);
+    model.position.x += -center.x * scale;
+    model.position.y += -box.min.y * scale;
+    model.position.z += -center.z * scale;
+  }
+
+  function addUploadedModel(root, modelMeta) {
+    fitUploadedModel(root);
+    root.position.x += 0.8 * uploadedModelIds.size;
+    root.userData.uploadedModelId = modelMeta.id;
+    root.userData.source = 'uploadedModel';
+    root.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+      }
+    });
+    uploadedModelIds.add(modelMeta.id);
+    uploadedModelRoots.push(root);
+    scene.add(root);
+    registerEntity({
+      id: modelMeta.id,
+      name: modelMeta.filename,
+      type: 'uploaded',
+      node: root,
+      source: 'uploaded',
+      movable: true,
+    });
+    info.textContent = `Model added: ${modelMeta.filename}`;
+    emitEntities();
+  }
+
+  function clearAllSceneContent() {
+    clearGeneratedScene();
+    for (const root of uploadedModelRoots) {
+      scene.remove(root);
+    }
+    uploadedModelRoots.length = 0;
+    uploadedModelIds.clear();
+    draggableObjects.length = 0;
+    entityRegistry.clear();
+    selectedEntityId = null;
+    info.textContent = 'Scene cleared';
+    emitEntities();
+  }
+
+  function loadUploadedModel(modelMeta) {
+    if (!modelMeta?.url || !modelMeta?.filename || uploadedModelIds.has(modelMeta.id)) return;
+    const ext = modelMeta.filename.split('.').pop().toLowerCase();
+    if (ext === 'glb' || ext === 'gltf') {
+      const loader = new GLTFLoader();
+      loader.load(
+        modelMeta.url,
+        (gltf) => addUploadedModel(gltf.scene, modelMeta),
+        undefined,
+        (err) => {
+          console.error('LOAD_UPLOADED_MODEL gltf', err);
+          info.textContent = 'Model load error: ' + (err && err.message ? err.message : 'unknown');
+        }
+      );
+      return;
+    }
+    if (ext === 'obj') {
+      const loader = new OBJLoader();
+      loader.load(
+        modelMeta.url,
+        (obj) => addUploadedModel(obj, modelMeta),
+        undefined,
+        (err) => {
+          console.error('LOAD_UPLOADED_MODEL obj', err);
+          info.textContent = 'Model load error: ' + (err && err.message ? err.message : 'unknown');
+        }
+      );
+    }
   }
 
   // Listen for postMessage from parent
@@ -174,6 +423,26 @@ window.__OBLLOMOV_API_BASE__ = normalizeApiBase(window.__OBLLOMOV_API_BASE__);
         console.error('renderScene', err);
         info.textContent = 'Scene render error: ' + (err && err.message);
       });
+      return;
+    }
+    if (event.data.type === 'CLEAR_SCENE') {
+      clearAllSceneContent();
+      return;
+    }
+    if (event.data.type === 'LOAD_UPLOADED_MODEL' && event.data.model) {
+      loadUploadedModel(event.data.model);
+      return;
+    }
+    if (event.data.type === 'SET_ENTITY_VISIBILITY') {
+      setEntityVisibility(event.data.entityId, event.data.visible);
+      return;
+    }
+    if (event.data.type === 'MOVE_ENTITY') {
+      setEntityPosition(event.data.entityId, event.data.position);
+      return;
+    }
+    if (event.data.type === 'SELECT_ENTITY') {
+      markEntitySelected(event.data.entityId);
     }
   });
 

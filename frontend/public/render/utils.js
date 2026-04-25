@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 let scene, camera, controls, renderer, textureLoader;
 const textureCache = {};
+const GENERATED_TAG = 'aiGeneratedSceneObject';
+const ENABLE_DOOR_TEXTURES = true;
 
 function apiBasePath() {
   if (typeof window === 'undefined') return '';
@@ -27,7 +29,7 @@ export function initViewer() {
   document.body.appendChild(renderer.domElement);
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb);
+  scene.background = new THREE.Color(0xf4ede4);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   controls = new OrbitControls(camera, renderer.domElement);
@@ -117,9 +119,11 @@ export function buildFloor(room) {
 
   const mat = makeMaterial(room.floor_material, 3, 3);
   const mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData[GENERATED_TAG] = true;
   mesh.receiveShadow = true;
   mesh.position.y = 0.000;
   scene.add(mesh);
+  return mesh;
 }
 
 function computeWallUVs(poly) {
@@ -145,39 +149,95 @@ function computeWallUVs(poly) {
   return uvs;
 }
 
-export function buildWall(wall) {
+export function buildWall(wall, openings = []) {
   const poly = wall.polygon;
   if (!poly || poly.length < 3) return;
 
-  const vertices = [];
-  for (const p of poly) {
-    vertices.push(p.x, p.y, p.z);
-  }
+  const seg = wall.segment;
+  const width = Number(wall.width || 0);
+  const height = Number(wall.height || 0);
+  const minY = Math.min(...poly.map((p) => Number(p.y || 0)));
 
-  const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(vertices);
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  let geometry = null;
+  if (seg && width > 0 && height > 0) {
+    const dx = Number(seg.v2?.x || 0) - Number(seg.v1?.x || 0);
+    const dz = Number(seg.v2?.z || 0) - Number(seg.v1?.z || 0);
+    const segLen = Math.sqrt(dx * dx + dz * dz) || 1;
+    const dirX = dx / segLen;
+    const dirZ = dz / segLen;
 
-  if (poly.length === 4) {
-    geometry.setIndex([0, 1, 2, 0, 2, 3]);
-  } else {
-    const indices = [];
-    for (let i = 1; i < poly.length - 1; i++) {
-      indices.push(0, i, i + 1);
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.lineTo(width, 0);
+    shape.lineTo(width, height);
+    shape.lineTo(0, height);
+    shape.lineTo(0, 0);
+
+    for (const raw of openings) {
+      const x1 = Math.max(0, Math.min(width, Math.min(Number(raw.x1 || 0), Number(raw.x2 || 0))));
+      const x2 = Math.max(0, Math.min(width, Math.max(Number(raw.x1 || 0), Number(raw.x2 || 0))));
+      const y1 = Math.max(0, Math.min(height, Math.min(Number(raw.y1 || 0), Number(raw.y2 || 0))));
+      const y2 = Math.max(0, Math.min(height, Math.max(Number(raw.y1 || 0), Number(raw.y2 || 0))));
+      if (x2 - x1 < 0.05 || y2 - y1 < 0.05) continue;
+
+      const hole = new THREE.Path();
+      hole.moveTo(x1, y1);
+      hole.lineTo(x1, y2);
+      hole.lineTo(x2, y2);
+      hole.lineTo(x2, y1);
+      hole.lineTo(x1, y1);
+      shape.holes.push(hole);
     }
-    geometry.setIndex(indices);
-  }
-  geometry.computeVertexNormals();
 
-  const uvs = computeWallUVs(poly);
-  geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2));
+    geometry = new THREE.ShapeGeometry(shape);
+    const posAttr = geometry.getAttribute('position');
+    const uvArr = new Float32Array(posAttr.count * 2);
+    const v1x = Number(seg.v1?.x || 0);
+    const v1z = Number(seg.v1?.z || 0);
+
+    for (let i = 0; i < posAttr.count; i++) {
+      const u = posAttr.getX(i);
+      const v = posAttr.getY(i);
+      const worldX = v1x + dirX * u;
+      const worldY = minY + v;
+      const worldZ = v1z + dirZ * u;
+      posAttr.setXYZ(i, worldX, worldY, worldZ);
+      uvArr[i * 2] = width > 0 ? u / width : 0;
+      uvArr[i * 2 + 1] = height > 0 ? v / height : 0;
+    }
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2));
+    geometry.computeVertexNormals();
+  } else {
+    const vertices = [];
+    for (const p of poly) {
+      vertices.push(p.x, p.y, p.z);
+    }
+    geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(vertices);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    if (poly.length === 4) {
+      geometry.setIndex([0, 1, 2, 0, 2, 3]);
+    } else {
+      const indices = [];
+      for (let i = 1; i < poly.length - 1; i++) {
+        indices.push(0, i, i + 1);
+      }
+      geometry.setIndex(indices);
+    }
+    geometry.computeVertexNormals();
+    const uvs = computeWallUVs(poly);
+    geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2));
+  }
 
   const matName = wall.material ? wall.material.name : null;
   const mat = makeMaterial({ name: matName }, wall.width / 2, wall.height / 2);
   const mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData[GENERATED_TAG] = true;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   scene.add(mesh);
+  return mesh;
 }
 
 function loadCroppedDoorTexture(url, callback) {
@@ -218,6 +278,7 @@ function loadCroppedDoorTexture(url, callback) {
     tex.magFilter = THREE.LinearFilter;
     callback(tex);
   };
+  img.onerror = () => callback(null);
   img.src = url;
 }
 
@@ -239,6 +300,7 @@ export function buildDoor(door) {
   const rotY = Math.atan2(-dz, dx);
 
   const group = new THREE.Group();
+  group.userData[GENERATED_TAG] = true;
   group.position.set(midX, hp[0].y, midZ);
   group.rotation.y = rotY;
 
@@ -276,16 +338,20 @@ export function buildDoor(door) {
   back.castShadow = true;
   group.add(back);
 
-  loadCroppedDoorTexture(apiUrl(`/doors/${door.asset_id}.png`), (tex) => {
-    frontMat.map = tex;
-    frontMat.needsUpdate = true;
-    const backTex = tex.clone();
-    backTex.needsUpdate = true;
-    backMat.map = backTex;
-    backMat.needsUpdate = true;
-  });
+  if (ENABLE_DOOR_TEXTURES) {
+    loadCroppedDoorTexture(apiUrl(`/doors/${door.asset_id}.png`), (tex) => {
+      if (!tex) return;
+      frontMat.map = tex;
+      frontMat.needsUpdate = true;
+      const backTex = tex.clone();
+      backTex.needsUpdate = true;
+      backMat.map = backTex;
+      backMat.needsUpdate = true;
+    });
+  }
 
   scene.add(group);
+  return group;
 }
 
 export function buildWindow(win) {
@@ -306,6 +372,7 @@ export function buildWindow(win) {
   const rotY = Math.atan2(-dz, dx);
 
   const group = new THREE.Group();
+  group.userData[GENERATED_TAG] = true;
   group.position.set(midX, hp[0].y + height / 2, midZ);
   group.rotation.y = rotY;
 
@@ -366,6 +433,21 @@ export function buildWindow(win) {
   glass.position.z = 0.02;
   group.add(glass);
 
+  // Visual "hole in wall" effect: mask wall area behind the window opening.
+  // This is not full CSG subtraction, but it makes windows look like real openings.
+  const openingMaskMat = new THREE.MeshStandardMaterial({
+    color: 0xcfe3f5,
+    side: THREE.DoubleSide,
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+  const openingMask = new THREE.Mesh(
+    new THREE.BoxGeometry(Math.max(width - 0.06, 0.1), Math.max(height - 0.06, 0.1), frameDepth * 2.2),
+    openingMaskMat
+  );
+  openingMask.position.z = 0.0;
+  group.add(openingMask);
+
   const sillMat = new THREE.MeshStandardMaterial({ color: 0xd0d0d0, roughness: 0.4 });
   const sill = new THREE.Mesh(new THREE.BoxGeometry(width + 0.1, 0.03, 0.18), sillMat);
   sill.position.y = -height / 2 - 0.015;
@@ -373,13 +455,38 @@ export function buildWindow(win) {
   group.add(sill);
 
   scene.add(group);
+  return group;
 }
 
 export async function buildObject(obj) {
-  const resp = await fetch(apiUrl(`/mesh/${obj.asset_id}`));
-  if (!resp.ok) {
-    console.warn(`Failed to load mesh ${obj.asset_id}: ${resp.status}`);
-    return;
+  const addPlaceholderObject = () => {
+    const placeholder = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.5, 0.5),
+      new THREE.MeshStandardMaterial({ color: 0xff8c42, roughness: 0.6, metalness: 0.1 })
+    );
+    placeholder.userData[GENERATED_TAG] = true;
+    placeholder.userData.objectId = obj.id;
+    placeholder.position.set(
+      obj?.position?.x ?? 0,
+      obj?.position?.y ?? 0.25,
+      obj?.position?.z ?? 0
+    );
+    placeholder.rotation.order = 'YXZ';
+    placeholder.rotation.set(
+      THREE.MathUtils.degToRad(obj?.rotation?.x ?? 0),
+      THREE.MathUtils.degToRad(obj?.rotation?.y ?? 0),
+      THREE.MathUtils.degToRad(obj?.rotation?.z ?? 0)
+    );
+    placeholder.castShadow = true;
+    placeholder.receiveShadow = true;
+    scene.add(placeholder);
+    return placeholder;
+  };
+
+  const resp = await fetch(apiUrl(`/mesh/${obj.asset_id}`)).catch(() => null);
+  if (!resp || !resp.ok) {
+    console.warn(`Failed to load mesh ${obj.asset_id}: ${resp ? resp.status : 'network error'}`);
+    return addPlaceholderObject();
   }
   const mesh = await resp.json();
 
@@ -419,6 +526,7 @@ export async function buildObject(obj) {
   geometry.translate(-center.x, -center.y, -center.z);
 
   const object3d = new THREE.Mesh(geometry, mat);
+  object3d.userData[GENERATED_TAG] = true;
   object3d.userData.objectId = obj.id;
   object3d.position.set(obj.position.x, obj.position.y, obj.position.z);
   object3d.rotation.order = 'YXZ';
@@ -431,6 +539,14 @@ export async function buildObject(obj) {
   object3d.receiveShadow = true;
   scene.add(object3d);
   return object3d;
+}
+
+export function clearGeneratedScene() {
+  if (!scene) return;
+  const toRemove = scene.children.filter((child) => child?.userData?.[GENERATED_TAG]);
+  for (const item of toRemove) {
+    scene.remove(item);
+  }
 }
 
 export function wallDedupeKey(wall) {

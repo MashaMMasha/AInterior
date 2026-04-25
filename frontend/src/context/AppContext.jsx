@@ -18,6 +18,8 @@ export const AppProvider = ({ children }) => {
   const [selectedObject, setSelectedObject] = useState(null);
   // Убираем дефолтное сообщение - чат будет загружаться через ChatPanel
   const [chatMessages, setChatMessages] = useState([]);
+  const SCENE_SNAPSHOT_TYPE = 'scene_plan_snapshot_v1';
+  const isPersistableSceneObject = (obj) => obj && obj._ephemeral !== true;
 
   useEffect(() => {
     // Всегда загружаем проекты пользователя при открытии
@@ -117,16 +119,26 @@ export const AppProvider = ({ children }) => {
       return;
     }
 
+    const preservedSystemObjects = Array.isArray(currentProject.objects)
+      ? currentProject.objects.filter((obj) => obj?._system_type === SCENE_SNAPSHOT_TYPE)
+      : [];
+
     const updatedProject = {
       name: currentProject.name,
-      objects: sceneObjects.map((obj) => ({
-        id: obj.id,
-        name: obj.name,
-        visible: obj.visible,
-        position: obj.position,
-        rotation: obj.rotation,
-        scale: obj.scale
-      })),
+      objects: [
+        ...sceneObjects
+          .filter(isPersistableSceneObject)
+          .map((obj) => ({
+          id: obj.id,
+          name: obj.name,
+          visible: obj.visible,
+          position: obj.position,
+          rotation: obj.rotation,
+          scale: obj.scale,
+          _source: obj._source,
+        })),
+        ...preservedSystemObjects,
+      ],
     };
     if (currentProject.conversation_id) {
       updatedProject.conversation_id = currentProject.conversation_id;
@@ -165,6 +177,26 @@ export const AppProvider = ({ children }) => {
     setSceneObjects(prev => [...prev, obj]);
   };
 
+  const replaceSceneObjects = (objects) => {
+    setSceneObjects(Array.isArray(objects) ? objects : []);
+    setSelectedObject((prev) => {
+      if (!prev) return prev;
+      const next = (Array.isArray(objects) ? objects : []).find((o) => o.id === prev.id);
+      return next || null;
+    });
+  };
+
+  const updateSceneObject = (id, partial) => {
+    if (!id || !partial) return;
+    setSceneObjects((prev) => prev.map((obj) => (obj.id === id ? { ...obj, ...partial } : obj)));
+    setSelectedObject((prev) => (prev?.id === id ? { ...prev, ...partial } : prev));
+  };
+
+  const moveSceneObject = (id, nextPosition) => {
+    if (!id || !nextPosition) return;
+    updateSceneObject(id, { position: nextPosition });
+  };
+
   const removeSceneObject = (id) => {
     setSceneObjects(prev => prev.filter(obj => obj.id !== id));
     if (selectedObject?.id === id) {
@@ -173,10 +205,11 @@ export const AppProvider = ({ children }) => {
   };
 
   const toggleObjectVisibility = (id) => {
-    setSceneObjects(prev => 
-      prev.map(obj => 
-        obj.id === id ? { ...obj, visible: !obj.visible } : obj
-      )
+    setSceneObjects((prev) =>
+      prev.map((obj) => (obj.id === id ? { ...obj, visible: !obj.visible } : obj))
+    );
+    setSelectedObject((prev) =>
+      prev?.id === id ? { ...prev, visible: !prev.visible } : prev
     );
   };
 
@@ -202,6 +235,9 @@ export const AppProvider = ({ children }) => {
     switchProject,
     addChatMessage,
     addSceneObject,
+    replaceSceneObjects,
+    updateSceneObject,
+    moveSceneObject,
     removeSceneObject,
     toggleObjectVisibility,
     saveCurrentProject

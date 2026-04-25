@@ -28,72 +28,135 @@
   background: var(--color-bg);
 }
 
-.scene-object {
+.scene-group {
+  margin-bottom: 8px;
+  border: 1px solid rgba(109, 105, 67, 0.24);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.scene-group-header {
+  width: 100%;
+  border: none;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(109, 105, 67, 0.18);
+}
+
+.scene-group-title {
+  flex: 1;
+  text-align: left;
+  color: var(--color-text-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scene-group-count {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background: rgba(109, 105, 67, 0.12);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.scene-group-chevron {
+  color: var(--color-primary);
+  width: 18px;
+  height: 18px;
+}
+
+.scene-group-chevron svg {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.2s ease;
+}
+
+.scene-group-chevron svg.expanded {
+  transform: rotate(180deg);
+}
+
+.scene-group-items {
+  padding: 6px;
+}
+
+.scene-object {
+  padding: 8px 10px;
   margin-bottom: 4px;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   transition: all 0.2s ease;
-  background: white;
-  border: 1px solid var(--color-border);
+  background: #fff;
+  border: 1px solid rgba(109, 105, 67, 0.2);
 }
 
 .scene-object:hover {
-  background: var(--color-secondary);
-  color: var(--color-text-light);
-  transform: translateX(-4px);
+  border-color: var(--color-secondary);
+  background: rgba(200, 161, 177, 0.08);
 }
 
 .scene-object.selected {
-  background: var(--color-primary);
-  color: var(--color-text-light);
   border-color: var(--color-primary);
-}
-
-.scene-object-icon {
-  font-size: 18px;
+  background: rgba(109, 105, 67, 0.1);
 }
 
 .scene-object-name {
   flex: 1;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--color-text-dark);
 }
 
 .scene-object-actions {
   display: flex;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.scene-object:hover .scene-object-actions {
-  opacity: 1;
 }
 
 .scene-object-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   padding: 4px;
-  font-size: 14px;
   color: var(--color-text-dark);
   border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.scene-object:hover .scene-object-btn {
-  color: var(--color-text-light);
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .scene-object-btn:hover {
-  background: rgba(244, 243, 238, 0.2);
+  background: rgba(200, 161, 177, 0.12);
+  border-color: rgba(200, 161, 177, 0.4);
+}
+
+.icon-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-btn.eye {
+  color: var(--color-secondary);
 }
 
 .scene-empty {
@@ -101,6 +164,52 @@
   text-align: center;
   color: var(--color-primary);
   font-size: 13px;
+}
+
+.scene-transform {
+  border-top: 1px solid var(--color-border);
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.scene-transform-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+}
+
+.scene-transform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.scene-transform-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  color: #555;
+  gap: 4px;
+}
+
+.scene-transform-grid input {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.scene-transform-apply {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid var(--color-secondary);
+  background: rgba(200, 161, 177, 0.18);
+  color: var(--color-primary);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .upload-area {

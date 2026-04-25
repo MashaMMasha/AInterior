@@ -13,6 +13,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
 .header-right {
@@ -32,6 +34,20 @@
   display: flex;
   gap: 4px;
   align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.projects-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.projects-tabs::-webkit-scrollbar-thumb {
+  background: rgba(200, 161, 177, 0.45);
+  border-radius: 8px;
 }
 
 .project-tab {
@@ -47,6 +63,8 @@
   align-items: center;
   gap: 8px;
   opacity: 0.7;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .project-tab:hover {
@@ -106,6 +124,7 @@
   margin-right: 8px;
   padding-right: 8px;
   border-right: 1px solid rgba(200, 161, 177, 0.3);
+  flex-shrink: 0;
 }
 
 .header-user-name {

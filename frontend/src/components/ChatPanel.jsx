@@ -9,6 +9,24 @@ const WELCOME_TEXT =
 const storageKeyForProject = (projectId) => `ainterior_conversation_${projectId}`;
 const TERMINAL_STAGES = new Set(['completed', 'error', 'failed']);
 const hasScenePlan = (stage) => Boolean(stage?.scene_plan);
+const countSceneObjects = (scenePlan) => {
+  if (!scenePlan) return 0;
+  return [
+    ...(scenePlan.objects || []),
+    ...(scenePlan.floor_objects || []),
+    ...(scenePlan.wall_objects || []),
+    ...(scenePlan.small_objects || []),
+    ...(scenePlan.ceiling_objects || []),
+  ].length;
+};
+
+const completionText = (scenePlan) => {
+  const count = countSceneObjects(scenePlan);
+  if (count === 0) {
+    return 'Сцена сгенерирована, но без интерьерных объектов (только геометрия/проемы).';
+  }
+  return `Сцена успешно сгенерирована! Объектов интерьера: ${count}.`;
+};
 
 const buildMessagesFromApiHistory = (msgs, onModelLoad) => {
   if (!msgs || msgs.length === 0) {
@@ -20,7 +38,7 @@ const buildMessagesFromApiHistory = (msgs, onModelLoad) => {
     if (m.stages && m.stages.length > 0) {
       const lastStage = m.stages[m.stages.length - 1];
       if (lastStage.stage_name === 'completed') {
-        out.push({ type: 'assistant', text: 'Сцена сгенерирована!' });
+        out.push({ type: 'assistant', text: completionText(lastStage.scene_plan) });
       }
       if (onModelLoad && hasScenePlan(lastStage)) {
           setTimeout(() => onModelLoad({ type: 'scene_plan', data: lastStage.scene_plan }), 500);
@@ -179,7 +197,7 @@ const ChatPanel = ({ onModelLoad }) => {
           setCurrentStage('');
           if (!completionNotifiedRef.current.has(interaction.interaction_id)) {
             completionNotifiedRef.current.add(interaction.interaction_id);
-            addChatMessage('assistant', 'Сцена успешно сгенерирована!');
+            addChatMessage('assistant', completionText(lastStage?.scene_plan));
           }
           return;
         }
