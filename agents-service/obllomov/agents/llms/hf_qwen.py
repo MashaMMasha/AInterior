@@ -8,8 +8,6 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
                                      SystemMessage)
 from langchain_core.outputs import ChatGeneration, ChatResult
-from openai import OpenAI
-# from langchain_core.prompts import ChatPromptTemplate
 from pydantic import Field, model_validator
 from transformers import AutoModelForCausalLM, AutoTokenizer
 

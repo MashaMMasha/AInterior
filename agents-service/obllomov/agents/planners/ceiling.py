@@ -7,8 +7,8 @@ import obllomov.agents.prompts as prompts
 from obllomov.agents.retrievers import BaseRetriever
 from obllomov.agents.selectors.base import BaseSelector
 from obllomov.schemas.domain.annotations import Annotation, AnnotationDict
-from obllomov.schemas.domain.entries import (CeilingObjectEntry, CeilingPlan,
-                                             ScenePlan)
+from obllomov.schemas.domain.entries import (CeilingObjectEntry, CeilingPlan,)
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawCeilingEntry, RawCeilingPlan
 from obllomov.shared.geometry import Polygon2D, Vertex2D, Vertex3D
 from obllomov.shared.log import logger

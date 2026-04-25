@@ -34,8 +34,19 @@ colima-big:
 	colima stop || true
 	colima start --memory 16 --cpu 8 --disk 120
 
+edit:
+	export PYTHONPATH="./agents-service" && python scripts/edit.py \
+	--query "$(query)" \
+	--session-id "$(session_id)"
+
+
+debug:
+	export PYTHONPATH="./agents-service" && python scripts/debug.py
+
 rendering:
-	export PYTHONPATH="./agents-service" && python -u scripts/render/render.py "$(session_id)"
+	export PYTHONPATH="./agents-service" && python -u scripts/render/render.py \
+	--session-id "$(session_id)"
+
 
 render-stream:
 	export PYTHONPATH="./agents-service" && python -u scripts/render/render_stream.py "$(generation_id)"
@@ -50,8 +61,14 @@ minio:
 	-v ~/minio-data:/data \
 	quay.io/minio/minio server /data --console-address ":9001"
 
+<<<<<<< HEAD
 docker-up:
 	export DOCKER_HOST="unix:/$$HOME/.colima/default/docker.sock" && docker compose up -d
+=======
+migrate-to-minio:
+	export PYTHONPATH="./agents-service" && python -u scripts/migrate_to_minio.py
+
+>>>>>>> better-agents
 
 docker-build:
 	export DOCKER_HOST="unix:/$$HOME/.colima/default/docker.sock" && docker compose up -d --build

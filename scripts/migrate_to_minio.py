@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from obllomov.storage.assets.s3 import S3Assets
+from obllomov.shared.path import HOLODECK_BASE_DATA_DIR
+from obllomov.shared.env import env
+
 
 print("Starting migration to MinIO...")
 

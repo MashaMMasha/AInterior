@@ -1,7 +1,7 @@
 from typing import Optional
 
 from obllomov.schemas.dto.chat import ChatInteraction, ChatSession, ChatStage
-from obllomov.schemas.domain.entries import ScenePlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawScenePlan
 from obllomov.storage.db import SessionRepository
 
@@ -22,18 +22,33 @@ class ChatService:
     def start_interaction(self, session_id: str, query: str) -> ChatInteraction:
         return self._repo.add_interaction(session_id, query)
 
+    def has_active_interaction(self, session_id: str) -> bool:
+        return self._repo.has_active_interaction(session_id)
+
+    def complete_interaction(self, interaction_id: int):
+        self._repo.update_interaction_status(interaction_id, "done")
+
+    def fail_interaction(self, interaction_id: int):
+        self._repo.update_interaction_status(interaction_id, "error")
+
+    def set_interaction_status(self, interaction_id: int, status: str):
+        self._repo.update_interaction_status(interaction_id, status)
+
+    def complete_editing_interactions(self, session_id: str):
+        self._repo.complete_editing_interactions(session_id)
+
     def save_stage(
         self,
         interaction_id: int,
         stage_name: str,
         scene_plan: ScenePlan,
-        raw_scene_plan: RawScenePlan,
+        raw_scene_plan: Optional[RawScenePlan] = None,
     ) -> ChatStage:
         return self._repo.add_stage(
             interaction_id=interaction_id,
             stage_name=stage_name,
-            scene_plan=scene_plan.to_scene(),
-            raw_scene_plan=raw_scene_plan.model_dump(),
+            scene_plan=scene_plan.to_json(),
+            raw_scene_plan=raw_scene_plan.model_dump() if raw_scene_plan else {},
         )
 
     def save_stage_dict(

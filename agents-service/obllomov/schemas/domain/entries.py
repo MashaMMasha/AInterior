@@ -4,12 +4,6 @@ from pydantic import BaseModel, Field
 
 from obllomov.shared.geometry import Polygon2D, Segment2D, Vertex2D, Vertex3D
 
-
-def _to_camel(key: str) -> str:
-    parts = key.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-
 class RoomPlan(BaseModel):
     room_type: str
     floor_design: str
@@ -46,8 +40,8 @@ class WallEntry(BaseModel):
     segment: Segment2D
 
 class OpenWalls(BaseModel):
-    segments: list[Segment2D]
-    boxes: list
+    segments: List[Segment2D] = []
+    open_wall_boxes: list = []
 
 class WallPlan(BaseModel):
     wall_height: float
@@ -93,6 +87,18 @@ class WindowPlan(BaseModel):
     walls: list[WallEntry]
 
 
+class FloorObjectEntry(BaseModel):
+    asset_id: str
+    id: str
+    kinematic: bool = True
+    position: Vertex3D
+    rotation: Vertex3D
+    material: Optional[str] = None
+    room_id: str
+    vertices: list = []
+    object_name: str
+
+
 class WallObjectEntry(BaseModel):
     asset_id: str
     id: str
@@ -101,7 +107,7 @@ class WallObjectEntry(BaseModel):
     rotation: Vertex3D
     material: Optional[str] = None
     room_id: str
-    vertices: list
+    vertices: list = []
     object_name: str
 
 
@@ -135,79 +141,3 @@ class CeilingObjectEntry(BaseModel):
 
 class CeilingPlan(BaseModel):
     ceiling_objects: List[CeilingObjectEntry]
-
-class ScenePlan(BaseModel):
-    query: str = ""
-    procedural_parameters: dict = {}
-    rooms: List[RoomPlan] = []
-    wall_height: float = 0.0
-    walls: List[WallEntry] = []
-    doors: List[DoorEntry] = []
-    room_pairs: list = []
-    open_room_pairs: List[Tuple[str, str]] = []
-    open_walls: dict = {}
-    windows: List[WindowEntry] = []
-    object_selection_plan: dict = {}
-    selected_objects: dict = {}
-    floor_objects: list = []
-    wall_objects: List[WallObjectEntry] = []
-    small_objects: List[SmallObjectEntry] = []
-    ceiling_objects: List[CeilingObjectEntry] = []
-    receptacle2small_objects: dict = {}
-
-    @staticmethod
-    def _camel_keys(obj):
-        if isinstance(obj, dict):
-            return {_to_camel(k): ScenePlan._camel_keys(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [ScenePlan._camel_keys(i) for i in obj]
-        return obj
-
-    def to_scene(self) -> dict:
-        dump = self.model_dump()
-        for key in ["object_selection_plan", "selected_objects", "receptacle2small_objects"]:
-            if not dump[key]:
-                dump.pop(key)
-        dump["objects"] = (
-            dump.get("floor_objects", [])
-            + dump.get("wall_objects", [])
-            + dump.get("small_objects", [])
-            + dump.get("ceiling_objects", [])
-        )
-        return dump
-
-    THOR_METADATA: ClassVar[Dict] = {
-        "schema": "1.0.0",
-        "agent": {
-            "horizon": 30,
-            "position": {"x": 0, "y": 0.95, "z": 0},
-            "rotation": {"x": 0, "y": 0, "z": 0},
-            "standing": True,
-        },
-        "agentPoses": {},
-        "roomSpecId": "",
-        "warnings": {},
-    }
-
-    def to_thor_scene(self) -> dict:
-        dump = self._camel_keys(self.model_dump())
-        rooms = dump.get("rooms", [])
-        for room in rooms:
-            room.setdefault("children", [])
-            room.setdefault("ceilings", [])
-        objects = (
-            dump.get("floorObjects", [])
-            + dump.get("wallObjects", [])
-            + dump.get("smallObjects", [])
-            + dump.get("ceilingObjects", [])
-        )
-        return {
-            "metadata": self.THOR_METADATA,
-            "rooms": rooms,
-            "walls": dump.get("walls", []),
-            "doors": dump.get("doors", []),
-            "windows": dump.get("windows", []),
-            "objects": objects,
-            "proceduralParameters": dump.get("proceduralParameters", {}),
-        }
-

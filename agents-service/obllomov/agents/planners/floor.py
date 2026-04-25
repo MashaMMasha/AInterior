@@ -4,12 +4,11 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 from colorama import Fore
 from langchain_core.language_models import BaseChatModel
-from pydantic import BaseModel, Field
-from shapely.geometry import LineString
 
 import obllomov.agents.prompts as prompts
 from obllomov.agents.selectors import MaterialSelector
-from obllomov.schemas.domain.entries import FloorPlan, RoomPlan, ScenePlan
+from obllomov.schemas.domain.entries import FloorPlan, RoomPlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawFloorPlan, RawRoomPlan
 from obllomov.shared.geometry import (Polygon2D, Vertex2D, Vertex3D,
                                       check_interior_angles, get_full_vertices,
@@ -140,8 +139,7 @@ class FloorPlanner(BasePlanner):
                     or poly_j.contains_polygon(poly_i)
                 ):
                     return False, "Room polygons must not overlap."
-                intersection = poly_i.intersection(poly_j)
-                if isinstance(intersection, LineString):
+                if poly_i.intersects_polygon(poly_j):
                     has_neighbor = True
                 if poly_i.contains_point_of(Polygon2D(vertices=rooms[j].vertices)):
                     return False, "No vertex of a room can be inside another room."

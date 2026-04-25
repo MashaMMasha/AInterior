@@ -29,6 +29,7 @@ class InteractionRow(Base):
     session_id: Mapped[str] = mapped_column(String(36), ForeignKey("chat.sessions.session_id"), index=True)
     sequence: Mapped[int] = mapped_column(Integer)
     query: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String, default="pending")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     session: Mapped["SessionRow"] = relationship(back_populates="interactions")

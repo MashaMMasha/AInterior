@@ -4,7 +4,7 @@ import json
 import pickle
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Iterator, Optional
+from typing import Any, Iterable, Iterator, Optional
 
 import compress_pickle
 
@@ -40,6 +40,19 @@ class BaseAssets(ABC):
         """
         Возвращает локальный путь к директории (prefix) с ассетами.
         Для удалённых бэкендов (например S3) должен скачать содержимое в кэш.
+        """
+        pass
+
+    @abstractmethod
+    def prepare_local_dir(
+        self,
+        base_prefix: Path | str,
+        subfolders: Iterable[str],
+    ) -> Path:
+        """
+        Подготавливает временную директорию, содержащую только указанные подпапки
+        из base_prefix. Возвращает путь ко временной директории.
+        Вызывающий код отвечает за очистку (shutil.rmtree).
         """
         pass
 

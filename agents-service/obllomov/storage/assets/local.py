@@ -1,5 +1,6 @@
+import tempfile
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterable, Iterator, Optional
 
 from obllomov.shared.env import env
 
@@ -61,3 +62,16 @@ class LocalAssets(BaseAssets):
                 f"Директория не найдена в локальном хранилище: {abs_path}"
             )
         return abs_path
+
+    def prepare_local_dir(
+        self,
+        base_prefix: Path | str,
+        subfolders: Iterable[str],
+    ) -> Path:
+        base = self._abs(base_prefix)
+        tmp = Path(tempfile.mkdtemp(prefix="obllomov_assets_"))
+        for name in subfolders:
+            src = base / name
+            if src.is_dir():
+                (tmp / name).symlink_to(src)
+        return tmp

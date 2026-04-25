@@ -16,6 +16,7 @@ class ChatInteraction(BaseModel):
     id: int
     sequence: int
     query: str
+    status: str = "pending"
     stages: list[ChatStage] = []
     created_at: datetime
 

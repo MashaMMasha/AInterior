@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS chat.interactions (
     session_id VARCHAR(36) REFERENCES chat.sessions(session_id) ON DELETE CASCADE,
     sequence INTEGER NOT NULL,
     query TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_chat_interactions_session_sequence UNIQUE (session_id, sequence)
 );

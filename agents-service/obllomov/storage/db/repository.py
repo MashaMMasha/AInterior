@@ -59,6 +59,36 @@ class SessionRepository:
             s.refresh(row)
             return self._to_chat_interaction(row)
 
+    def has_active_interaction(self, session_id: str) -> bool:
+        with Session(self._engine) as s:
+            return s.execute(
+                select(InteractionRow.id)
+                .where(
+                    InteractionRow.session_id == session_id,
+                    InteractionRow.status == "pending",
+                )
+                .limit(1)
+            ).scalar() is not None
+
+    def update_interaction_status(self, interaction_id: int, status: str):
+        with Session(self._engine) as s:
+            row = s.get(InteractionRow, interaction_id)
+            if row:
+                row.status = status
+                s.commit()
+
+    def complete_editing_interactions(self, session_id: str):
+        with Session(self._engine) as s:
+            rows = s.execute(
+                select(InteractionRow).where(
+                    InteractionRow.session_id == session_id,
+                    InteractionRow.status == "user_editing",
+                )
+            ).scalars().all()
+            for row in rows:
+                row.status = "done"
+            s.commit()
+
     def get_interaction(self, session_id: str, sequence: int) -> Optional[ChatInteraction]:
         with Session(self._engine) as s:
             row = s.execute(
@@ -122,6 +152,7 @@ class SessionRepository:
             id=row.id,
             sequence=row.sequence,
             query=row.query,
+            status=row.status,
             stages=[
                 SessionRepository._to_chat_stage(st)
                 for st in row.stages

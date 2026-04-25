@@ -3,13 +3,16 @@ Assume the wall thickness is zero. Please ensure that all rooms are connected, n
 Note: the units for the coordinates are meters.
 
 Here are some guidelines for you:
-1. A room's size range (length or width) is 3m to 8m. The maximum area of a room is 48 m$^2$ and the minimum rom area is 9 m$^2$. Please provide a floor plan within this range and ensure the room is not too small or too large.
+1. A room's size range (length or width) is 3m to 8m. The maximum area of a room is 48 m$^2$. Please provide a floor plan within this range and ensure the room is not too small or too large.
 2. It is okay to have one room in the floor plan if you think it is reasonable.
 3. The room name should be unique.
 
 Now, I need a design for: "{query}".
 Additional requirements: {additional_requirements}.
 Your response should be direct and without additional text at the beginning or end."""
+# For example:
+# living room | maple hardwood, matte | light grey drywall, smooth | [(0, 0), (0, 8), (5, 8), (5, 0)]
+# kitchen | white hex tile, glossy | light grey drywall, smooth | [(5, 0), (5, 5), (8, 5), (8, 0)]
 
 wall_height_prompt = """I am now designing: "{query}". Please help me decide the wall height in meters.
 
@@ -87,7 +90,7 @@ Here are some guidelines for you:
 Now I want you to design {room_type} and the room size is {room_size}.
 Here are the objects that I want to place in the {room_type}:
 {objects}
-Please first use natural language to explain your high-level design strategy, and then follow the desired format *strictly* (do not add any additional text at the beginning or end) to provide the constraints for each object."""
+"""
 
 
 wall_object_selection_prompt = """Assist me in selecting wall-based objects to furnish each room.
@@ -104,22 +107,20 @@ Please help me arrange wall objects in the room by providing their relative posi
 Note the distance is the distance from the *bottom* of the wall object to the floor. The second column is optional and can be N/A. The object of the same type should be placed at the same height.
 Now I am designing {room_type} of which the wall height is {wall_height} cm, and the floor objects in the room are: {floor_objects}.
 The wall objects I want to place in the {room_type} are: {wall_objects}.
-Please do not add additional text at the beginning or in the end."""
+"""
 
 
 ceiling_selection_prompt = """Assist me in selecting ceiling objects (light/fan) to furnish each room.
 
 Currently, the design in progress is "{query}", featuring these rooms: {rooms}. You need to provide one ceiling object for each room.
 Please also consider the following additional requirements: {additional_requirements}.
-
-Your response should be precise, without additional text at the beginning or end. """
+"""
 
 
 small_object_selection_prompt = """As an experienced room designer, you are tasked to bring life into the room by strategically placing more *small* objects. Those objects should only be arranged *on top of* large objects which serve as receptacles. 
 
 Now, we are designing: "{query}" and the available receptacles in the room include: {receptacles}. Additional requirements for this design project are as follows: {additional_requirements}.
 Your response should solely contain the information about the placement of objects and should not include any additional text before or after the main content."""
-
 
 object_selection_prompt_1 = """You are an experienced room designer, please assist me in selecting large *floor*/*wall* objects and small objects on top of them to furnish the room. You need to select appropriate objects to satisfy the customer's requirements.
 You must provide a description and desired size for each object since I will use it to retrieve object. If multiple items are to be placed in the room with the same description, please indicate the quantity and variance_type ("same" if they should be identical, otherwise "varied").
@@ -133,6 +134,19 @@ Here are some guidelines for you:
 3. I want more types of large objects and more types of small objects on top of the large objects to make the room look more vivid.
 
 """
+# Please first use natural language to explain your high-level design strategy for *ROOM_TYPE*, and then follow the desired JSON format *strictly* (do not add any additional text at the beginning or end).
+
+object_selection_prompt_messages = [
+    {"user": "{object_selection_prompt_new_1}"},
+    {"ai": "{object_selection_1}"},
+    {"user": """
+     Thanks! After following your suggestions to retrieve objects, I found the *{room}* is still too empty. To enrich the *{room}*, you could:
+1. Add more *floor* objects to the *{room}* (excluding rug, carpet, windows, doors, curtains, and *ignore ceiling objects*).
+2. Increase the size and quantity of the objects.
+3. Add more *types* of small objects on top of the large objects.
+Could you update the entire JSON file with the same format as before and answer without additional text at the beginning or end?
+     """}
+]
 
 object_selection_prompt_2 = """User: {object_selection_prompt_new_1}
 

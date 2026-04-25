@@ -43,6 +43,9 @@ class MaterialSelector(BaseSelector):
             
         return design2materials
     
+    def select_single_material(self, design: str, topk=5):
+        return self.select_materials([design], topk=topk)[design]
+    
     def color2rgb(self, color_name):
         rgb = mcolors.to_rgb(color_name)
         return {"r": rgb[0], "g": rgb[1], "b": rgb[2]}

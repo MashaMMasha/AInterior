@@ -163,10 +163,40 @@
 
     info.textContent = `Scene: ${data.query || 'unknown'} | Rooms: ${data.rooms.length} | Objects: ${allObjects.length}`;
   }
+  for (const door of (data.doors || [])) {
+    buildDoor(door);
+  }
 
-  loadScene();
-  animate();
-})();
+  for (const win of (data.windows || [])) {
+    buildWindow(win);
+  }
+
+  const allObjects = [
+    ...(data.objects || []),
+    ...(data.floor_objects || []),
+    ...(data.wall_objects || []),
+    ...(data.small_objects || []),
+    ...(data.ceiling_objects || []),
+  ];
+  const seenAssets = new Set();
+  const objectPromises = [];
+  for (const obj of allObjects) {
+    if (!obj.asset_id) continue;
+    const key = `${obj.asset_id}_${obj.id}`;
+    if (seenAssets.has(key)) continue;
+    seenAssets.add(key);
+    objectPromises.push(buildObject(obj));
+  }
+  const meshes = await Promise.all(objectPromises);
+  for (const m of meshes) {
+    if (m) draggableObjects.push(m);
+  }
+
+  info.textContent = `Scene: ${data.query || 'unknown'} | Rooms: ${data.rooms.length} | Objects: ${allObjects.length}`;
+})
+
+loadScene();
+animate();
 </script>
 </body>
 </html>

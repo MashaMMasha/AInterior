@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 import obllomov.agents.prompts as prompts
 from obllomov.agents.base import BaseAgent
 from obllomov.agents.retrievers import ObjathorRetriever
-from obllomov.schemas.domain.entries import ScenePlan
+from obllomov.schemas.domain.scene import ScenePlan
 from obllomov.schemas.domain.raw import RawRoomObjects, RawTopObjectEntry
 from obllomov.agents.selectors.placement import DFS_Solver_Floor, DFS_Solver_Wall
 from obllomov.shared.geometry import Polygon2D, Vertex2D
@@ -87,7 +87,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         room2size       = {rt: self._get_room_size(room2polygon[rt], scene_plan.wall_height) for rt in rooms_types}
         room2perimeter  = {rt: room2polygon[rt].perimeter for rt in rooms_types}
         room2vertices   = {
-            rt: [v.scaled(100).to_tuple() for v in room2polygon[rt].vertices]
+            rt: [v.convert_m_to_cm().to_tuple() for v in room2polygon[rt].vertices]
             for rt in rooms_types
         }
 
@@ -228,7 +228,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
         uids, scores = self.retriever.retrieve_single(
             f"a 3D model of {object_type}, {object_description}",
             threshold=similarity_threshold,
-            topk=200
+            topk=500
         )
 
         candidates = list(zip(uids, scores))
@@ -474,7 +474,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
 
         open_walls = scene_plan.open_walls
         if open_walls:
-            for box in open_walls.get("openWallBoxes", []):
+            for box in open_walls.open_wall_boxes:
                 verts = [(x * 100, z * 100) for x, z in box]
                 poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in verts])
                 if room_poly.contains(poly.centroid):
@@ -549,7 +549,7 @@ class ObjectSelector(BaseAgent, BaseSelector):
                     if room_poly.contains(door_poly.centroid):
                         room2floor_capacity[room.id][1] += door_poly.area * 0.6
             if scene_plan.open_walls:
-                for box in scene_plan.open_walls.get("openWallBoxes", []):
+                for box in scene_plan.open_walls.open_wall_boxes:
                     poly = Polygon2D(vertices=[Vertex2D(x=v[0], z=v[1]) for v in box])
                     if room_poly.contains(poly.centroid):
                         room2floor_capacity[room.id][1] += poly.area * 0.6

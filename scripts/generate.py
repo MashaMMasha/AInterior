@@ -40,8 +40,15 @@ else:
 
 # llm = ChatMock()
 
-
 assets = LocalAssets()
+# assets = S3Assets(
+#     bucket_name=env.S3_BUCKET_NAME,
+#     key_prefix=env.S3_KEY_PREFIX,
+#     aws_access_key_id=env.AWS_ACCESS_KEY_ID,
+#     aws_secret_access_key=env.AWS_SECRET_ACCESS_KEY,
+#     endpoint_url=env.S3_ENDPOINT_URL,
+#     region_name=env.AWS_DEFAULT_REGION,
+# )
 
 model = ObLLoMov(llm, assets)
 engine = create_db_engine()
@@ -57,18 +64,22 @@ else:
 
 interaction = chat.start_interaction(session_id, args.query)
 callback = CompositeEventCallback([
-    LogEventCallback(),
+    # LogEventCallback(),
     ChatEventCallback(chat, interaction.id),
 ])
 
 generation_id = f"{session_id}-{interaction.id}"
-logger.info(f"generation_id: {generation_id}")
 
-sleep(5)
-async_callback = RabbitMQEventCallback(env.RABBITMQ_URL, generation_id)
+
+# logger.info(f"generation_id: {generation_id}")
+# sleep(5)
+# async_callback = RabbitMQEventCallback(env.RABBITMQ_URL, generation_id)
 
 asyncio.run(model.generate_scene(args.query, args.save_dir,
                                  callback=callback,
-                                 async_callback=async_callback,
+                                #  async_callback=async_callback,
                                  add_time=False
                                  ))
+
+
+logger.info(f"generation_id: {generation_id}")

@@ -5,8 +5,8 @@ from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel, Field
 
 import obllomov.agents.prompts as prompts
-from obllomov.schemas.domain.entries import (ScenePlan, WallConnection,
-                                             WallEntry, WallPlan, OpenWalls)
+from obllomov.schemas.domain.entries import (WallConnection, WallEntry, WallPlan, OpenWalls)
+from obllomov.schemas.domain.scene import ScenePlan
 
 from obllomov.schemas.domain.raw import RawWallPlan
 from obllomov.shared.geometry import (Polygon2D, Segment2D, Vertex2D, Vertex3D,
@@ -78,12 +78,10 @@ class WallPlanner(BasePlanner):
             open_wall_rectangles.append(top)
             open_wall_rectangles.append(bottom)
 
-        # OpenWalls(segments=open_wall_segments, boxes=open_wall_rectangles)
-        
-        open_walls = {
-            "segments": [s.model_dump() for s in open_wall_segments],
-            "openWallBoxes": open_wall_rectangles,
-        }
+        open_walls = OpenWalls(
+            segments=open_wall_segments,
+            open_wall_boxes=open_wall_rectangles,
+        )
 
         return WallPlan(wall_height=wall_plan.wall_height, walls=updated_walls), open_walls
 
