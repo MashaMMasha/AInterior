@@ -140,7 +140,6 @@ class S3Assets(BaseAssets):
                     Bucket=self.bucket_name,
                     Key=self._s3_key(rel),
                 )
-                logger.debug("read bytes")
                 return response["Body"].read()
             except ClientError as e:
                 code = e.response.get("Error", {}).get("Code")

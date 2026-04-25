@@ -6,8 +6,22 @@ RUN apt-get update && apt-get install -y \
     git \
     build-essential \
     curl \
+    xvfb \
     libgl1 \
     libglib2.0-0 \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    libxtst6 \
+    libxi6 \
+    libxrandr2 \
+    libxfixes3 \
+    libxcursor1 \
+    libxinerama1 \
+    libsm6 \
+    libice6 \
+    libnss3 \
+    libasound2 \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 

@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -99,6 +100,17 @@ async def _run_generation(
         if async_callback:
             await async_callback.close()
 
+def _run_generation_sync(
+    query: str,
+    session_id: str,
+    interaction_id: int,
+):
+    """
+    Run async generation in a background thread to keep the
+    main event loop responsive for /health and /generate.
+    """
+    asyncio.run(_run_generation(query, session_id, interaction_id))
+
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
@@ -113,7 +125,7 @@ async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
 
     interaction = chat.start_interaction(session_id, req.query)
 
-    background_tasks.add_task(_run_generation, req.query, session_id, interaction.id)
+    background_tasks.add_task(_run_generation_sync, req.query, session_id, interaction.id)
 
     return GenerateResponse(
         session_id=session_id,

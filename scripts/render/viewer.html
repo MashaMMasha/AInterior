@@ -19,6 +19,12 @@
   if (typeof window.__OBLLOMOV_API_BASE__ === 'undefined') {
     window.__OBLLOMOV_API_BASE__ = '';
   }
+  const rawBase = String(window.__OBLLOMOV_API_BASE__ || '').replace(/\/$/, '');
+  if (!rawBase || rawBase.indexOf('__obllomov_render__') !== -1) {
+    window.__OBLLOMOV_API_BASE__ = '/render';
+  } else {
+    window.__OBLLOMOV_API_BASE__ = rawBase;
+  }
 </script>
 <script type="importmap">
 {
@@ -33,13 +39,34 @@
 (async function initViewerApp() {
   const API = String(window.__OBLLOMOV_API_BASE__ || '').replace(/\/$/, '');
   const p = (path) => API + (path.startsWith('/') ? path : `/${path}`);
+  const toAbsUrl = (rawPath) => {
+    const s = String(rawPath || '').trim();
+    if (!s) return null;
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    return new URL(s.startsWith('/') ? s : `/${s}`, window.location.origin).href;
+  };
 
   const { DragControls } = await import('three/addons/controls/DragControls.js');
-  const utilsUrl = new URL(p('/utils.js'), window.location.origin).href;
+  const candidateUtilsUrls = [
+    toAbsUrl(p('/utils.js')),
+    toAbsUrl('/render/utils.js'),
+    toAbsUrl('/utils.js'),
+  ].filter(Boolean);
+  let importedUtils = null;
+  let lastImportError = null;
+  for (const url of [...new Set(candidateUtilsUrls)]) {
+    try {
+      importedUtils = await import(url);
+      break;
+    } catch (err) {
+      lastImportError = err;
+    }
+  }
+  if (!importedUtils) throw lastImportError || new Error('Unable to import utils.js');
   const {
     initViewer, animate, positionCamera,
     buildFloor, buildWall, buildDoor, buildWindow, buildObject, wallDedupeKey
-  } = await import(utilsUrl);
+  } = importedUtils;
 
   const info = document.getElementById('info');
   const { camera, controls, renderer } = initViewer();

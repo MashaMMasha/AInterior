@@ -7,6 +7,8 @@ const WELCOME_TEXT =
   'Привет! Я помогу вам создать интерьер мечты. Опишите, какую квартиру вы хотите создать.';
 
 const storageKeyForProject = (projectId) => `ainterior_conversation_${projectId}`;
+const TERMINAL_STAGES = new Set(['completed', 'error', 'failed']);
+const hasScenePlan = (stage) => Boolean(stage?.scene_plan);
 
 const buildMessagesFromApiHistory = (msgs, onModelLoad) => {
   if (!msgs || msgs.length === 0) {
@@ -17,15 +19,20 @@ const buildMessagesFromApiHistory = (msgs, onModelLoad) => {
     out.push({ type: 'user', text: m.content });
     if (m.stages && m.stages.length > 0) {
       const lastStage = m.stages[m.stages.length - 1];
-      if (lastStage.stage_name === 'object_selection' || lastStage.stage_name === 'completed') {
+      if (lastStage.stage_name === 'completed') {
         out.push({ type: 'assistant', text: 'Сцена сгенерирована!' });
-        if (onModelLoad && lastStage.scene_plan) {
+      }
+      if (onModelLoad && hasScenePlan(lastStage)) {
           setTimeout(() => onModelLoad({ type: 'scene_plan', data: lastStage.scene_plan }), 500);
-        }
       }
     }
   }
   return out;
+};
+
+const getLastStage = (interaction) => {
+  if (!interaction?.stages?.length) return null;
+  return interaction.stages[interaction.stages.length - 1];
 };
 
 const ChatPanel = ({ onModelLoad }) => {
@@ -34,6 +41,7 @@ const ChatPanel = ({ onModelLoad }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
+  const completionNotifiedRef = useRef(new Set());
 
   const [conversationId, setConversationId] = useState(null);
   const [currentStage, setCurrentStage] = useState('');
@@ -80,6 +88,8 @@ const ChatPanel = ({ onModelLoad }) => {
         if (!cancelled) {
           setChatMessages([{ type: 'assistant', text: WELCOME_TEXT }]);
           setConversationId(null);
+          setIsLoading(false);
+          setCurrentStage('');
         }
         return;
       }
@@ -89,10 +99,24 @@ const ChatPanel = ({ onModelLoad }) => {
         const msgs = await api.getConversationMessages(convId);
         if (cancelled) return;
         setChatMessages(buildMessagesFromApiHistory(msgs, onModelLoadRef.current));
+        const latestInteraction = msgs[msgs.length - 1];
+        const lastStage = getLastStage(latestInteraction);
+        const stageName = lastStage?.stage_name;
+
+        if (latestInteraction && !TERMINAL_STAGES.has(stageName || '')) {
+          setIsLoading(true);
+          setCurrentStage(stageName ? `Текущий этап: ${stageName}` : 'Запуск генерации...');
+          startPolling(convId, latestInteraction.interaction_id);
+        } else {
+          setIsLoading(false);
+          setCurrentStage('');
+        }
       } catch (e) {
         console.error('Failed to load conversation history:', e);
         if (!cancelled) {
           setChatMessages([{ type: 'assistant', text: WELCOME_TEXT }]);
+          setIsLoading(false);
+          setCurrentStage('');
         }
       }
     })();
@@ -110,6 +134,66 @@ const ChatPanel = ({ onModelLoad }) => {
     scrollToBottom();
   }, [chatMessages]);
 
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  const startPolling = (targetConversationId, targetInteractionId) => {
+    stopPolling();
+    const tick = async () => {
+      try {
+        const msgs = await api.getConversationMessages(targetConversationId);
+        const interaction =
+          msgs.find((m) => m.interaction_id === targetInteractionId) || msgs[msgs.length - 1];
+        if (!interaction) return;
+
+        const lastStage = getLastStage(interaction);
+        const name = lastStage?.stage_name;
+
+        if (!name) {
+          setCurrentStage('Запуск генерации...');
+          return;
+        }
+
+        if (name === 'error' || name === 'failed') {
+          stopPolling();
+          setIsLoading(false);
+          setCurrentStage('');
+          if (!completionNotifiedRef.current.has(interaction.interaction_id)) {
+            completionNotifiedRef.current.add(interaction.interaction_id);
+            addChatMessage('assistant', 'Произошла ошибка при генерации сцены.');
+          }
+          return;
+        }
+
+        if (onModelLoadRef.current && hasScenePlan(lastStage)) {
+          onModelLoadRef.current({ type: 'scene_plan', data: lastStage.scene_plan });
+        }
+
+        if (name === 'completed') {
+          stopPolling();
+          setIsLoading(false);
+          setCurrentStage('');
+          if (!completionNotifiedRef.current.has(interaction.interaction_id)) {
+            completionNotifiedRef.current.add(interaction.interaction_id);
+            addChatMessage('assistant', 'Сцена успешно сгенерирована!');
+          }
+          return;
+        }
+
+        setCurrentStage(`Текущий этап: ${name}`);
+      } catch (e) {
+        console.error('Ошибка поллинга статуса:', e);
+      }
+    };
+
+    tick();
+    pollRef.current = setInterval(tick, 2000);
+  };
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
     if (!currentProject) return;
@@ -121,10 +205,7 @@ const ChatPanel = ({ onModelLoad }) => {
     setIsLoading(true);
     setCurrentStage('Запуск генерации...');
 
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
+    stopPolling();
 
     const sendId = getConversationIdForProject(project) || conversationId;
 
@@ -132,48 +213,7 @@ const ChatPanel = ({ onModelLoad }) => {
       const result = await api.sendMessage(message, sendId);
       await persistConversationId(project, result.conversation_id);
       setConversationId(result.conversation_id);
-
-      const pollInterval = setInterval(async () => {
-        try {
-          const msgs = await api.getConversationMessages(result.conversation_id);
-          const currentInteraction = msgs.find((m) => m.interaction_id === result.interaction_id);
-
-          if (currentInteraction && currentInteraction.stages && currentInteraction.stages.length > 0) {
-            const lastStage = currentInteraction.stages[currentInteraction.stages.length - 1];
-            const name = lastStage.stage_name;
-
-            if (name === 'error' || name === 'failed') {
-              if (pollRef.current) {
-                clearInterval(pollRef.current);
-                pollRef.current = null;
-              }
-              setIsLoading(false);
-              setCurrentStage('');
-              addChatMessage('assistant', 'Произошла ошибка при генерации сцены.');
-            } else if (name === 'windows' || name === 'object_selection' || name === 'completed') {
-              if (onModelLoad && lastStage.scene_plan) {
-                onModelLoad({ type: 'scene_plan', data: lastStage.scene_plan });
-              }
-              if (name === 'completed') {
-                if (pollRef.current) {
-                  clearInterval(pollRef.current);
-                  pollRef.current = null;
-                }
-                setIsLoading(false);
-                setCurrentStage('');
-                addChatMessage('assistant', 'Сцена успешно сгенерирована!');
-              } else {
-                setCurrentStage(`Текущий этап: ${name}`);
-              }
-            } else {
-              setCurrentStage(`Текущий этап: ${name}`);
-            }
-          }
-        } catch (e) {
-          console.error('Ошибка поллинга статуса:', e);
-        }
-      }, 2000);
-      pollRef.current = pollInterval;
+      startPolling(result.conversation_id, result.interaction_id);
     } catch (error) {
       console.error('Chat error:', error);
       addChatMessage(

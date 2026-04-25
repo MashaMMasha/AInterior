@@ -4,6 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 import httpx
 import logging
+import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,29 +57,55 @@ async def send_message(
             new_session = await chat_service.start_session(db, user["id"])
             session_id = new_session.id
         
-        # Вызываем agents-service для запуска процесса генерации
-        async with httpx.AsyncClient() as client:
-            try:
-                payload = {
-                    "query": request.message,
-                    "user_id": user["id"],
-                    "session_id": session_id  # Всегда передаём session_id
-                }
-                
-                agents_base = settings.AGENTS_SERVICE_URL.rstrip("/")
-                response = await client.post(
-                    f"{agents_base}/generate",
-                    json=payload,
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                data = response.json()
-            except httpx.RequestError as e:
-                logger.error(f"Failed to call agents-service: {e}")
-                raise HTTPException(status_code=503, detail="Agents service unavailable")
-            except httpx.HTTPStatusError as e:
-                logger.error(f"Agents service returned error: {e.response.text}")
-                raise HTTPException(status_code=e.response.status_code, detail="Agents service error")
+        # Вызываем agents-service для запуска процесса генерации.
+        # Retries hide short hiccups while agents-service restarts/warms up.
+        timeout = httpx.Timeout(connect=3.0, read=45.0, write=10.0, pool=5.0)
+        payload = {
+            "query": request.message,
+            "user_id": user["id"],
+            "session_id": session_id  # Всегда передаём session_id
+        }
+        agents_base = settings.AGENTS_SERVICE_URL.rstrip("/")
+        last_error: Exception | None = None
+        data = None
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            for attempt in range(1, 4):
+                try:
+                    response = await client.post(
+                        f"{agents_base}/generate",
+                        json=payload,
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    break
+                except httpx.RequestError as e:
+                    last_error = e
+                    logger.warning(
+                        "Failed to call agents-service on attempt %s/3: %r",
+                        attempt,
+                        e,
+                    )
+                except httpx.HTTPStatusError as e:
+                    # For upstream transient errors we retry, otherwise bubble up.
+                    if e.response.status_code in (502, 503, 504):
+                        last_error = e
+                        logger.warning(
+                            "Agents service transient error on attempt %s/3: %s %s",
+                            attempt,
+                            e.response.status_code,
+                            e.response.text,
+                        )
+                    else:
+                        logger.error(f"Agents service returned error: {e.response.text}")
+                        raise HTTPException(status_code=e.response.status_code, detail="Agents service error")
+
+                if attempt < 3:
+                    await asyncio.sleep(0.8 * attempt)
+
+        if data is None:
+            logger.error("Failed to call agents-service after retries: %r", last_error)
+            raise HTTPException(status_code=503, detail="Agents service unavailable")
 
         return ChatResponse(
             interaction_id=data["interaction_id"],
