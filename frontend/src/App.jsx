@@ -19,8 +19,13 @@ function MainApp() {
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
-  const handleModelLoad = (url, filename) => {
-    setModelToLoad({ url, filename, timestamp: Date.now() });
+  const handleModelLoad = (payloadOrUrl, filename) => {
+    if (payloadOrUrl && typeof payloadOrUrl === 'object' && payloadOrUrl.type === 'scene_plan') {
+      setModelToLoad({ ...payloadOrUrl, timestamp: Date.now() });
+      return;
+    }
+
+    setModelToLoad({ url: payloadOrUrl, filename, timestamp: Date.now() });
   };
 
   const handleToggleLeftPanel = () => {

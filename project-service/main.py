@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 
+from project_service.routers import projects
+
 app = FastAPI(
     title="AInterior Project Service",
     description="Project management service",
@@ -15,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(projects.router)
 
 
 @app.get("/health")

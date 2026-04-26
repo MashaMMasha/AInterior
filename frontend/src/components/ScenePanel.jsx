@@ -1,7 +1,47 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import './ScenePanel.css';
+
+const GROUP_CONFIG = [
+  { key: 'object', title: 'Объекты' },
+  { key: 'uploaded', title: 'Загруженные модели' },
+  { key: 'door', title: 'Двери' },
+  { key: 'window', title: 'Окна' },
+  { key: 'wall', title: 'Стены' },
+  { key: 'floor', title: 'Пол' },
+  { key: 'other', title: 'Прочее' },
+];
+
+const EyeIcon = ({ hidden = false }) => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M2 12C4.2 8.2 7.6 6 12 6C16.4 6 19.8 8.2 22 12C19.8 15.8 16.4 18 12 18C7.6 18 4.2 15.8 2 12Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+    {hidden && <path d="M4 20L20 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M4 7H20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M9 7V5C9 4.4 9.4 4 10 4H14C14.6 4 15 4.4 15 5V7" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M7 7L8 19C8 20.1 8.9 21 10 21H14C15.1 21 16 20.1 16 19L17 7" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M10 11V17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M14 11V17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+);
+
+const ChevronIcon = ({ expanded }) => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={expanded ? 'expanded' : ''}>
+    <path d="M8 10L12 14L16 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
 
 const ScenePanel = ({ onModelLoad }) => {
   const {
@@ -10,10 +50,42 @@ const ScenePanel = ({ onModelLoad }) => {
     setSelectedObject,
     removeSceneObject,
     toggleObjectVisibility,
+    moveSceneObject,
     addChatMessage
   } = useApp();
   
   const fileInputRef = useRef(null);
+  const [posDraft, setPosDraft] = useState({ x: 0, y: 0, z: 0 });
+  const [expandedGroups, setExpandedGroups] = useState(() =>
+    Object.fromEntries(GROUP_CONFIG.map((g) => [g.key, true]))
+  );
+
+  useEffect(() => {
+    if (!selectedObject?.position) return;
+    setPosDraft({
+      x: Number(selectedObject.position.x ?? 0),
+      y: Number(selectedObject.position.y ?? 0),
+      z: Number(selectedObject.position.z ?? 0),
+    });
+  }, [selectedObject?.id, selectedObject?.position]);
+
+  const groupedObjects = useMemo(() => {
+    const buckets = Object.fromEntries(GROUP_CONFIG.map((g) => [g.key, []]));
+    for (const obj of sceneObjects) {
+      const type = obj?.type || 'other';
+      const key = buckets[type] ? type : 'other';
+      buckets[key].push(obj);
+    }
+    Object.keys(buckets).forEach((k) => {
+      buckets[k].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    });
+    return buckets;
+  }, [sceneObjects]);
+
+  const visibleGroups = useMemo(
+    () => GROUP_CONFIG.filter((group) => (groupedObjects[group.key] || []).length > 0),
+    [groupedObjects]
+  );
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
@@ -68,43 +140,111 @@ const ScenePanel = ({ onModelLoad }) => {
   return (
     <div className="scene-panel">
       <div className="scene-objects">
-        {sceneObjects.length === 0 ? (
+        {visibleGroups.length === 0 ? (
           <div className="scene-empty">Пока нет объектов на сцене</div>
         ) : (
-          sceneObjects.map((obj) => (
-            <div
-              key={obj.id}
-              className={`scene-object ${selectedObject?.id === obj.id ? 'selected' : ''}`}
-              onClick={() => setSelectedObject(obj)}
-            >
-              <span className="scene-object-icon">📦</span>
-              <span className="scene-object-name">{obj.name}</span>
-              <div className="scene-object-actions">
-                <button
-                  className="scene-object-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleObjectVisibility(obj.id);
-                  }}
-                  title="Видимость"
-                >
-                  {obj.visible ? '👁️' : '🚫'}
-                </button>
-                <button
-                  className="scene-object-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeSceneObject(obj.id);
-                  }}
-                  title="Удалить"
-                >
-                  🗑️
-                </button>
-              </div>
+          visibleGroups.map((group) => (
+            <div key={group.key} className="scene-group">
+              <button
+                type="button"
+                className="scene-group-header"
+                onClick={() =>
+                  setExpandedGroups((prev) => ({ ...prev, [group.key]: !prev[group.key] }))
+                }
+              >
+                <span className="scene-group-title">{group.title}</span>
+                <span className="scene-group-count">{groupedObjects[group.key].length}</span>
+                <span className="scene-group-chevron">
+                  <ChevronIcon expanded={Boolean(expandedGroups[group.key])} />
+                </span>
+              </button>
+
+              {expandedGroups[group.key] && (
+                <div className="scene-group-items">
+                  {groupedObjects[group.key].map((obj) => (
+                    <div
+                      key={obj.id}
+                      className={`scene-object ${selectedObject?.id === obj.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedObject(obj)}
+                    >
+                      <span className="scene-object-name">{obj.name}</span>
+                      <div className="scene-object-actions">
+                        <button
+                          className="scene-object-btn icon-btn eye"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleObjectVisibility(obj.id);
+                          }}
+                          title={obj.visible ? 'Скрыть' : 'Показать'}
+                        >
+                          <EyeIcon hidden={!obj.visible} />
+                        </button>
+                        {obj._source === 'uploaded' && (
+                          <button
+                            className="scene-object-btn icon-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeSceneObject(obj.id);
+                            }}
+                            title="Удалить"
+                          >
+                            <TrashIcon />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))
         )}
       </div>
+
+      {selectedObject && (
+        <div className="scene-transform">
+          <div className="scene-transform-title">Позиция</div>
+          <div className="scene-transform-grid">
+            <label>
+              X
+              <input
+                type="number"
+                step="0.1"
+                disabled={selectedObject.movable === false}
+                value={Number.isFinite(posDraft.x) ? posDraft.x : 0}
+                onChange={(e) => setPosDraft((p) => ({ ...p, x: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              Y
+              <input
+                type="number"
+                step="0.1"
+                disabled={selectedObject.movable === false}
+                value={Number.isFinite(posDraft.y) ? posDraft.y : 0}
+                onChange={(e) => setPosDraft((p) => ({ ...p, y: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              Z
+              <input
+                type="number"
+                step="0.1"
+                disabled={selectedObject.movable === false}
+                value={Number.isFinite(posDraft.z) ? posDraft.z : 0}
+                onChange={(e) => setPosDraft((p) => ({ ...p, z: Number(e.target.value) }))}
+              />
+            </label>
+          </div>
+          <button
+            className="scene-transform-apply"
+            disabled={selectedObject.movable === false}
+            onClick={() => moveSceneObject(selectedObject.id, { ...posDraft })}
+          >
+            Применить
+          </button>
+        </div>
+      )}
       
       <div
         className="upload-area"

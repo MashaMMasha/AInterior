@@ -342,6 +342,7 @@ services:
       - backend-service
       - chat-service
       - project-service
+      - agents-service
     networks:
       - ainterior-network
     healthcheck:

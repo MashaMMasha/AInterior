@@ -1,8 +1,12 @@
 import asyncio
+import json
+import mimetypes
 from contextlib import asynccontextmanager
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -18,6 +22,11 @@ from obllomov.services.events import (
 from obllomov.services.obllomov import ObLLoMov
 from obllomov.shared.env import env
 from obllomov.shared.log import logger
+from obllomov.shared.path import (
+    HOLODECK_DOORS_IMAGES_DIR,
+    HOLODECK_MATERIALS_IMAGES_DIR,
+    OBJATHOR_ASSETS_DIR,
+)
 from obllomov.storage.assets import LocalAssets, S3Assets
 from obllomov.storage.db.engine import create_db_engine
 from obllomov.storage.db.repository import SessionRepository
@@ -31,12 +40,16 @@ obllomov = None
 async def lifespan(app):
     global engine, chat, obllomov
 
+    if env.YANDEX_CLOUD_API_KEY and env.YANDEX_CLOUD_FOLDER and env.YANDEX_CLOUD_MODEL:
+        llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
+        logger.info("Using Yandex LLM model: %s", env.YANDEX_CLOUD_MODEL)
+    else:
+        llm = ChatMock()
+        logger.warning("Using ChatMock fallback: Yandex LLM config is incomplete")
+
     engine = create_db_engine(env.DB_URL)
     repo = SessionRepository(engine)
     chat = ChatService(repo)
-
-    # llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
-    llm = ChatMock()
 
     if (
         not env.AGENTS_USE_LOCAL_ASSETS
@@ -82,6 +95,47 @@ class GenerateResponse(BaseModel):
     session_id: str
     interaction_id: int
     status: str
+
+
+def _to_xyz_list(value):
+    if isinstance(value, dict):
+        return [
+            float(value.get("x", 0.0)),
+            float(value.get("y", 0.0)),
+            float(value.get("z", 0.0)),
+        ]
+    if isinstance(value, (list, tuple)) and len(value) >= 3:
+        return [float(value[0]), float(value[1]), float(value[2])]
+    return [0.0, 0.0, 0.0]
+
+
+def _to_uv_list(value):
+    if isinstance(value, dict):
+        return [float(value.get("x", 0.0)), float(value.get("y", 0.0))]
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        return [float(value[0]), float(value[1])]
+    return [0.0, 0.0]
+
+
+@lru_cache(maxsize=256)
+def _load_mesh_json_bytes(asset_id: str) -> bytes:
+    pkl_rel = OBJATHOR_ASSETS_DIR / asset_id / f"{asset_id}.pkl.gz"
+    mesh_raw = obllomov.assets.read_pickle(pkl_rel)
+    mesh = {
+        "vertices": [_to_xyz_list(v) for v in mesh_raw.get("vertices", [])],
+        "normals": [_to_xyz_list(n) for n in mesh_raw.get("normals", [])],
+        "uvs": [_to_uv_list(u) for u in mesh_raw.get("uvs", [])],
+        "triangles": [int(i) for i in mesh_raw.get("triangles", [])],
+        "albedoUrl": f"/assets/{asset_id}/albedo.jpg",
+        "normalUrl": f"/assets/{asset_id}/normal.jpg",
+        "emissionUrl": f"/assets/{asset_id}/emission.jpg",
+    }
+    return json.dumps(mesh).encode()
+
+
+def _mime_for_path(path: str) -> str:
+    guessed, _ = mimetypes.guess_type(path)
+    return guessed or "application/octet-stream"
 
 
 async def _run_generation(
@@ -208,3 +262,38 @@ async def _run_edit(
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "agents-service"}
+
+
+@app.get("/render/materials/{name}")
+async def render_material(name: str):
+    data = obllomov.assets.read_bytes_or_none(HOLODECK_MATERIALS_IMAGES_DIR / name)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Material not found: {name}")
+    return Response(content=data, media_type="image/png")
+
+
+@app.get("/render/doors/{name}")
+async def render_door_image(name: str):
+    data = obllomov.assets.read_bytes_or_none(HOLODECK_DOORS_IMAGES_DIR / name)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Door image not found: {name}")
+    return Response(content=data, media_type="image/png")
+
+
+@app.get("/render/mesh/{asset_id}")
+async def render_mesh(asset_id: str):
+    pkl_rel = OBJATHOR_ASSETS_DIR / asset_id / f"{asset_id}.pkl.gz"
+    if not obllomov.assets.exists(pkl_rel):
+        raise HTTPException(status_code=404, detail=f"Mesh asset not found: {asset_id}")
+    return Response(content=_load_mesh_json_bytes(asset_id), media_type="application/json")
+
+
+@app.get("/render/assets/{asset_path:path}")
+async def render_asset(asset_path: str):
+    if not asset_path:
+        raise HTTPException(status_code=404, detail="Asset path is required")
+    rel = Path(asset_path)
+    data = obllomov.assets.read_bytes_or_none(OBJATHOR_ASSETS_DIR / rel)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Asset not found: {asset_path}")
+    return Response(content=data, media_type=_mime_for_path(asset_path))
