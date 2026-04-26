@@ -36,8 +36,12 @@ engine = create_db_engine(env.DB_URL)
 repo = SessionRepository(engine)
 chat = ChatService(repo)
 
-# llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
-llm = ChatMock()
+if env.YANDEX_CLOUD_API_KEY and env.YANDEX_CLOUD_FOLDER and env.YANDEX_CLOUD_MODEL:
+    llm = get_chat_yandex_model(temperature=0.3, max_completion_tokens=MAX_NEW_TOKENS)
+    logger.info("Using Yandex LLM model: %s", env.YANDEX_CLOUD_MODEL)
+else:
+    llm = ChatMock()
+    logger.warning("Using ChatMock fallback: Yandex LLM config is incomplete")
 
 if (
     not env.AGENTS_USE_LOCAL_ASSETS
