@@ -1,197 +1,80 @@
-# AInterior
+<div align="center">
+  <img src="logo.png" alt="AInterior Logo" width="200"/>
+  <h1>AInterior</h1>
+  <p>Веб-приложение для проектирования и визуализации интерьерных решений с AI-ассистентом</p>
+</div>
 
-Веб-приложение для проектирования и визуализации интерьерных решений с AI-ассистентом.
-
-## Запуск
-
-### Полный запуск (backend + frontend + инфраструктура)
-
-```bash
-./start-all.sh
-```
-
-### Только backend
+## Быстрый старт
 
 ```bash
-docker-compose up -d
+# Запустить все сервисы
+docker compose up -d
 ```
 
-**Требования:** Python 3.11+, Node.js 18+, Docker.
+Фронтенд доступен на http://localhost:3000
 
-После первого запуска отредактируй `SMTP_USER` и `SMTP_PASSWORD` в `.env` для отправки кодов подтверждения email.
+
+**Требования:** Docker, Docker Compose
 
 ## Архитектура
 
 ```
-                    Frontend (React + Three.js, :3000)
-                              ↓
-                    Backend (API Gateway, :8000)
-                              ↓
-        ┌─────────────────────┼─────────────────────┐
-        ↓                     ↓                     ↓
-  Auth Service          Render Service        Chat Service
-    (:8001)                 (:8002)              (:8003)
-  - JWT Auth            - 3D Generation        - AI Chat (mock)
-  - Email verify        - ObLLoMov            - Conversations
-        ↓                     ↓                     ↓
-        │              Project Service       Storage Service
-        │                 (:8004)               (:8005)
-        │              - CRUD Projects        - S3/MinIO
-        │              - Scene Management     - File Upload
-        └─────────────────────┼─────────────────────┘
-                              ↓
-              ┌───────────────┴───────────────┐
-              ↓                               ↓
-         PostgreSQL                      MinIO (S3)
-         RabbitMQ                        Redis
+Frontend (React + Three.js)
+    ↓
+Backend Service (API Gateway)
+    ↓
+├── Auth Service (JWT, Email)
+├── Agents Service (AI генерация сцен)
+├── Chat Service (AI-диалоги)
+├── Project Service (CRUD проектов)
+└── Storage Service (S3/MinIO)
+    ↓
+PostgreSQL, MinIO, Redis, RabbitMQ
 ```
 
-### Микросервисы
+### Сервисы
 
-**Auth Service (порт 8001)** — авторизация и аутентификация:
-- Регистрация, логин (JWT)
-- Email verification
-- Управление пользователями
+| Сервис | Порт | Назначение |
+|--------|------|------------|
+| `frontend` | 3000 | React SPA с 3D-редактором |
+| `backend-service` | 8000 | API Gateway |
+| `auth-service` | 8001 | Авторизация, JWT |
+| `chat-service` | 8003 | AI-чат |
+| `project-service` | 8004 | Управление проектами |
+| `storage-service` | 8005 | Файловое хранилище |
+| `agents-service` | 8006 | AI генерация интерьеров (ObLLoMov) |
 
-**Backend Service (порт 8000)** — API Gateway (роутинг):
-- Единая точка входа для фронтенда
-- Проксирование запросов к микросервисам
-- Базовая валидация и маршрутизация
-
-**Render Service (порт 8002)** — генерация 3D сцен:
-- Генерация интерьеров (ObLLoMov)
-- Генерация мебели
-- Автоматическая расстановка
-- Streaming generation через RabbitMQ
-
-**Chat Service (порт 8003)** — AI-ассистент (mock):
-- Чат с AI (пока моки)
-- История бесед
-- Парсинг намерений пользователя
-
-**Project Service (порт 8004)** — управление проектами:
-- CRUD операции с проектами
-- Сохранение/загрузка сцен
-- История изменений
-
-**Storage Service (порт 8005)** — файловое хранилище:
-- Upload/Download файлов
-- Presigned URLs
-- S3/MinIO integration
-
-**Frontend (React + Vite, порт 3000)** — интерактивный 3D-редактор с чатом.
-
-**Инфраструктура (Docker Compose):** PostgreSQL, MinIO (S3), Redis, RabbitMQ.
-
-## Структура проекта
+## Структура
 
 ```
 AInterior/
-├── auth-service/          # Сервис авторизации
-│   ├── models/           # SQLAlchemy модели (User, VerificationCode)
-│   ├── routers/          # Auth endpoints
-│   ├── services/         # Auth logic, email
-│   ├── config.py         # Настройки auth-service
-│   ├── database.py       # Подключение к БД
-│   ├── dependencies.py   # FastAPI dependencies
-│   └── main.py           # Точка входа
-├── backend-service/       # Основной API-шлюз
-│   ├── routers/          # Projects, models, ML proxy
-│   ├── services/         # S3, auth-client, ml-client
-│   ├── schema/           # Pydantic DTO
-│   ├── config.py         # Настройки backend-service
-│   ├── dependencies.py   # Auth middleware
-│   └── main.py           # Точка входа
-├── ml-service/            # ML сервис
-│   ├── agents/           # AI-агенты (парсинг, генерация, планировка)
-│   ├── db/               # Каталог мебели
-│   ├── schema/           # Pydantic DTO
-│   ├── services/         # ML logic, S3, auth-client
-│   ├── config.py         # Настройки ml-service
-│   ├── dependencies.py   # Auth middleware
-│   ├── database.py       # Подключение к БД
-│   └── main.py           # Точка входа
-├── frontend/
-│   └── src/
-│       ├── components/   # React-компоненты
-│       ├── context/      # AuthContext, AppContext
-│       ├── pages/        # Login, Register, VerifyEmail
-│       ├── services/     # API-клиент
-│       └── styles/       # CSS
-├── database/
-│   └── init.sql          # Схема БД
-├── docker-compose.yml     # Оркестрация всех сервисов
-├── Dockerfile.auth        # Auth Service image
-├── Dockerfile.backend     # Backend Service image
-├── Dockerfile.ml          # ML Service image
-├── requirements.txt
-├── start.sh              # Запуск backend-сервисов
-├── start-all.sh          # Запуск всего стека
-├── .env.example
-└── .gitignore
+├── auth-service/          # Авторизация
+├── backend-service/       # API Gateway
+├── agents-service/        # AI генерация
+├── chat-service/          # Чат с AI
+├── project-service/       # CRUD проектов
+├── storage-service/       # S3 хранилище
+├── frontend/              # React UI
+├── database/              # SQL схемы и миграции
+├── scripts/               # Утилиты
+└── docker-compose.yml     # Оркестрация
 ```
-
-## API
-
-### Auth Service (:8001)
-
-**Авторизация:**
-- `POST /auth/register` — регистрация
-- `POST /auth/verify-email` — подтверждение email
-- `POST /auth/login` — вход
-- `POST /auth/refresh` — обновление токена
-- `GET /auth/me` — текущий пользователь
-- `POST /auth/verify-token` — проверка токена
-
-### Backend Service (:8000)
-
-**Все эндпоинты требуют JWT токен в заголовке `Authorization: Bearer <token>`**
-
-**Модели:**
-- `POST /upload_model` — загрузка 3D-модели
-- `GET /list_models` — список моделей
-- `GET /uploaded_models/{filename}` — скачать модель
-- `GET /generated_models/{filename}` — скачать сгенерированную модель
-
-**Проекты:**
-- `GET /projects` — список проектов пользователя
-- `POST /projects` — создать проект
-- `PUT /projects/{id}` — обновить
-- `DELETE /projects/{id}` — удалить
-
-**ML Proxy:**
-- `POST /generate` — генерация из текста
-- `POST /generate_furniture` — генерация мебели
-- `POST /auto_arrange` — автоматическая расстановка
-- `POST /chat` — чат с ассистентом
-- `POST /generate_scene` — генерация сцены
-- `GET /generation/{generation_id}` — статус генерации
-
-**WebSocket:**
-- `WS /ws/generation/{generation_id}?token=<jwt>` — стрим прогресса генерации
-
-### ML Service (:8002)
-
-**Все эндпоинты требуют JWT токен в заголовке `Authorization: Bearer <token>`**
-
-**ML Операции:**
-- `POST /generate` — генерация модели
-- `POST /generate_furniture` — генерация мебели из текста
-- `POST /auto_arrange` — автоматическая расстановка
-- `POST /chat` — парсинг запроса
-- `POST /generate_scene` — генерация сцены (streaming)
-- `GET /generation/{generation_id}` — статус генерации
-- `GET /health` — проверка здоровья сервиса (публичный)
-
-Swagger UI:
-- Auth: http://localhost:8001/docs
-- Backend: http://localhost:8000/docs  
-- ML: http://localhost:8002/docs
 
 ## Технологии
 
-**Backend:** FastAPI, SQLAlchemy (async), PyTorch, Trimesh, Boto3, python-jose (JWT), bcrypt, aiosmtplib, httpx
+**Backend:** FastAPI, SQLAlchemy, PyTorch, ObLLoMov, AI2-THOR, JWT
 
-**Frontend:** React 18, Three.js, Vite, React Router
+**Frontend:** React, Three.js, React Three Fiber, Vite
 
-**Инфраструктура:** Docker Compose, PostgreSQL, MinIO, Redis, RabbitMQ
+**Инфраструктура:** Docker, PostgreSQL, MinIO (S3), Redis, RabbitMQ
+
+## API
+
+Swagger UI доступен после запуска:
+- Backend Service: http://localhost:8000/docs
+- Auth Service: http://localhost:8001/docs
+- Chat Service: http://localhost:8003/docs
+- Project Service: http://localhost:8004/docs
+- Storage Service: http://localhost:8005/docs
+- Agents Service: http://localhost:8006/docs
+
